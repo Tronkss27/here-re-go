@@ -1,0 +1,114 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+# Task Master Command Reference for Cursor Agent
+
+When you see @taskmaster anywhere in the chat, include these instructions:
+
+## 1. Parse a PRD into tasks.json
+- **Command**: `task-master parse-prd scripts/prd.txt`
+- **Outcome**: Creates or updates tasks.json with structured tasks from requirements document.
+
+## 2. Generate individual task files
+- **Command**: `task-master generate`
+- **Outcome**: Creates tasks/task_<id>.txt for each task.
+
+## 3. List all tasks
+- **Command**: `task-master list [--with-subtasks] [--status=<status>]`
+- **Outcome**: Prints a table of all tasks with their id, status, dependencies, and priority.
+
+## 4. Show next recommended task
+- **Command**: `task-master next`
+- **Outcome**: Displays the single unblocked, highest priority task.
+
+## 5. Show detailed info for one task
+- **Command**: `task-master show <task_id>`
+- **Outcome**: Outputs title, description, details, and testStrategy.
+
+## 6. Update tasks from a given ID onward
+- **Command**: `task-master update --from=<task_id> --prompt="<context>" [--research]`
+- **Outcome**: Re-writes all tasks in tasks.json from <task_id> onward using the new context.
+
+## 7. Expand a complex task into subtasks
+- **Command**: `task-master expand --id=<task_id> [--num=<n>] [--research] [--force]`
+- **Outcome**: Generates <n> subtasks, optionally using external research (Perplexity).
+
+## 8. Mark a task as done
+- **Command**: `task-master set-status --id=<task_id> --status=done`
+- **Outcome**: Updates tasks.json so task_id is done.
+
+## 9. Add a new task
+- **Command**: `task-master add-task --prompt="<task description>" [--dependencies=<ids>] [--priority=<level>] [--research]`
+- **Outcome**: Appends a new task to tasks.json.
+
+## 10. Fix broken dependencies
+- **Command**: `task-master fix-dependencies`
+- **Outcome**: Auto-resolves invalid or circular dependencies if possible.
+
+## 11. Validate dependencies
+- **Command**: `task-master validate-dependencies`
+- **Outcome**: Reports any cycles or unresolved IDs in tasks.json.
+
+## 12. Clear subtasks
+- **Command**: `task-master clear-subtasks --id=<task_id>`
+- **Outcome**: Removes any existing subtasks for task_id so you can re-expand.
+
+## 13. Generate a one-time complexity analysis
+- **Command**: `task-master analyze-complexity --research`
+- **Outcome**: Generates a JSON file with complexity scores for each task.
+
+## 14. Add a subtask to an existing task
+- **Command**: `task-master add-subtask --parent=<task_id> --title="<title>" [--description="<desc>"]`
+- **Outcome**: Adds a new subtask under the specified parent task.
+
+## 15. Update a specific task
+- **Command**: `task-master update-task --id=<task_id> --prompt="<changes>" [--research]`
+- **Outcome**: Modifies the specified task with new information or requirements.
+
+## 16. Update a specific subtask
+- **Command**: `task-master update-subtask --id=<subtask_id> --prompt="<notes>" [--research]`
+- **Outcome**: Appends timestamped notes to the specified subtask.
+
+## 17. Move tasks within hierarchy
+- **Command**: `task-master move --from=<id> --to=<id>`
+- **Outcome**: Moves tasks or subtasks to new positions in the task hierarchy.
+
+## 18. Remove a task or subtask
+- **Command**: `task-master remove-task --id=<task_id> [--yes]`
+- **Outcome**: Permanently deletes the specified task or subtask.
+
+## 19. Manage dependencies
+- **Command**: `task-master add-dependency --id=<task_id> --depends-on=<prereq_id>`
+- **Command**: `task-master remove-dependency --id=<task_id> --depends-on=<prereq_id>`
+- **Outcome**: Adds or removes dependency relationships between tasks.
+
+## 20. View complexity report
+- **Command**: `task-master complexity-report`
+- **Outcome**: Displays the task complexity analysis in readable format.
+
+## 21. Configure AI models
+- **Command**: `task-master models [--set-main=<model>] [--set-research=<model>] [--setup]`
+- **Outcome**: Views or configures AI models for different Task Master operations.
+
+# Natural Language to Command Mapping
+
+| **Your Instruction (Agent Chat)** | **Underlying CLI Command** | **Effect** |
+|---|---|---|
+| "Init Task Master in this project." | `task-master init` / `npx task-master init` | Creates scripts/prd.txt, tasks.json, .cursor/mcp.json, and rules. |
+| "Create tasks from my PRD in scripts/prd.txt." | `task-master parse-prd scripts/prd.txt` | Generates tasks.json with structured tasks. |
+| "Generate individual task files from tasks.json." | `task-master generate` | Creates tasks/task_001.txt, tasks/task_002.txt, etc. |
+| "List all tasks." | `task-master list` | Returns a table of all tasks with ID, status, deps, priority. |
+| "Show the next task to work on." | `task-master next` | Shows the next unblocked, highest-priority task. |
+| "Show details for task 5." | `task-master show 5` | Outputs title, description, details, and test strategy for task 5. |
+| "Break task 3 into 3 subtasks focusing on performance." | `task-master expand --id=3 --num=3 --prompt="performance"` | Rewrites tasks.json with 3 new subtasks under task 3. |
+| "Update tasks from 4 onward to use Express instead of Fastify." | `task-master update --from=4 --prompt="Use Express instead of Fastify."` | Re-scopes tasks >=4 in tasks.json with new context. |
+| "Mark task 2 as done." | `task-master set-status --id=2 --status=done` | Updates tasks.json so task 2's status becomes done. |
+| "Add a new task asking for OAuth integration." | `task-master add-task --prompt="Implement OAuth login flow."` | Appends a new task to tasks.json. |
+| "Fix broken dependencies automatically." | `task-master fix-dependencies` | Attempts to resolve invalid or circular deps in tasks.json. |
+| "Validate dependencies in tasks.json." | `task-master validate-dependencies` | Checks for dependency loops or missing IDs. |
+| "Clear subtasks for task 7 so I can re-expand." | `task-master clear-subtasks --id=7` | Removes all subtasks under task 7 in tasks.json. |
+| "Analyze task complexity with Perplexity AI." | `task-master analyze-complexity --research` | Generates a JSON complexity report for each task. |
+
+**Note**: By committing this .cursor/rules/taskmaster.mdc file, Cursor's chat agent has "built-in knowledge" of how to run every Task Master command. All you need to do is type plain English in Agent mode (or prefix with @taskmaster if you want to force the rule).

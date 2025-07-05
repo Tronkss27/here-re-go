@@ -1,0 +1,50 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+- **Backend come Single Source of Truth (SSOT)**
+  - Tutta la logica di business e i dati fondamentali (profili utente, profili venue, prenotazioni, immagini, etc.) **DEVONO** essere persistiti sul database del backend tramite le API dedicate.
+  - Il frontend non deve mai considerare il `localStorage` o `sessionStorage` come una fonte di dati primaria o affidabile.
+
+- **Utilizzo del `localStorage`**
+  - Il `localStorage` è consentito **SOLO** per:
+    - Caching di dati non critici per migliorare le performance (es. preferenze UI, dati di sessione temporanei).
+    - Mantenere lo stato di sessione dell'utente (es. token JWT).
+    - Meccanismi di fallback temporanei **SOLO SE** il backend non è raggiungibile, e deve essere chiaramente documentato.
+
+- **Salvataggio Dati del Profilo Venue**
+  - **✅ DO:** Utilizzare la funzione centralizzata `venuesService.updateVenueProfile(venueId, profileData)` per salvare o aggiornare qualsiasi dato relativo a un locale.
+    ```javascript
+    // Esempio di utilizzo corretto
+    import venuesService from 'path/to/venuesService';
+    
+    async function handleSaveProfile(venueId, data) {
+      try {
+        await venuesService.updateVenueProfile(venueId, data);
+        // Gestisci successo
+      } catch (error) {
+        // Gestisci errore
+      }
+    }
+    ```
+  - **❌ DON'T:** Non utilizzare `localStorage.setItem()` direttamente nei componenti per salvare dati critici del profilo.
+    ```javascript
+    // Esempio di anti-pattern da evitare
+    const handleSavePhotos = (photos) => {
+      // Questo è SBAGLIATO perché non salva i dati in modo persistente e sicuro
+      const profile = JSON.parse(localStorage.getItem('venue_profile'));
+      profile.photos = photos;
+      localStorage.setItem('venue_profile', JSON.stringify(profile)); 
+    }
+    ```
+
+- **Caricamento Dati**
+  - I dati devono sempre essere richiesti al backend all'avvio del componente o dell'app.
+  - Se si utilizza il `localStorage` per il caching, deve esistere una logica di invalidazione della cache per ricaricare i dati dal backend quando questi cambiano.
+  - La funzione `getUnifiedImages` in `venuesService.js` è l'esempio di riferimento: prima controlla i dati del backend, poi (come fallback) il `localStorage`.
+
+- **Riferimenti**
+  - Per l'implementazione corretta, fare riferimento a:
+    - `frontend/src/services/venuesService.js`
+    - `frontend/src/components/wizard-steps/StepPhotos.tsx`

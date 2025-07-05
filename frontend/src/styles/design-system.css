@@ -1,0 +1,110 @@
+/* SPOrTS Design System Custom Styles */
+
+/* Typography Classes */
+.font-display {
+  font-family: 'Racing Sans One', cursive !important;
+}
+
+.font-heading {
+  font-family: 'Kanit', sans-serif !important;
+  font-weight: 600;
+}
+
+.font-body {
+  font-family: 'Kanit', sans-serif !important;
+  font-weight: 400;
+}
+
+/* Custom Orange Gradient Backgrounds */
+.bg-gradient-orange {
+  background: linear-gradient(135deg, #f97316 0%, #ea580c 100%) !important;
+}
+
+.bg-gradient-orange-soft {
+  background: linear-gradient(135deg, #fff7ed 0%, #fed7aa 100%) !important;
+}
+
+/* Sports-themed animations */
+@keyframes ball-bounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+
+.animate-ball-bounce {
+  animation: ball-bounce 2s ease-in-out infinite !important;
+}
+
+/* Custom shadows */
+.shadow-sports {
+  box-shadow: 0 4px 25px 0 rgba(249, 115, 22, 0.15) !important;
+}
+
+.shadow-soft-orange {
+  box-shadow: 0 2px 15px 0 rgba(249, 115, 22, 0.08) !important;
+}
+
+/* Interactive elements */
+.hover-lift {
+  transition: all 0.2s ease-in-out !important;
+}
+
+.hover-lift:hover {
+  transform: translateY(-2px) !important;
+  box-shadow: 0 8px 40px 0 rgba(0, 0, 0, 0.16) !important;
+}
+
+/* Custom focus styles */
+.focus-orange:focus {
+  outline: none !important;
+  box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.2) !important;
+}
+
+/* Text gradients */
+.text-gradient-orange {
+  background: linear-gradient(135deg, #f97316 0%, #ea580c 100%) !important;
+  -webkit-background-clip: text !important;
+  -webkit-text-fill-color: transparent !important;
+  background-clip: text !important;
+}
+
+/* Sports Bar themed classes */
+.glass-effect {
+  backdrop-filter: blur(10px) !important;
+  background: rgba(255, 255, 255, 0.9) !important;
+}
+
+.score-display {
+  font-family: 'Racing Sans One', cursive !important;
+  font-size: 2rem !important;
+  color: #f97316 !important;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1) !important;
+}
+
+/* Loading states with sports theme */
+.loading-sports {
+  position: relative;
+}
+
+.loading-sports::before {
+  content: "⚽";
+  position: absolute;
+  animation: ball-bounce 1s ease-in-out infinite;
+}
+
+/* Custom scrollbar */
+.scrollbar-orange::-webkit-scrollbar {
+  width: 6px;
+}
+
+.scrollbar-orange::-webkit-scrollbar-track {
+  background: #f3f4f6;
+}
+
+.scrollbar-orange::-webkit-scrollbar-thumb {
+  background: #f97316;
+  border-radius: 3px;
+}
+
+.scrollbar-orange::-webkit-scrollbar-thumb:hover {
+  background: #ea580c;
+} 

@@ -1,0 +1,89 @@
+---
+description:
+globs:
+alwaysApply: false
+---
+# Operative.sh - Web Eval Agent MCP Server
+
+## Strumenti Disponibili
+
+### 1. web_eval_agent
+* **MCP Tool:** `web_eval_agent`
+* **Scopo:** Eseguire test end-to-end di applicazioni web con report automatico
+* **Argomenti richiesti:**
+  - `url` (stringa): Indirizzo dell'app da testare (es. `"http://localhost:5173"`)
+  - `task` (stringa): Descrizione in linguaggio naturale di cosa testare (es. `"esegui il flusso di login e verifica errori di console"`)
+  - `headless_browser` (boolean, opzionale): `true` per nascondere la finestra del browser, `false` (default) per mostrarla
+
+* **Output fornito:**
+  - Log di console filtrati (max 10.000 caratteri)
+  - Log di network con status delle richieste HTTP
+  - Percorso file screenshot generato
+  - Report UX in linguaggio naturale con raccomandazioni ed errori
+
+* **Esempi di utilizzo:**
+  - Test di login: `"esegui il flusso di login con credenziali di test"`
+  - Verifica errori: `"naviga nell'app e raccogli tutti gli errori di console"`
+  - Test responsive: `"verifica la UI su diverse dimensioni di schermo"`
+  - Performance check: `"controlla i tempi di caricamento e le richieste lente"`
+
+### 2. setup_browser_state
+* **MCP Tool:** `setup_browser_state`
+* **Scopo:** Aprire browser non-headless per login manuale e salvare stato di sessione
+* **Argomenti richiesti:** nessuno
+* **Funzionalità:**
+  - Apre browser visibile per interazione manuale
+  - Salva cookie e localStorage alla chiusura
+  - Stato viene riutilizzato nei test successivi con `web_eval_agent`
+  - Evita di dover fare login ripetuti durante i test
+
+* **Workflow tipico:**
+  1. Eseguire `setup_browser_state` per login manuale
+  2. Effettuare login nell'interfaccia browser aperta
+  3. Chiudere browser (stato viene salvato automaticamente)
+  4. Eseguire `web_eval_agent` per test automatici (partirà già autenticato)
+
+## Prerequisiti di Sistema
+- Python 3.11+
+- Node.js 16+ e npm
+- Playwright con Chromium installato
+- Chiave API di Operative (OPERATIVE_API_KEY)
+- Configurazione in `.cursor/mcp.json`
+
+## Configurazione MCP
+Il server deve essere configurato in `.cursor/mcp.json`:
+```json
+{
+  "mcpServers": {
+    "web-eval-agent": {
+      "command": "uvx",
+      "args": [
+        "--refresh-package",
+        "webEvalAgent",
+        "--from",
+        "git+https://github.com/Operative-Sh/web-eval-agent.git",
+        "webEvalAgent"
+      ],
+      "env": {
+        "OPERATIVE_API_KEY": "sk-YOUR_API_KEY_HERE"
+      }
+    }
+  }
+}
+```
+
+## Casi d'Uso Comuni per SPOrTS
+- **Test di autenticazione:** Verificare login/logout e gestione sessioni
+- **Validazione UI:** Controllare rendering componenti BarMatch integrati  
+- **Test performance:** Monitorare caricamento dati da MongoDB
+- **Debug errori:** Identificare problemi di console in sviluppo
+- **Verifica responsive:** Testare layout su dispositivi mobili
+- **Test API integration:** Verificare chiamate a backend Express
+
+## Limitazioni e Note
+- Timeout massimo per test: 30-60 secondi
+- Log troncati a 10.000 caratteri per limiti di contesto
+- Riavviare Cursor dopo modifiche a mcp.json
+- Browser state persistente tra sessioni
+- Richiede connessione internet per API Operative
+

@@ -1,0 +1,32 @@
+{
+  "watch": ["src/", "server.js"],
+  "ignore": [
+    ".git",
+    "node_modules/**/node_modules",
+    "*.log",
+    "logs/",
+    "public/",
+    "dist/",
+    "temp/",
+    "uploads/",
+    ".*.swp",
+    "*.lock",
+    "*.tmp",
+    ".DS_Store",
+    "Thumbs.db",
+    "*.pid",
+    ".env*",
+    "coverage/",
+    ".nyc_output/",
+    "*.sqlite",
+    "*.db"
+  ],
+  "ext": "js,json",
+  "exec": "node server.js",
+  "delay": "3000ms",
+  "verbose": false,
+  "restartable": "rs",
+  "env": {
+    "NODE_ENV": "development"
+  }
+} 

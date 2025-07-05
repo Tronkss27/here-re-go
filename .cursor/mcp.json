@@ -1,0 +1,35 @@
+{
+    "mcpServers": {
+        "task-master-ai": {
+            "command": "npx",
+            "args": [
+                "-y",
+                "--package=task-master-ai",
+                "task-master-ai"
+            ],
+            "env": {
+                "ANTHROPIC_API_KEY": "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",
+                "PERPLEXITY_API_KEY": "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",
+                "OPENAI_API_KEY": "OPENAI_API_KEY_HERE",
+                "GOOGLE_API_KEY": "GOOGLE_API_KEY_HERE",
+                "XAI_API_KEY": "XAI_API_KEY_HERE",
+                "OPENROUTER_API_KEY": "OPENROUTER_API_KEY_HERE",
+                "MISTRAL_API_KEY": "MISTRAL_API_KEY_HERE",
+                "AZURE_OPENAI_API_KEY": "AZURE_OPENAI_API_KEY_HERE",
+                "OLLAMA_API_KEY": "OLLAMA_API_KEY_HERE"
+            }
+        },
+        "web-eval-agent": {
+            "command": "/Users/nicolotroncone/.local/bin/uvx",
+            "args": [
+                "--from",
+                "git+https://github.com/Operative-Sh/web-eval-agent.git",
+                "webEvalAgent"
+            ],
+            "env": {
+                "OPERATIVE_API_KEY": "op-tlO1Py5WAnXFQV3B_tje4yV3IdqapcaIUMeP7DPxRSU",
+                "PATH": "/Users/nicolotroncone/.local/bin:/opt/anaconda3/bin:/usr/local/bin:/usr/bin:/bin"
+            }
+        }
+    }
+}

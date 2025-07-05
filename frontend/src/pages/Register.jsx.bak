@@ -1,0 +1,528 @@
+import { useState, useEffect } from 'react'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
+import { useAuth } from '../hooks/useAuth'
+
+const Register = () => {
+  const { register, loginDemo, isLoading, error, clearError } = useAuth()
+  const [formData, setFormData] = useState({
+    name: '',
+    email: '',
+    password: '',
+    confirmPassword: '',
+    role: 'user'
+  })
+  const [showPassword, setShowPassword] = useState(false)
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
+  const [validationErrors, setValidationErrors] = useState({})
+  
+  const location = useLocation()
+  const navigate = useNavigate()
+  
+  // SPOrTS Theme Inline Styles
+  const containerStyle = {
+    minHeight: '100vh',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    background: 'linear-gradient(135deg, #fff7ed 0%, #fed7aa 100%)',
+    padding: '3rem 1rem',
+    fontFamily: 'Kanit, sans-serif'
+  }
+
+  const cardStyle = {
+    maxWidth: '500px',
+    width: '100%',
+    backgroundColor: 'white',
+    borderRadius: '1.5rem',
+    padding: '3rem',
+    boxShadow: '0 20px 60px rgba(249, 115, 22, 0.15)',
+    border: '2px solid #f97316'
+  }
+
+  const headerStyle = {
+    textAlign: 'center',
+    marginBottom: '2rem'
+  }
+
+  const titleStyle = {
+    fontFamily: 'Racing Sans One, cursive',
+    fontSize: '3rem',
+    background: 'linear-gradient(135deg, #f97316 0%, #ea580c 100%)',
+    WebkitBackgroundClip: 'text',
+    WebkitTextFillColor: 'transparent',
+    backgroundClip: 'text',
+    marginBottom: '1rem',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: '0.5rem'
+  }
+
+  const subtitleStyle = {
+    fontSize: '1.5rem',
+    color: '#1f2937',
+    fontWeight: '600',
+    marginBottom: '0.5rem'
+  }
+
+  const linkStyle = {
+    color: '#f97316',
+    textDecoration: 'none',
+    fontWeight: '500',
+    fontSize: '0.9rem'
+  }
+
+  const inputStyle = {
+    width: '100%',
+    padding: '0.875rem 1rem',
+    border: '2px solid #fed7aa',
+    borderRadius: '0.75rem',
+    fontSize: '1rem',
+    fontFamily: 'Kanit, sans-serif',
+    transition: 'all 0.2s ease-in-out',
+    outline: 'none'
+  }
+
+  const inputErrorStyle = {
+    ...inputStyle,
+    borderColor: '#fca5a5'
+  }
+
+  const inputFocusStyle = {
+    borderColor: '#f97316',
+    boxShadow: '0 0 0 3px rgba(249, 115, 22, 0.1)'
+  }
+
+  const labelStyle = {
+    display: 'block',
+    fontSize: '0.875rem',
+    fontWeight: '600',
+    color: '#374151',
+    marginBottom: '0.5rem'
+  }
+
+  const buttonStyle = {
+    width: '100%',
+    padding: '1rem 1.5rem',
+    backgroundColor: '#f97316',
+    color: 'white',
+    border: 'none',
+    borderRadius: '0.75rem',
+    fontSize: '1rem',
+    fontWeight: '600',
+    fontFamily: 'Kanit, sans-serif',
+    cursor: 'pointer',
+    transition: 'all 0.2s ease-in-out',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: '0.5rem'
+  }
+
+  const selectStyle = {
+    ...inputStyle,
+    paddingRight: '2.5rem',
+    backgroundImage: 'url(data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAiIGhlaWdodD0iNiIgdmlld0JveD0iMCAwIDEwIDYiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHBhdGggZD0iTTEgMUw1IDVMOSAxIiBzdHJva2U9IiM2QjcyODAiIHN0cm9rZS13aWR0aD0iMS41IiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiLz48L3N2Zz4=)',
+    backgroundRepeat: 'no-repeat',
+    backgroundPosition: 'right 1rem center',
+    appearance: 'none'
+  }
+
+  const errorStyle = {
+    backgroundColor: '#fef2f2',
+    border: '1px solid #fca5a5',
+    borderRadius: '0.5rem',
+    padding: '1rem',
+    marginBottom: '1rem',
+    color: '#dc2626'
+  }
+
+  const errorTextStyle = {
+    fontSize: '0.875rem',
+    color: '#dc2626',
+    marginTop: '0.25rem'
+  }
+
+  const demoButtonStyle = {
+    ...buttonStyle,
+    backgroundColor: 'transparent',
+    color: '#f97316',
+    border: '2px solid #f97316'
+  }
+  
+  // Clear error when component unmounts
+  useEffect(() => {
+    return () => clearError()
+  }, [clearError])
+
+  const validateForm = () => {
+    const errors = {}
+
+    // Validazione nome
+    if (!formData.name.trim()) {
+      errors.name = 'Il nome è obbligatorio'
+    } else if (formData.name.trim().length < 2) {
+      errors.name = 'Il nome deve essere di almeno 2 caratteri'
+    }
+
+    // Validazione email
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (!formData.email.trim()) {
+      errors.email = 'L\'email è obbligatoria'
+    } else if (!emailRegex.test(formData.email)) {
+      errors.email = 'Inserisci un\'email valida'
+    }
+
+    // Validazione password
+    if (!formData.password) {
+      errors.password = 'La password è obbligatoria'
+    } else if (formData.password.length < 6) {
+      errors.password = 'La password deve essere di almeno 6 caratteri'
+    }
+
+    // Validazione conferma password
+    if (!formData.confirmPassword) {
+      errors.confirmPassword = 'La conferma password è obbligatoria'
+    } else if (formData.password !== formData.confirmPassword) {
+      errors.confirmPassword = 'Le password non corrispondono'
+    }
+
+    setValidationErrors(errors)
+    return Object.keys(errors).length === 0
+  }
+
+  const handleInputChange = (e) => {
+    const { name, value } = e.target
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }))
+    
+    // Clear specific field error when user starts typing
+    if (validationErrors[name]) {
+      setValidationErrors(prev => ({
+        ...prev,
+        [name]: ''
+      }))
+    }
+    
+    // Clear general error when user starts typing
+    if (error) clearError()
+  }
+
+  const handleSubmit = async (e) => {
+    e.preventDefault()
+    
+    if (!validateForm()) {
+      return
+    }
+
+    const result = await register(formData.name, formData.email, formData.password, formData.role)
+    
+    if (result.success) {
+      // Redirect to intended page or dashboard
+      const from = location.state?.from?.pathname || '/dashboard'
+      navigate(from, { replace: true })
+    }
+  }
+
+  const handleDemoLogin = async () => {
+    const result = await loginDemo()
+    
+    if (result.success) {
+      const from = location.state?.from?.pathname || '/dashboard'
+      navigate(from, { replace: true })
+    }
+  }
+
+  return (
+    <div style={containerStyle}>
+      <div style={cardStyle}>
+        <div style={headerStyle}>
+          <h1 style={titleStyle}>
+            🏆 SPOrTS
+          </h1>
+          <h2 style={subtitleStyle}>
+            Crea il tuo account
+          </h2>
+          <p style={{ color: '#6b7280', margin: 0 }}>
+            Hai già un account?{' '}
+            <Link to="/login" style={linkStyle}>
+              Accedi qui
+            </Link>
+          </p>
+        </div>
+
+        {error && (
+          <div style={errorStyle}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <p style={{ margin: 0 }}>{error}</p>
+              <button
+                onClick={clearError}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: '#dc2626',
+                  cursor: 'pointer',
+                  fontSize: '1.25rem'
+                }}
+              >
+                ✕
+              </button>
+            </div>
+          </div>
+        )}
+
+        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+          <div>
+            <label htmlFor="name" style={labelStyle}>
+              Nome completo*
+            </label>
+            <input
+              id="name"
+              name="name"
+              type="text"
+              autoComplete="name"
+              required
+              value={formData.name}
+              onChange={handleInputChange}
+              onFocus={(e) => Object.assign(e.target.style, inputFocusStyle)}
+              onBlur={(e) => Object.assign(e.target.style, { borderColor: validationErrors.name ? '#fca5a5' : '#fed7aa', boxShadow: 'none' })}
+              style={validationErrors.name ? inputErrorStyle : inputStyle}
+              placeholder="Inserisci il tuo nome completo"
+            />
+            {validationErrors.name && (
+              <p style={errorTextStyle}>{validationErrors.name}</p>
+            )}
+          </div>
+
+          <div>
+            <label htmlFor="email" style={labelStyle}>
+              Email*
+            </label>
+            <input
+              id="email"
+              name="email"
+              type="email"
+              autoComplete="email"
+              required
+              value={formData.email}
+              onChange={handleInputChange}
+              onFocus={(e) => Object.assign(e.target.style, inputFocusStyle)}
+              onBlur={(e) => Object.assign(e.target.style, { borderColor: validationErrors.email ? '#fca5a5' : '#fed7aa', boxShadow: 'none' })}
+              style={validationErrors.email ? inputErrorStyle : inputStyle}
+              placeholder="Inserisci la tua email"
+            />
+            {validationErrors.email && (
+              <p style={errorTextStyle}>{validationErrors.email}</p>
+            )}
+          </div>
+
+          <div>
+            <label htmlFor="role" style={labelStyle}>
+              Tipologia Account*
+            </label>
+            <select
+              id="role"
+              name="role"
+              value={formData.role}
+              onChange={handleInputChange}
+              style={selectStyle}
+            >
+              <option value="user">👤 Utente</option>
+              <option value="venue_owner">🏢 Proprietario Locale</option>
+              <option value="admin">👨‍💼 Amministratore</option>
+            </select>
+          </div>
+
+          <div>
+            <label htmlFor="password" style={labelStyle}>
+              Password*
+            </label>
+            <div style={{ position: 'relative' }}>
+              <input
+                id="password"
+                name="password"
+                type={showPassword ? 'text' : 'password'}
+                autoComplete="new-password"
+                required
+                value={formData.password}
+                onChange={handleInputChange}
+                onFocus={(e) => Object.assign(e.target.style, inputFocusStyle)}
+                onBlur={(e) => Object.assign(e.target.style, { borderColor: validationErrors.password ? '#fca5a5' : '#fed7aa', boxShadow: 'none' })}
+                style={{ ...(validationErrors.password ? inputErrorStyle : inputStyle), paddingRight: '3rem' }}
+                placeholder="Inserisci la password"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                style={{
+                  position: 'absolute',
+                  right: '1rem',
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  background: 'none',
+                  border: 'none',
+                  color: '#6b7280',
+                  cursor: 'pointer',
+                  fontSize: '1.25rem'
+                }}
+              >
+                {showPassword ? '👁️' : '👁️‍🗨️'}
+              </button>
+            </div>
+            {validationErrors.password && (
+              <p style={errorTextStyle}>{validationErrors.password}</p>
+            )}
+          </div>
+
+          <div>
+            <label htmlFor="confirmPassword" style={labelStyle}>
+              Conferma Password*
+            </label>
+            <div style={{ position: 'relative' }}>
+              <input
+                id="confirmPassword"
+                name="confirmPassword"
+                type={showConfirmPassword ? 'text' : 'password'}
+                autoComplete="new-password"
+                required
+                value={formData.confirmPassword}
+                onChange={handleInputChange}
+                onFocus={(e) => Object.assign(e.target.style, inputFocusStyle)}
+                onBlur={(e) => Object.assign(e.target.style, { borderColor: validationErrors.confirmPassword ? '#fca5a5' : '#fed7aa', boxShadow: 'none' })}
+                style={{ ...(validationErrors.confirmPassword ? inputErrorStyle : inputStyle), paddingRight: '3rem' }}
+                placeholder="Conferma la password"
+              />
+              <button
+                type="button"
+                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                style={{
+                  position: 'absolute',
+                  right: '1rem',
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  background: 'none',
+                  border: 'none',
+                  color: '#6b7280',
+                  cursor: 'pointer',
+                  fontSize: '1.25rem'
+                }}
+              >
+                {showConfirmPassword ? '👁️' : '👁️‍🗨️'}
+              </button>
+            </div>
+            {validationErrors.confirmPassword && (
+              <p style={errorTextStyle}>{validationErrors.confirmPassword}</p>
+            )}
+          </div>
+
+          <button
+            type="submit"
+            disabled={isLoading}
+            style={{
+              ...buttonStyle,
+              opacity: isLoading ? 0.7 : 1,
+              cursor: isLoading ? 'not-allowed' : 'pointer'
+            }}
+            onMouseOver={(e) => {
+              if (!isLoading) {
+                e.target.style.backgroundColor = '#ea580c'
+                e.target.style.transform = 'translateY(-2px)'
+                e.target.style.boxShadow = '0 8px 25px rgba(249, 115, 22, 0.3)'
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (!isLoading) {
+                e.target.style.backgroundColor = '#f97316'
+                e.target.style.transform = 'translateY(0)'
+                e.target.style.boxShadow = 'none'
+              }
+            }}
+          >
+            {isLoading ? (
+              <>
+                <div style={{
+                  width: '1rem',
+                  height: '1rem',
+                  border: '2px solid transparent',
+                  borderTop: '2px solid white',
+                  borderRadius: '50%',
+                  animation: 'spin 1s linear infinite'
+                }} />
+                Creazione account...
+              </>
+            ) : (
+              '📝 Crea Account'
+            )}
+          </button>
+
+          <div style={{ position: 'relative', textAlign: 'center', margin: '1rem 0' }}>
+            <div style={{
+              position: 'absolute',
+              top: '50%',
+              left: 0,
+              right: 0,
+              height: '1px',
+              backgroundColor: '#e5e7eb'
+            }} />
+            <span style={{
+              backgroundColor: 'white',
+              padding: '0 1rem',
+              color: '#6b7280',
+              fontSize: '0.875rem'
+            }}>
+              oppure
+            </span>
+          </div>
+
+          <button
+            type="button"
+            onClick={handleDemoLogin}
+            disabled={isLoading}
+            style={{
+              ...demoButtonStyle,
+              opacity: isLoading ? 0.7 : 1,
+              cursor: isLoading ? 'not-allowed' : 'pointer'
+            }}
+            onMouseOver={(e) => {
+              if (!isLoading) {
+                e.target.style.backgroundColor = '#fff7ed'
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (!isLoading) {
+                e.target.style.backgroundColor = 'transparent'
+              }
+            }}
+          >
+            {isLoading ? (
+              <>
+                <div style={{
+                  width: '1rem',
+                  height: '1rem',
+                  border: '2px solid transparent',
+                  borderTop: '2px solid #f97316',
+                  borderRadius: '50%',
+                  animation: 'spin 1s linear infinite'
+                }} />
+                Accesso Demo...
+              </>
+            ) : (
+              '🚀 Accesso Demo'
+            )}
+          </button>
+        </form>
+      </div>
+
+      <style jsx>{`
+        @keyframes spin {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        }
+      `}</style>
+    </div>
+  )
+}
+
+export default Register 

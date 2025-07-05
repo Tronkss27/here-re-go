@@ -1,0 +1,488 @@
+# SPOrTS - Sports Bar Management System
+## Product Requirements Document (PRD)
+
+### Vision & Business Goals
+
+SPOrTS è un sistema di gestione intelligente per bar sportivi che semplifica la vita dei proprietari e migliora l'esperienza degli appassionati di sport. Ispirato alla semplicità di Fanzo, SPOrTS offre un'interfaccia intuitiva per gestire prenotazioni, partite, offerte e clienti in un'unica piattaforma web moderna.
+
+**Target Audience:**
+- Proprietari di bar sportivi e pub
+- Manager di locali con eventi sportivi
+- Staff addetto alle prenotazioni e marketing
+
+**Core Value Proposition:**
+- Setup in 5 minuti, utilizzo immediato
+- Interfaccia moderna e intuitiva stile Fanzo
+- Gestione completa senza complessità inutili
+- Integrazione automatica con dati sportivi
+- Separazione account perfetta per multi-tenancy
+
+### Technical Architecture
+
+**Frontend:**
+- React 18+ con hooks moderni
+- Tailwind CSS per styling rapido e consistente
+- React Router v6 per navigazione SPA
+- Context API per state management globale
+- Componenti modulari e riutilizzabili
+
+**Backend:**
+- Node.js + Express.js RESTful API
+- MongoDB per persistenza dati
+- JWT per autenticazione sicura
+- Middleware custom per validazione e logging
+
+**External Integrations:**
+- API-Football per dati partite in tempo reale
+- Sistema di fallback con database locale
+- Email service per notifiche (futuro)
+
+**Deployment:**
+- Docker containerization
+- Environment-based configuration
+- Production-ready monitoring
+
+### Core Features & User Stories
+
+#### 1. Authentication & Account Management
+**User Story:** "Come proprietario di bar, voglio accedere al mio account personale e vedere solo i miei dati"
+
+**Requirements:**
+- Login sicuro con email/password
+- Demo mode per testing rapido
+- Separazione account completa (no data leaking)
+- Session management robusto
+- Logout completo con pulizia dati
+
+**Technical Specs:**
+- JWT tokens con refresh mechanism
+- localStorage keys specifiche per utente: `sports_{dataType}_{userId}`
+- AuthContext con user state management
+- ProtectedRoutes per aree riservate
+
+#### 2. Sports Events & Fixture Management  
+**User Story:** "Come gestore, voglio vedere le partite del giorno e configurare la mia programmazione TV"
+
+**Requirements:**
+- Ricerca partite per squadra, campionato, data
+- Visualizzazione orari e canali TV (DAZN, Sky, etc.)
+- Programmazione eventi personalizzata
+- Sistema ibrido: database locale + API-Football
+- Fallback automatico se API non disponibile
+
+**Technical Specs:**
+- FixturesService con dual-source architecture
+- Database locale con 20+ partite popolari pre-caricate
+- API-Football integration per dati real-time
+- Caching intelligente per performance
+- Search functionality multi-criteria
+
+#### 3. Booking & Reservation System
+**User Story:** "Come cliente, voglio prenotare un tavolo per la partita della domenica e ricevere conferma"
+
+**Requirements:**
+- Booking form intuitivo con date picker
+- Gestione tavoli e capacità
+- Stati prenotazione: pending, confirmed, cancelled
+- Dashboard manager con overview real-time
+- Statistiche giornaliere e settimanali
+
+**Technical Specs:**
+- CRUD completo per prenotazioni
+- BookingAdmin component con filtering avanzato
+- Real-time stats: ospiti oggi, ricavi, prenotazioni pending
+- Modal-based UI per quick actions
+- Data validation e error handling
+
+#### 4. Offers & Promotions Management
+**User Story:** "Come proprietario, voglio creare offerte speciali per attirare clienti durante le partite"
+
+**Requirements:**
+- Wizard 4-step per creazione offerte
+- Template offerte predefiniti (Happy Hour, Derby Specials, etc.)
+- Targeting per eventi specifici
+- Sistema scadenze e validità
+- Preview e pubblicazione immediata
+
+**Technical Specs:**
+- OffersAdmin con step-by-step form
+- Template system per quick setup
+- Date range validation
+- Integration con eventi sportivi
+- Persistent storage per offerte attive
+
+#### 5. Venue Profile & Settings
+**User Story:** "Come gestore, voglio personalizzare il profilo del mio locale con info, foto e servizi"
+
+**Requirements:**
+- Profile form completo: nome, indirizzo, telefono, email
+- Upload foto venue e gallery
+- Configurazione servizi: WiFi, parcheggio, cucina
+- Orari apertura e info speciali
+- Social media integration
+
+**Technical Specs:**
+- ProfileAdmin component con form validation
+- Image upload e preview
+- Settings persistence nel localStorage
+- Responsive design per mobile editing
+
+#### 6. Analytics & Statistics Dashboard
+**User Story:** "Come proprietario, voglio vedere statistiche del mio business e tendenze clienti"
+
+**Requirements:**
+- Dashboard con KPIs principali
+- Grafici prenotazioni, ricavi, eventi popolari
+- Trend analysis settimanale/mensile
+- Export dati per contabilità
+- Alert per performance critiche
+
+**Technical Specs:**
+- StatsAdmin con charts library (Chart.js/Recharts)
+- Data aggregation algorithms
+- Real-time updates
+- Export functionality (CSV/PDF)
+- Responsive charts per mobile
+
+#### 7. Reviews & Customer Feedback
+**User Story:** "Come cliente, voglio lasciare feedback sulla mia esperienza e vedere recensioni di altri"
+
+**Requirements:**
+- Sistema rating 1-5 stelle
+- Commenti testuali opzionali
+- Moderazione reviews prima pubblicazione
+- Risposta proprietario alle recensioni
+- Widget reviews per website integration
+
+**Technical Specs:**
+- ReviewsAdmin per gestione feedback
+- Rating calculation e aggregation
+- Moderation workflow
+- Public API per widget esterno
+
+### UI/UX Design Requirements
+
+**Design Philosophy:**
+- Semplicità alla Fanzo: "Less is More"
+- Mobile-first responsive design
+- Accessibility WCAG 2.1 AA compliant
+- Consistent color scheme e typography
+- Fast loading e smooth animations
+
+**Color Palette:**
+- Primary: Orange (#F97316) - energia e calore
+- Secondary: Dark Gray (#374151) - professionalità
+- Background: Light Gray (#F9FAFB) - pulizia
+- Success: Green (#10B981) - conferme
+- Warning: Yellow (#F59E0B) - attenzione
+- Error: Red (#EF4444) - errori
+
+**Typography:**
+- Heading: Racing Sans One per titoli
+- Body: Kanit Regular per testo
+- Monospace: JetBrains Mono per codici
+
+**Component Standards:**
+- Buttons: rounded-lg con hover effects
+- Forms: border focus states, validation colors
+- Cards: shadow-sm con border radius
+- Modals: backdrop blur con smooth transitions
+- Navigation: breadcrumbs e active states
+
+### Data Model & Storage
+
+#### User Account
+```json
+{
+  "id": "demo-user",
+  "email": "demo@sports.it", 
+  "name": "Bar Demo",
+  "role": "admin",
+  "subscription": "demo",
+  "createdAt": "2024-01-01T00:00:00Z"
+}
+```
+
+#### Venue Profile
+```json
+{
+  "id": "venue_1",
+  "name": "Sports Bar Demo",
+  "address": "Via Roma 123, Milano",
+  "phone": "+39 02 1234567",
+  "email": "info@sportsbar.it",
+  "capacity": 50,
+  "services": ["wifi", "parking", "kitchen"],
+  "hours": {
+    "monday": "16:00-01:00",
+    "sunday": "14:00-02:00"
+  }
+}
+```
+
+#### Booking
+```json
+{
+  "id": "booking_1",
+  "customerName": "Mario Rossi",
+  "customerEmail": "mario@email.it",
+  "customerPhone": "+39 333 1234567", 
+  "date": "2024-12-15",
+  "time": "20:00",
+  "guests": 4,
+  "tableType": "premium",
+  "status": "confirmed",
+  "notes": "Tavolo vicino al maxischermo",
+  "createdAt": "2024-12-10T10:30:00Z"
+}
+```
+
+#### Sports Fixture
+```json
+{
+  "id": "fixture_1",
+  "homeTeam": "Milan",
+  "awayTeam": "Inter",
+  "competition": "Serie A",
+  "date": "2024-12-15",
+  "time": "20:45",
+  "venue": "San Siro",
+  "tvChannel": "DAZN",
+  "source": "local", // "local" or "api"
+  "featured": true
+}
+```
+
+#### Offer/Promotion
+```json
+{
+  "id": "offer_1",
+  "title": "Derby della Madonnina Special",
+  "description": "20% sconto su bevande durante Milan-Inter",
+  "discount": 20,
+  "type": "percentage",
+  "validFrom": "2024-12-15T18:00:00Z",
+  "validTo": "2024-12-15T23:59:59Z",
+  "targetEvent": "fixture_1",
+  "status": "active"
+}
+```
+
+### API Endpoints Design
+
+#### Authentication
+- `POST /api/auth/login` - User login
+- `POST /api/auth/logout` - User logout  
+- `GET /api/auth/me` - Get current user
+- `POST /api/auth/refresh` - Refresh JWT token
+
+#### Fixtures
+- `GET /api/fixtures` - List fixtures with filters
+- `GET /api/fixtures/search?q=Milan` - Search fixtures
+- `POST /api/fixtures` - Create custom fixture
+- `PUT /api/fixtures/:id` - Update fixture
+- `DELETE /api/fixtures/:id` - Delete fixture
+
+#### Bookings
+- `GET /api/bookings` - List bookings with pagination
+- `POST /api/bookings` - Create new booking
+- `PUT /api/bookings/:id` - Update booking
+- `DELETE /api/bookings/:id` - Cancel booking
+- `PATCH /api/bookings/:id/status` - Change booking status
+
+#### Offers
+- `GET /api/offers` - List active offers
+- `POST /api/offers` - Create new offer
+- `PUT /api/offers/:id` - Update offer
+- `DELETE /api/offers/:id` - Delete offer
+
+#### Venue
+- `GET /api/venue/profile` - Get venue profile
+- `PUT /api/venue/profile` - Update venue profile
+- `GET /api/venue/stats` - Get venue statistics
+
+#### Reviews
+- `GET /api/reviews` - List reviews with moderation status
+- `POST /api/reviews` - Create new review
+- `PUT /api/reviews/:id/moderate` - Moderate review
+- `POST /api/reviews/:id/reply` - Reply to review
+
+### Security Requirements
+
+**Authentication:**
+- JWT tokens with 24h expiration
+- Refresh tokens for seamless UX
+- Password hashing with bcrypt (12 rounds)
+- Rate limiting on login attempts
+
+**Data Protection:**
+- User data separation at storage level
+- localStorage namespace per user
+- Input sanitization e validation
+- XSS protection with CSP headers
+
+**API Security:**
+- CORS configuration for production
+- Request validation middleware
+- Error handling senza data leaking
+- API rate limiting (100 req/min per user)
+
+### Performance Requirements
+
+**Frontend:**
+- Initial load < 3 secondi
+- Navigation < 500ms
+- Search results < 1 secondo
+- Smooth animations 60fps
+
+**Backend:**
+- API response time < 200ms
+- Database queries optimized con indexes
+- Caching strategy per API-Football
+- Graceful degradation se API esterni down
+
+**Scalability:**
+- Supporto 100+ venue simultanei
+- 1000+ bookings per venue per mese
+- Image compression automatico
+- Lazy loading per large datasets
+
+### Integration Requirements
+
+**API-Football Integration:**
+- Real-time fixture data
+- Fallback su database locale
+- Caching intelligente (24h per fixtures)
+- Error handling e retry logic
+- API key management sicuro
+
+**Future Integrations:**
+- Email service (SendGrid/Mailgun)
+- Payment processing (Stripe)
+- Social media posting
+- Calendar integration
+- Analytics service (Google Analytics)
+
+### Error Handling & Edge Cases
+
+**User Experience:**
+- Loading states per ogni operazione
+- Error messages user-friendly in italiano
+- Offline mode con localStorage
+- Auto-save drafts per forms lunghi
+
+**Technical Resilience:**
+- API failure graceful degradation
+- Database connection error handling
+- Invalid data validation
+- Browser compatibility (Chrome 90+, Safari 14+, Firefox 88+)
+
+### Testing Strategy
+
+**Unit Testing:**
+- Jest per utility functions
+- React Testing Library per components
+- Coverage minimo 80%
+
+**Integration Testing:**
+- API endpoints testing con supertest
+- Database operations testing
+- Authentication flow testing
+
+**E2E Testing:**
+- Cypress per user workflows critici
+- Login → Create Booking → Confirm flow
+- Admin dashboard functionality
+- Mobile responsive testing
+
+### Deployment & DevOps
+
+**Environment Configuration:**
+- Development: Local setup con Docker
+- Staging: Cloud preview con real data
+- Production: Scalable cloud deployment
+
+**CI/CD Pipeline:**
+- GitHub Actions per automated testing
+- Build optimization e bundling
+- Environment variables management
+- Database migrations automatiche
+
+**Monitoring:**
+- Application performance monitoring
+- Error tracking e alerting
+- User analytics e usage patterns
+- Infrastructure health checks
+
+### Success Metrics
+
+**Business KPIs:**
+- Time to setup new venue: < 10 minuti
+- User adoption rate: 80% active dopo 1 settimana
+- Customer satisfaction: > 4.5/5 stelle
+- System uptime: 99.9%
+
+**Technical KPIs:**
+- Page load speed: < 3s
+- API response time: < 200ms
+- Zero critical security vulnerabilities
+- Mobile usage: > 60% traffic
+
+### Project Phases & Milestones
+
+**Phase 1: Core Foundation (2 settimane)**
+- Setup project architecture
+- Authentication system
+- Basic UI components
+- Database design
+
+**Phase 2: Core Features (3 settimane)**  
+- Fixtures management
+- Booking system
+- Venue profile
+- Admin dashboard
+
+**Phase 3: Advanced Features (2 settimane)**
+- Offers system
+- Statistics dashboard
+- Reviews system
+- Mobile optimization
+
+**Phase 4: Polish & Deploy (1 settimana)**
+- Performance optimization
+- Security hardening
+- Production deployment
+- Documentation
+
+### Constraints & Assumptions
+
+**Technical Constraints:**
+- React 18+ required per concurrent features
+- MongoDB per flexible document storage
+- JWT per stateless authentication
+- Tailwind CSS per rapid styling
+
+**Business Constraints:**
+- Demo mode deve funzionare senza backend
+- Multitenancy obbligatorio fin dal Day 1
+- Mobile-first design mandatory
+- Italian language primary
+
+**Assumptions:**
+- Users have modern browsers (Chrome 90+)
+- Internet connection available per API calls
+- Basic computer literacy assumed
+- Sports data accuracy from API-Football
+
+---
+
+**Note per Task Master:**
+Questo PRD deve generare tasks strutturati per:
+1. Setup iniziale e architettura
+2. Implementazione autenticazione e sicurezza  
+3. Sviluppo features core (fixtures, bookings, offers)
+4. UI/UX implementation e responsive design
+5. Testing e quality assurance
+6. Deployment e production readiness
+
+Ogni task deve includere acceptance criteria specifici, test strategy e implementazione details per permettere sviluppo efficiente e ordinato. 

@@ -1,0 +1,65 @@
+---
+description: Guidelines for creating and maintaining Cursor rules to ensure consistency and effectiveness.
+globs: .cursor/rules/*.mdc
+alwaysApply: true
+---
+
+- **Required Rule Structure:**
+  ```markdown
+  ---
+  description: Clear, one-line description of what the rule enforces
+  globs: path/to/files/*.ext, other/path/**/*
+  alwaysApply: boolean
+  ---
+
+  - **Main Points in Bold**
+    - Sub-points with details
+    - Examples and explanations
+  ```
+
+- **File References:**
+  - Use `[filename](mdc:SPOrTS/SPOrTS/path/to/file)` ([filename](mdc:SPOrTS/SPOrTS/filename)) to reference files
+  - Example: [prisma.mdc](mdc:SPOrTS/SPOrTS/.cursor/rules/prisma.mdc) for rule references
+  - Example: [schema.prisma](mdc:SPOrTS/SPOrTS/prisma/schema.prisma) for code references
+
+- **Code Examples:**
+  - Use language-specific code blocks
+  ```typescript
+  // ✅ DO: Show good examples
+  const goodExample = true;
+  
+  // ❌ DON'T: Show anti-patterns
+  const badExample = false;
+  ```
+
+- **Rule Content Guidelines:**
+  - Start with high-level overview
+  - Include specific, actionable requirements
+  - Show examples of correct implementation
+  - Reference existing code when possible
+  - Keep rules DRY by referencing other rules
+
+- **Rule Maintenance:**
+  - Update rules when new patterns emerge
+  - Add examples from actual codebase
+  - Remove outdated patterns
+  - Cross-reference related rules
+
+- **Best Practices:**
+  - Use bullet points for clarity
+  - Keep descriptions concise
+  - Include both DO and DON'T examples
+  - Reference actual code over theoretical examples
+  - Use consistent formatting across rules
+
+## Task Master Integration Rules
+
+For all task management and development workflow:
+- Reference [dev_workflow.mdc](mdc:SPOrTS/SPOrTS/.cursor/rules/dev_workflow.mdc) for complete Task Master workflow
+- Use [taskmaster.mdc](mdc:SPOrTS/SPOrTS/.cursor/rules/taskmaster.mdc) for specific command reference (@taskmaster)
+- Consult [taskmaster_setup.mdc](mdc:SPOrTS/SPOrTS/.cursor/rules/taskmaster_setup.mdc) for troubleshooting and best practices
+- **NEVER manually type task-master commands in terminal** - use MCP integration via chat
+- All task operations should be performed through natural language commands in Agent mode
+- Prioritize task-driven development approach using Task Master for project organization 
+
+

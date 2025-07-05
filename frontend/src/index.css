@@ -1,0 +1,264 @@
+/* Google Fonts Import - MUST BE FIRST */
+@import url('https://fonts.googleapis.com/css2?family=Racing+Sans+One&family=Kanit:wght@300;400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Shadcn/ui CSS Variables for BarMatch compatibility */
+@layer base {
+  :root {
+    /* SPOrTS Orange Theme Variables */
+    --background: 0 0% 100%;
+    --foreground: 20 14.3% 4.1%;
+    
+    --card: 0 0% 100%;
+    --card-foreground: 20 14.3% 4.1%;
+    
+    --popover: 0 0% 100%;
+    --popover-foreground: 20 14.3% 4.1%;
+    
+    --primary: 24 9.8% 10%; /* SPOrTS orange-500 in HSL */
+    --primary-foreground: 60 9.1% 97.8%;
+    
+    --secondary: 60 4.8% 95.9%;
+    --secondary-foreground: 24 9.8% 10%;
+    
+    --muted: 60 4.8% 95.9%;
+    --muted-foreground: 25 5.3% 44.7%;
+    
+    --accent: 60 4.8% 95.9%;
+    --accent-foreground: 24 9.8% 10%;
+    
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 60 9.1% 97.8%;
+    
+    --border: 20 5.9% 90%;
+    --input: 20 5.9% 90%;
+    --ring: 24 5.7% 82.9%; /* SPOrTS orange ring */
+    
+    --radius: 0.5rem;
+
+    /* Sidebar variables for BarMatch */
+    --sidebar-background: 0 0% 98%;
+    --sidebar-foreground: 240 5.3% 26.1%;
+    --sidebar-primary: 24 9.8% 10%;
+    --sidebar-primary-foreground: 0 0% 98%;
+    --sidebar-accent: 240 4.8% 95.9%;
+    --sidebar-accent-foreground: 240 5.9% 10%;
+    --sidebar-border: 220 13% 91%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+
+  .dark {
+    /* Dark mode with SPOrTS orange accents */
+    --background: 20 14.3% 4.1%;
+    --foreground: 60 9.1% 97.8%;
+    
+    --card: 20 14.3% 4.1%;
+    --card-foreground: 60 9.1% 97.8%;
+    
+    --popover: 20 14.3% 4.1%;
+    --popover-foreground: 60 9.1% 97.8%;
+    
+    --primary: 60 9.1% 97.8%;
+    --primary-foreground: 24 9.8% 10%;
+    
+    --secondary: 12 6.5% 15.1%;
+    --secondary-foreground: 60 9.1% 97.8%;
+    
+    --muted: 12 6.5% 15.1%;
+    --muted-foreground: 24 5.4% 63.9%;
+    
+    --accent: 12 6.5% 15.1%;
+    --accent-foreground: 60 9.1% 97.8%;
+    
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 60 9.1% 97.8%;
+    
+    --border: 12 6.5% 15.1%;
+    --input: 12 6.5% 15.1%;
+    --ring: 24 5.7% 82.9%;
+
+    /* Sidebar dark mode */
+    --sidebar-background: 240 5.9% 10%;
+    --sidebar-foreground: 240 4.8% 95.9%;
+    --sidebar-primary: 224.3 76.3% 94.1%;
+    --sidebar-primary-foreground: 240 5.9% 10%;
+    --sidebar-accent: 240 3.7% 15.9%;
+    --sidebar-accent-foreground: 240 4.8% 95.9%;
+    --sidebar-border: 240 3.7% 15.9%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+}
+
+/* Base styles */
+* {
+  border-color: hsl(var(--border));
+}
+
+body {
+  background-color: hsl(var(--background));
+  color: hsl(var(--foreground));
+  font-family: 'Kanit', system-ui, sans-serif;
+}
+
+/* SPOrTS Design System Classes */
+.sports-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 1rem;
+}
+
+.sports-card {
+  background: white;
+  border-radius: 1rem;
+  box-shadow: 0 4px 25px 0 rgba(249, 115, 22, 0.15);
+  border: 1px solid rgba(249, 115, 22, 0.1);
+}
+
+.sports-button-primary {
+  background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
+  color: white;
+  border: none;
+  border-radius: 0.75rem;
+  padding: 0.75rem 1.5rem;
+  font-weight: 600;
+  font-family: 'Kanit', sans-serif;
+  transition: all 0.2s ease-in-out;
+  cursor: pointer;
+}
+
+.sports-button-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(249, 115, 22, 0.3);
+}
+
+.sports-text-gradient {
+  background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* BarMatch compatibility classes */
+.bm-card {
+  @apply bg-white rounded-xl shadow-medium border border-orange-100;
+}
+
+.bm-button {
+  @apply bg-fanzo-yellow text-white px-6 py-3 rounded-lg font-semibold transition-all duration-200 hover:bg-fanzo-teal hover:shadow-orange;
+}
+
+.bm-text-primary {
+  @apply text-fanzo-dark font-medium;
+}
+
+.bm-text-secondary {
+  @apply text-gray-600;
+}
+
+.bm-bg-gradient {
+  background: linear-gradient(135deg, #f97316 0%, #ea580c 50%, #fed7aa 100%);
+}
+
+/* Loading states */
+.loading-spinner {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* Focus styles with SPOrTS orange */
+.sports-focus:focus {
+  outline: none;
+  ring: 3px;
+  ring-color: rgba(249, 115, 22, 0.3);
+  ring-offset: 2px;
+}
+
+/* 
+  Z-index management for overlays.
+  Use these utility classes on components like Modals, Popovers, etc.
+  to ensure they appear above other content.
+*/
+@layer utilities {
+  .z-modal { z-index: 40; }    /* For full-screen modals */
+  .z-popover { z-index: 50; } /* For popovers and dropdowns, needs to be above modals if used inside */
+  .z-tooltip { z-index: 60; } /* For tooltips, which should be on top of everything */
+}
+
+/* Popover and Dialog specific fixes */
+[data-radix-popper-content-wrapper] {
+  z-index: 10000 !important;
+}
+
+[data-state="open"][data-radix-popover-content] {
+  z-index: 10000 !important;
+}
+
+/* Popover trigger interactivity fixes */
+[data-radix-popover-trigger] {
+  position: relative;
+  z-index: 1;
+  pointer-events: auto !important;
+}
+
+/* Calendar popover specific styles */
+.calendar-popover-trigger {
+  min-height: 48px;
+  touch-action: manipulation;
+  user-select: none;
+  cursor: pointer !important;
+}
+
+.calendar-popover-trigger:focus-visible {
+  outline: 2px solid #f97316;
+  outline-offset: 2px;
+}
+
+/* Enhanced click area for date picker */
+.date-picker-wrapper {
+  position: relative;
+  cursor: pointer;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+}
+
+.date-picker-wrapper:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(249, 115, 22, 0.15);
+}
+
+.date-picker-wrapper:active {
+  transform: translateY(0);
+}
+
+/* Prevent interference from other elements */
+.booking-form-field {
+  position: relative;
+  z-index: 1;
+  margin-bottom: 24px;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #f97316;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #ea580c;
+}

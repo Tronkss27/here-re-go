@@ -1,0 +1,61 @@
+{
+  "meta": {
+    "generatedAt": "2025-06-16T12:28:05.030Z",
+    "tasksAnalyzed": 6,
+    "totalTasks": 20,
+    "analysisCount": 6,
+    "thresholdScore": 5,
+    "projectName": "Taskmaster",
+    "usedResearch": true
+  },
+  "complexityAnalysis": [
+    {
+      "taskId": 8,
+      "taskTitle": "Venue Profile & Settings",
+      "complexityScore": 7,
+      "recommendedSubtasks": 5,
+      "expansionPrompt": "Break down the Venue Profile & Settings task into subtasks covering form creation, image upload functionality, service configuration, responsive design, and data persistence.",
+      "reasoning": "Complex due to multiple features including form handling, image uploads, and responsive design. Requires integration with backend services and careful UX consideration."
+    },
+    {
+      "taskId": 9,
+      "taskTitle": "Analytics & Statistics Dashboard",
+      "complexityScore": 8,
+      "recommendedSubtasks": 6,
+      "expansionPrompt": "Divide the Analytics & Statistics Dashboard task into subtasks for data aggregation, chart implementation, KPI calculations, export functionality, responsive design, and real-time updates.",
+      "reasoning": "High complexity due to data processing, visualization libraries, and real-time capabilities. Requires careful performance optimization and mobile responsiveness."
+    },
+    {
+      "taskId": 10,
+      "taskTitle": "Reviews & Customer Feedback",
+      "complexityScore": 6,
+      "recommendedSubtasks": 4,
+      "expansionPrompt": "Break down the Reviews & Customer Feedback task into subtasks for review submission, moderation workflow, rating calculation, and public API widget development.",
+      "reasoning": "Moderate complexity with standard CRUD operations, but includes workflow management and API development. Requires careful consideration of user interactions and data integrity."
+    },
+    {
+      "taskId": 11,
+      "taskTitle": "Testing & Quality Assurance",
+      "complexityScore": 9,
+      "recommendedSubtasks": 7,
+      "expansionPrompt": "Divide the Testing & Quality Assurance task into subtasks for unit testing, component testing, API testing, E2E testing, mobile testing, performance audits, and CI/CD integration.",
+      "reasoning": "High complexity due to comprehensive test coverage across multiple layers, performance considerations, and automation requirements. Critical for ensuring overall system quality."
+    },
+    {
+      "taskId": 12,
+      "taskTitle": "Production Deployment & DevOps",
+      "complexityScore": 8,
+      "recommendedSubtasks": 6,
+      "expansionPrompt": "Break down the Production Deployment & DevOps task into subtasks for containerization, CI/CD pipeline setup, environment configuration, database migration, monitoring implementation, and error tracking.",
+      "reasoning": "Complex due to the variety of DevOps practices involved, requiring expertise in multiple tools and careful system configuration. Critical for stable production deployment."
+    },
+    {
+      "taskId": 20,
+      "taskTitle": "Venue Setup & Onboarding Wizard",
+      "complexityScore": 8,
+      "recommendedSubtasks": 7,
+      "expansionPrompt": "This task is already well-defined with 7 subtasks. Consider adding subtasks for data validation, API integration, and final submission handling if not covered.",
+      "reasoning": "High complexity due to multi-step process, various data inputs, and importance for user onboarding. Already well-structured with detailed subtasks covering main aspects."
+    }
+  ]
+}
