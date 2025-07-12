@@ -18,19 +18,32 @@ app.use(cors({
   credentials: true
 }))
 
-// Rate limiting
-const limiter = rateLimit({
+// Rate limiting per tenant
+const tenantRateLimit = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: process.env.NODE_ENV === 'development' ? 1000 : 100, // More permissive in development
+  max: (req) => {
+    // Limiti diversi per piano tenant
+    const plan = req.tenant?.plan || 'trial'
+    const limits = {
+      trial: 100,
+      basic: 500,
+      premium: 2000,
+      enterprise: 10000
+    }
+    return limits[plan] || 100
+  },
+  keyGenerator: (req) => {
+    // Rate limit per tenant
+    return `${req.tenantId || 'default'}-${req.ip}`
+  },
   message: {
     success: false,
-    error: 'Too many requests from this IP, please try again later.',
-    retryAfter: Math.ceil(15 * 60 * 1000 / 1000) // seconds
+    error: 'Rate limit exceeded',
+    message: 'Too many requests for your plan'
   },
   standardHeaders: true,
   legacyHeaders: false,
 })
-app.use(limiter)
 
 // Body parsing middleware
 app.use(express.json({ limit: '10mb' }))
@@ -58,7 +71,9 @@ app.use(AuditMiddleware.securityErrorLogger)
 // Tenant middleware - Extract tenant context from requests
 const TenantMiddleware = require('./middlewares/tenantMiddleware')
 app.use(TenantMiddleware.extractTenant)
-app.use(TenantMiddleware.updateLastActivity)
+
+// Rate limiting dopo tenant extraction
+app.use(tenantRateLimit)
 
 // Tenant ownership validation
 app.use(SecurityMiddleware.validateTenantOwnership)
@@ -72,24 +87,22 @@ app.use(AuditMiddleware.auditLogger({
   includeHeaders: false 
 }))
 
-// Routes
+// Routes con tenant validation
 app.use('/api/auth', require('./routes/auth'))
-// app.use('/api/tenants', require('./routes/tenants'))
-app.use('/api/venues', require('./routes/venues'))
-app.use('/api/fixtures', require('./routes/fixtures'))
-app.use('/api/bookings', require('./routes/bookings'))
-// app.use('/api/offers', require('./routes/offers'))
-// app.use('/api/reviews', require('./routes/reviews'))
 
-// 🚀 NEW: Match announcements routes - WORKING NOW
-app.use('/api/match-announcements', require('./routes/matchAnnouncements'))
+// Routes che richiedono tenant context
+app.use('/api/venues', TenantMiddleware.requireTenant, require('./routes/venues'))
+app.use('/api/fixtures', TenantMiddleware.requireTenant, require('./routes/fixtures'))
+app.use('/api/bookings', TenantMiddleware.requireTenant, require('./routes/bookings'))
+app.use('/api/match-announcements', TenantMiddleware.requireTenant, require('./routes/matchAnnouncements'))
 
-// Health check endpoint
+// Health check endpoint (non richiede tenant)
 app.get('/api/health', (req, res) => {
   res.status(200).json({
     status: 'OK',
     message: 'SPOrTS API is running',
-    timestamp: new Date().toISOString()
+    timestamp: new Date().toISOString(),
+    tenant: req.tenant ? req.tenant.slug : 'none'
   })
 })
 
@@ -97,14 +110,16 @@ app.get('/api/health', (req, res) => {
 app.use((err, req, res, next) => {
   console.error(err.stack)
   res.status(500).json({
-    error: 'Something went wrong!',
-    message: process.env.NODE_ENV === 'development' ? err.message : 'Internal server error'
+    success: false,
+    error: 'Internal server error',
+    message: process.env.NODE_ENV === 'development' ? err.message : 'Something went wrong'
   })
 })
 
 // 404 handler - Fixed: no asterisk, just catch all unmatched routes
 app.use((req, res) => {
   res.status(404).json({
+    success: false,
     error: 'Route not found',
     path: req.originalUrl
   })

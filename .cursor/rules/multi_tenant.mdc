@@ -1,0 +1,435 @@
+# Sistema Multi-Tenant SPOrTS
+
+## **Architettura Multi-Tenant**
+
+### **Principi Fondamentali**
+- **Isolamento completo dei dati** tra tenant
+- **Identificazione tenant obbligatoria** per tutte le operazioni
+- **Validazione automatica ownership** di tutte le risorse
+- **Audit logging** per compliance e debugging
+
+### **Strategia di Identificazione Tenant**
+
+#### **1. Header-Based (PRIORITÀ ALTA)**
+```javascript
+// ✅ DO: Usare header X-Tenant-ID
+const tenantId = req.headers['x-tenant-id']
+if (!tenantId) {
+  return res.status(400).json({
+    success: false,
+    error: 'Tenant ID required',
+    message: 'Please provide X-Tenant-ID header'
+  })
+}
+```
+
+#### **2. Subdomain-Based (FALLBACK)**
+```javascript
+// ✅ DO: Estrazione subdomain
+const extractSubdomain = (host) => {
+  if (!host || host.includes('localhost')) return null
+  const parts = host.split('.')
+  return parts.length >= 3 ? parts[0] : null
+}
+```
+
+#### **3. JWT-Based (SECONDARY)**
+```javascript
+// ✅ DO: Estrazione tenant da JWT
+const decoded = jwt.decode(token, { complete: true })
+const tenantId = decoded?.payload?.tenantId
+```
+
+## **Middleware Implementation**
+
+### **Tenant Extraction Middleware**
+```javascript
+// ✅ DO: Middleware completo per estrazione tenant
+const extractTenant = async (req, res, next) => {
+  try {
+    let tenantId = null
+    let tenant = null
+    
+    // 1. Header X-Tenant-ID (priorità alta)
+    if (req.headers['x-tenant-id']) {
+      tenantId = req.headers['x-tenant-id']
+    }
+    
+    // 2. Subdomain extraction
+    else if (req.get('host')) {
+      const subdomain = extractSubdomain(req.get('host'))
+      if (subdomain) {
+        tenant = await Tenant.findOne({ 
+          subdomain: subdomain,
+          status: { $in: ['active', 'trial'] }
+        })
+        if (tenant) tenantId = tenant._id.toString()
+      }
+    }
+    
+    // 3. JWT token
+    if (!tenantId && req.headers.authorization) {
+      const token = req.headers.authorization.replace('Bearer ', '')
+      const decoded = jwt.decode(token, { complete: true })
+      if (decoded?.payload?.tenantId) {
+        tenantId = decoded.payload.tenantId
+      }
+    }
+    
+    // 4. Default tenant per sviluppo
+    if (!tenant && process.env.NODE_ENV === 'development') {
+      tenant = await Tenant.findOne({ slug: 'default' })
+      tenantId = tenant?._id.toString()
+    }
+    
+    // Validazione tenant
+    if (tenantId && !tenant) {
+      tenant = await Tenant.findById(tenantId)
+    }
+    
+    if (!tenant) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid tenant',
+        message: 'Tenant not found or inactive'
+      })
+    }
+    
+    // Aggiungi al request
+    req.tenant = tenant
+    req.tenantId = tenant._id
+    
+    next()
+  } catch (error) {
+    console.error('Tenant extraction error:', error)
+    return res.status(500).json({
+      success: false,
+      error: 'Tenant resolution failed'
+    })
+  }
+}
+```
+
+### **Tenant Validation Middleware**
+```javascript
+// ✅ DO: Validazione tenant obbligatoria
+const requireTenant = (req, res, next) => {
+  if (!req.tenant) {
+    return res.status(400).json({
+      success: false,
+      error: 'Tenant context required'
+    })
+  }
+  
+  // Verifica stato tenant
+  if (!req.tenant.isActive && req.tenant.status !== 'trial') {
+    return res.status(403).json({
+      success: false,
+      error: 'Tenant access denied',
+      message: `Tenant status: ${req.tenant.status}`
+    })
+  }
+  
+  // Verifica trial scaduto
+  if (req.tenant.isTrialExpired) {
+    return res.status(402).json({
+      success: false,
+      error: 'Trial expired',
+      message: 'Please upgrade your subscription'
+    })
+  }
+  
+  next()
+}
+```
+
+## **Data Isolation**
+
+### **Model Schema con Tenant**
+```javascript
+// ✅ DO: Aggiungere tenantId a tutti i modelli
+const venueSchema = new mongoose.Schema({
+  tenantId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Tenant',
+    required: true,
+    index: true
+  },
+  name: {
+    type: String,
+    required: true
+  },
+  // ... altri campi
+})
+
+// Indice composto per performance
+venueSchema.index({ tenantId: 1, name: 1 })
+venueSchema.index({ tenantId: 1, createdAt: -1 })
+```
+
+### **Query Isolation**
+```javascript
+// ✅ DO: Filtrare sempre per tenant
+const getVenues = async (req, res) => {
+  try {
+    const venues = await Venue.find({ 
+      tenantId: req.tenantId 
+    }).populate('tenantId')
+    
+    res.json({
+      success: true,
+      data: venues
+    })
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch venues'
+    })
+  }
+}
+```
+
+### **Create/Update Isolation**
+```javascript
+// ✅ DO: Assegnare automaticamente tenantId
+const createVenue = async (req, res) => {
+  try {
+    const venue = new Venue({
+      ...req.body,
+      tenantId: req.tenantId // Assegnazione automatica
+    })
+    
+    await venue.save()
+    
+    res.status(201).json({
+      success: true,
+      data: venue
+    })
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: 'Failed to create venue'
+    })
+  }
+}
+```
+
+## **Security Validation**
+
+### **Ownership Validation**
+```javascript
+// ✅ DO: Validare ownership prima di operazioni
+const validateOwnership = async (req, res, next) => {
+  const { id } = req.params
+  
+  try {
+    const resource = await Resource.findById(id)
+    
+    if (!resource) {
+      return res.status(404).json({
+        success: false,
+        error: 'Resource not found'
+      })
+    }
+    
+    if (resource.tenantId.toString() !== req.tenantId.toString()) {
+      return res.status(403).json({
+        success: false,
+        error: 'Access denied',
+        message: 'Resource belongs to different tenant'
+      })
+    }
+    
+    req.resource = resource
+    next()
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: 'Validation failed'
+    })
+  }
+}
+```
+
+### **Rate Limiting per Tenant**
+```javascript
+// ✅ DO: Rate limiting specifico per tenant
+const tenantRateLimit = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minuti
+  max: (req) => {
+    // Limiti diversi per piano tenant
+    const plan = req.tenant?.plan || 'trial'
+    const limits = {
+      trial: 100,
+      basic: 500,
+      premium: 2000,
+      enterprise: 10000
+    }
+    return limits[plan] || 100
+  },
+  keyGenerator: (req) => {
+    // Rate limit per tenant
+    return `${req.tenantId}-${req.ip}`
+  },
+  message: {
+    success: false,
+    error: 'Rate limit exceeded',
+    message: 'Too many requests for your plan'
+  }
+})
+```
+
+## **Audit Logging**
+
+### **Audit Middleware**
+```javascript
+// ✅ DO: Logging automatico per tutte le operazioni
+const auditLogger = (operation) => {
+  return async (req, res, next) => {
+    const originalSend = res.send
+    
+    res.send = function(data) {
+      // Log dopo la risposta
+      const auditLog = {
+        tenantId: req.tenantId,
+        userId: req.user?.id,
+        operation: operation,
+        method: req.method,
+        path: req.path,
+        statusCode: res.statusCode,
+        timestamp: new Date(),
+        ip: req.ip,
+        userAgent: req.get('User-Agent')
+      }
+      
+      // Salva log (async)
+      AuditLog.create(auditLog).catch(console.error)
+      
+      originalSend.call(this, data)
+    }
+    
+    next()
+  }
+}
+```
+
+## **Error Handling**
+
+### **Tenant-Specific Errors**
+```javascript
+// ✅ DO: Error handling specifico per tenant
+const handleTenantError = (error, req, res, next) => {
+  if (error.name === 'TenantNotFound') {
+    return res.status(400).json({
+      success: false,
+      error: 'Invalid tenant',
+      message: 'Tenant not found or inactive'
+    })
+  }
+  
+  if (error.name === 'TenantAccessDenied') {
+    return res.status(403).json({
+      success: false,
+      error: 'Access denied',
+      message: 'Insufficient permissions for this tenant'
+    })
+  }
+  
+  if (error.name === 'TenantLimitExceeded') {
+    return res.status(429).json({
+      success: false,
+      error: 'Limit exceeded',
+      message: 'You have reached your plan limits'
+    })
+  }
+  
+  next(error)
+}
+```
+
+## **Testing Multi-Tenant**
+
+### **Test Isolation**
+```javascript
+// ✅ DO: Test isolamento dati
+describe('Multi-Tenant Data Isolation', () => {
+  it('should not allow cross-tenant access', async () => {
+    // Crea dati per tenant A
+    const tenantA = await createTenant('tenant-a')
+    const venueA = await createVenue(tenantA.id, 'Venue A')
+    
+    // Crea dati per tenant B
+    const tenantB = await createTenant('tenant-b')
+    const venueB = await createVenue(tenantB.id, 'Venue B')
+    
+    // Prova accesso cross-tenant
+    const response = await request(app)
+      .get(`/api/venues/${venueA.id}`)
+      .set('X-Tenant-ID', tenantB.slug)
+    
+    expect(response.status).toBe(403)
+    expect(response.body.error).toBe('Access denied')
+  })
+})
+```
+
+## **Performance Optimization**
+
+### **Database Indexing**
+```javascript
+// ✅ DO: Indici ottimizzati per multi-tenant
+// Indice principale per tenant
+schema.index({ tenantId: 1 })
+
+// Indici composti per query comuni
+schema.index({ tenantId: 1, createdAt: -1 })
+schema.index({ tenantId: 1, status: 1 })
+schema.index({ tenantId: 1, category: 1 })
+
+// Indici per ricerca
+schema.index({ tenantId: 1, name: 'text' })
+```
+
+### **Caching Strategy**
+```javascript
+// ✅ DO: Cache per tenant
+const getTenantCache = (tenantId) => {
+  return new NodeCache({
+    stdTTL: 1800, // 30 minuti
+    checkperiod: 600,
+    useClones: false
+  })
+}
+
+const getCachedData = async (tenantId, key, fetchFunction) => {
+  const cache = getTenantCache(tenantId)
+  const cacheKey = `${tenantId}:${key}`
+  
+  let data = cache.get(cacheKey)
+  if (!data) {
+    data = await fetchFunction()
+    cache.set(cacheKey, data)
+  }
+  
+  return data
+}
+```
+
+## **Best Practices**
+
+### **DO's**
+- ✅ **Sempre validare tenant context** prima di operazioni
+- ✅ **Filtrare query per tenantId** automaticamente
+- ✅ **Loggare tutte le operazioni** per audit
+- ✅ **Implementare rate limiting** per tenant
+- ✅ **Validare ownership** di tutte le risorse
+- ✅ **Usare indici database** ottimizzati
+- ✅ **Testare isolamento dati** completamente
+
+### **DON'Ts**
+- ❌ **Non permettere accesso cross-tenant**
+- ❌ **Non dimenticare tenantId** in create/update
+- ❌ **Non esporre dati di altri tenant**
+- ❌ **Non saltare validazione ownership**
+- ❌ **Non usare cache globale** per dati tenant-specific
+- ❌ **Non loggare dati sensibili** in audit log

@@ -1,6 +1,6 @@
 # SPOrTS - Sports Bar Management System
 
-Sistema completo per la gestione di bar sportivi con prenotazioni, eventi e gestione clienti.
+Sistema completo per la gestione di bar sportivi con prenotazioni, eventi e gestione clienti multi-tenant.
 
 ## 🚀 Quick Start
 
@@ -43,7 +43,7 @@ Sistema completo per la gestione di bar sportivi con prenotazioni, eventi e gest
 
 2. **Accedi all'applicazione**
    - Frontend: http://localhost:5173
-   - Backend API: http://localhost:5000
+   - Backend API: http://localhost:3001
    - MongoDB: localhost:27017
 
 ## 📁 Struttura del Progetto
@@ -51,22 +51,39 @@ Sistema completo per la gestione di bar sportivi con prenotazioni, eventi e gest
 ```
 SPOrTS/
 ├── frontend/              # React 18+ Application
+│   ├── src/
+│   │   ├── components/    # Componenti UI riutilizzabili
+│   │   ├── pages/         # Pagine dell'applicazione
+│   │   ├── services/      # API services
+│   │   ├── hooks/         # Custom React hooks
+│   │   ├── contexts/      # React contexts
+│   │   ├── utils/         # Utility functions
+│   │   └── types/         # TypeScript definitions
 ├── backend/               # Node.js + Express API
+│   ├── src/
+│   │   ├── controllers/   # Route controllers
+│   │   ├── models/        # Mongoose models
+│   │   ├── routes/        # API routes
+│   │   ├── middlewares/   # Express middlewares
+│   │   ├── services/      # Business logic
+│   │   ├── config/        # Configuration files
+│   │   └── utils/         # Utility functions
 ├── scripts/               # Database & Setup Scripts
-├── docs/                  # Documentazione
-├── docker-compose.dev.yml # Docker Development
-├── docker-compose.prod.yml # Docker Production
-└── .env.example          # Environment Template
+├── docs/                  # Documentazione API
+├── .cursor/               # Cursor IDE rules
+└── docker-compose.dev.yml # Docker Development
 ```
 
 ## 🛠️ Tecnologie
 
 ### Frontend
 - **React 18** - Framework UI
+- **TypeScript** - Type safety
 - **Tailwind CSS** - Styling
 - **Vite** - Build tool
 - **React Router** - Routing
-- **Axios** - HTTP client
+- **React Query** - Data fetching
+- **React Hook Form** - Form management
 
 ### Backend
 - **Node.js** - Runtime
@@ -75,6 +92,7 @@ SPOrTS/
 - **Mongoose** - ODM
 - **JWT** - Authentication
 - **bcryptjs** - Password hashing
+- **Helmet** - Security headers
 
 ### DevOps
 - **Docker** - Containerization
@@ -137,13 +155,9 @@ npm test                # Esegue tutti i test
 - `GET /api/bookings` - Lista prenotazioni
 - `POST /api/bookings` - Crea prenotazione
 
-### Offerte
-- `GET /api/offers` - Lista offerte
-- `POST /api/offers` - Crea offerta
-
-### Recensioni
-- `GET /api/reviews` - Lista recensioni
-- `POST /api/reviews` - Crea recensione
+### Match Announcements
+- `GET /api/match-announcements` - Lista annunci partite
+- `POST /api/match-announcements` - Crea annuncio partita
 
 ## 🔑 Autenticazione Demo
 
@@ -151,6 +165,27 @@ Per il testing è disponibile un utente demo:
 - **Email**: `demo@sports.it`
 - **Password**: `demo123`
 - **Ruolo**: `venue_owner`
+
+## 🏢 Sistema Multi-Tenant
+
+SPOrTS supporta un sistema multi-tenant completo:
+
+### Identificazione Tenant
+- **Header**: `X-Tenant-ID: <tenant-slug>`
+- **Subdomain**: `tenant-slug.sports.app`
+- **JWT Token**: Include tenant context
+
+### Isolamento Dati
+- Ogni tenant ha dati completamente isolati
+- Validazione automatica ownership
+- Rate limiting per tenant
+- Audit logging completo
+
+### Configurazione Tenant
+- Features abilitate/disabilitate
+- Limiti di utilizzo
+- Branding personalizzato
+- Configurazione business
 
 ## 🐳 Docker Development
 
@@ -179,9 +214,11 @@ docker exec -it sports_backend_dev sh
 
 ### MongoDB Collections
 - `users` - Utenti del sistema
+- `tenants` - Configurazioni tenant
 - `venues` - Bar sportivi
 - `fixtures` - Partite sportive
 - `bookings` - Prenotazioni
+- `matchAnnouncements` - Annunci partite
 - `offers` - Offerte e promozioni
 - `reviews` - Recensioni clienti
 
@@ -191,6 +228,7 @@ Il database include validazione automatica per:
 - Password minima lunghezza
 - Ruoli utente validi
 - Coordinate geografiche
+- Tenant isolation
 
 ## 🔒 Sicurezza
 
@@ -200,6 +238,8 @@ Il database include validazione automatica per:
 - **CORS** configurato
 - **Rate limiting** sulle API
 - **Input validation** con express-validator
+- **Tenant isolation** per isolamento dati
+- **Audit logging** per compliance
 
 ## 🧪 Testing
 
@@ -212,6 +252,9 @@ npm run frontend:test
 
 # Test backend
 npm run backend:test
+
+# Test multi-tenant
+npm run test:multi-tenant
 ```
 
 ## 📈 Monitoring
@@ -219,6 +262,8 @@ npm run backend:test
 - **Health checks** su tutti i servizi
 - **Logging** strutturato con Morgan
 - **Error handling** centralizzato
+- **Performance monitoring** con Web Vitals
+- **Audit trail** per tutte le operazioni
 
 ## 🚀 Deploy Production
 
@@ -248,5 +293,5 @@ Distributed under the MIT License. See `LICENSE` for more information.
 ## 📞 Supporto
 
 - **Email**: support@sports.it
-- **Documentation**: [docs/](./docs/)
-- **Issues**: GitHub Issues 
+- **Documentazione**: `/docs/`
+- **API Docs**: `/docs/API.md` 

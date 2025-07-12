@@ -1,491 +1,463 @@
-# SPOrTS - Guida Sviluppo
+# Guida Sviluppo SPOrTS
 
-## 🚀 Setup Ambiente di Sviluppo
+## 🚀 Setup Iniziale
 
-### Prerequisiti Obbligatori
-- **Node.js 18+** (LTS raccomandato)
-- **npm 9+** 
-- **Docker Desktop** (per sviluppo con containers)
-- **Git** (per version control)
-- **VS Code** (editor raccomandato)
+### **Prerequisiti**
+- Node.js 18+
+- npm 9+
+- Docker e Docker Compose
+- MongoDB (se non si usa Docker)
 
-### Estensioni VS Code Raccomandate
-```json
-{
-  "recommendations": [
-    "bradlc.vscode-tailwindcss",
-    "esbenp.prettier-vscode",
-    "ms-vscode.vscode-json",
-    "ms-vscode-remote.remote-containers",
-    "mongodb.mongodb-vscode"
-  ]
-}
+### **Installazione**
+```bash
+# Clona il repository
+git clone https://github.com/your-repo/sports.git
+cd sports
+
+# Installa tutte le dipendenze
+npm run install:all
+
+# Copia file di configurazione
+cp .env.example .env
+
+# Avvia in modalità sviluppo
+npm run dev
 ```
-
-### Setup Iniziale
-
-1. **Clone e Setup**
-   ```bash
-   git clone https://github.com/your-repo/sports.git
-   cd sports
-   npm run install:all
-   ```
-
-2. **Configurazione Environment**
-   ```bash
-   # Root level
-   cp .env.example .env
-   
-   # Backend specific
-   cp backend/.env.example backend/.env
-   ```
-
-3. **Database Setup**
-   ```bash
-   # Con Docker (raccomandato)
-   npm run docker:dev
-   
-   # O manualmente con MongoDB locale
-   npm run seed
-   ```
 
 ## 🏗️ Architettura del Progetto
 
-### Struttura Directory
+### **Struttura Backend**
 ```
-SPOrTS/
-├── .cursor/               # Cursor IDE rules
-├── backend/               # Node.js API
-│   ├── src/
-│   │   ├── config/        # Database, server config
-│   │   ├── controllers/   # Route handlers
-│   │   ├── middlewares/   # Auth, validation, etc.
-│   │   ├── models/        # MongoDB schemas
-│   │   ├── routes/        # API routes
-│   │   ├── services/      # Business logic
-│   │   └── utils/         # Helper functions
-│   ├── scripts/           # CLI tools, seeding
-│   └── tests/             # Unit/integration tests
-├── frontend/              # React Application
-│   ├── src/
-│   │   ├── components/    # Reusable UI components
-│   │   ├── contexts/      # React contexts
-│   │   ├── hooks/         # Custom hooks
-│   │   ├── pages/         # Route components
-│   │   ├── services/      # API calls
-│   │   └── utils/         # Helper functions
-│   └── public/            # Static assets
-├── docs/                  # Project documentation
-└── scripts/               # Global scripts
+backend/src/
+├── controllers/        # Route controllers
+├── models/            # Mongoose models
+├── routes/            # API routes
+├── middlewares/       # Express middlewares
+├── services/          # Business logic
+├── config/            # Configuration files
+└── utils/             # Utility functions
 ```
 
-### Pattern di Sviluppo
+### **Struttura Frontend**
+```
+frontend/src/
+├── components/        # Componenti UI riutilizzabili
+├── pages/            # Pagine dell'applicazione
+├── services/         # API services
+├── hooks/            # Custom React hooks
+├── contexts/         # React contexts
+├── utils/            # Utility functions
+├── types/            # TypeScript definitions
+└── styles/           # CSS e styling
+```
 
-#### Backend (Node.js + Express)
-- **MVC Pattern**: Model-View-Controller
-- **Middleware Chain**: Auth → Validation → Controller
-- **Error Handling**: Centralized error middleware
-- **Database**: MongoDB con Mongoose ODM
+## 🔧 Configurazione
 
-#### Frontend (React 18)
-- **Component Structure**: Atomic design
-- **State Management**: Context API + useReducer
-- **Styling**: Tailwind CSS con componenti custom
-- **Routing**: React Router v6
+### **Environment Variables**
+```bash
+# Database
+MONGODB_URI=mongodb://localhost:27017/sports-bar
 
-## 📝 Convenzioni di Coding
+# Server
+NODE_ENV=development
+PORT=3001
+FRONTEND_URL=http://localhost:5173
 
-### JavaScript/TypeScript
+# JWT
+JWT_SECRET=your-super-secret-jwt-key
+JWT_EXPIRES_IN=7d
+
+# Multi-Tenant
+DEFAULT_TENANT_SLUG=default
+ENABLE_MULTI_TENANT=true
+```
+
+### **Docker Development**
+```bash
+# Avvia tutti i servizi
+npm run docker:dev
+
+# Solo backend
+docker-compose -f docker-compose.dev.yml up backend
+
+# Solo frontend
+docker-compose -f docker-compose.dev.yml up frontend
+
+# Logs
+docker-compose -f docker-compose.dev.yml logs -f
+```
+
+## 🧪 Testing
+
+### **Test Backend**
+```bash
+# Test unitari
+npm run backend:test
+
+# Test multi-tenant
+npm run test:multi-tenant
+
+# Test specifico
+cd backend && npm test -- --grep "venue"
+```
+
+### **Test Frontend**
+```bash
+# Test unitari
+npm run frontend:test
+
+# Test E2E
+npm run test:e2e
+
+# Coverage
+npm run test:coverage
+```
+
+### **Test Multi-Tenant**
+```bash
+# Esegui suite completa
+npm run test:multi-tenant
+
+# Test specifico
+cd backend && node test-multi-tenant.js --test=isolation
+```
+
+## 🔍 Debugging
+
+### **Backend Debug**
+```bash
+# Avvia con debug
+cd backend && npm run dev:debug
+
+# Logs dettagliati
+DEBUG=* npm run backend:dev
+
+# MongoDB shell
+docker exec -it sports_mongodb_dev mongosh
+```
+
+### **Frontend Debug**
+```bash
+# DevTools
+# Apri Chrome DevTools (F12)
+# Tab Console per logs
+# Tab Network per API calls
+# Tab Performance per profiling
+```
+
+### **Database Debug**
+```bash
+# Connessione MongoDB
+mongosh mongodb://localhost:27017/sports-bar
+
+# Query di debug
+db.tenants.find({})
+db.venues.find({}).limit(5)
+db.bookings.aggregate([{ $group: { _id: "$tenantId", count: { $sum: 1 } } }])
+```
+
+## 📊 Performance
+
+### **Bundle Analysis**
+```bash
+# Frontend bundle
+cd frontend && npm run build:analyze
+
+# Backend dependencies
+cd backend && npm ls --depth=0
+```
+
+### **Database Performance**
+```bash
+# Indici
+db.venues.getIndexes()
+db.bookings.getIndexes()
+
+# Query performance
+db.venues.find({ tenantId: ObjectId("...") }).explain("executionStats")
+```
+
+### **API Performance**
+```bash
+# Test performance
+ab -n 1000 -c 10 http://localhost:3001/api/health
+
+# Monitor con Artillery
+npm install -g artillery
+artillery quick --count 100 --num 10 http://localhost:3001/api/health
+```
+
+## 🔒 Sicurezza
+
+### **Validazione Input**
 ```javascript
-// Naming conventions
-const API_BASE_URL = 'https://api.example.com'  // SCREAMING_SNAKE_CASE per costanti
-const userName = 'john_doe'                      // camelCase per variabili
-const UserProfile = () => {}                     // PascalCase per componenti
+// Usa express-validator
+const { body, validationResult } = require('express-validator')
 
-// Function declarations
-const fetchUserData = async (userId) => {
-  try {
-    const response = await api.get(`/users/${userId}`)
-    return response.data
-  } catch (error) {
-    console.error('Error fetching user:', error)
-    throw error
+const validateVenue = [
+  body('name').trim().isLength({ min: 2, max: 100 }),
+  body('email').isEmail().normalizeEmail(),
+  (req, res, next) => {
+    const errors = validationResult(req)
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() })
+    }
+    next()
   }
+]
+```
+
+### **Autenticazione**
+```javascript
+// JWT middleware
+const auth = require('../middlewares/auth')
+
+// Proteggi route
+router.get('/venues', auth, venueController.getVenues)
+```
+
+### **Multi-Tenant Security**
+```javascript
+// Tenant validation
+const TenantMiddleware = require('../middlewares/tenantMiddleware')
+
+// Richiedi tenant context
+router.use(TenantMiddleware.requireTenant)
+
+// Valida ownership
+router.use(SecurityMiddleware.validateTenantOwnership)
+```
+
+## 🚀 Deployment
+
+### **Development**
+```bash
+# Avvia sviluppo
+npm run dev
+
+# Build per test
+npm run build
+npm run preview
+```
+
+### **Production**
+```bash
+# Build production
+npm run build:prod
+
+# Docker production
+npm run docker:prod
+
+# Deploy
+docker-compose -f docker-compose.prod.yml up -d
+```
+
+### **Environment Variables Production**
+```bash
+# Copia template
+cp .env.example .env.production
+
+# Configura per production
+NODE_ENV=production
+MONGODB_URI=mongodb://prod-db:27017/sports-bar-prod
+JWT_SECRET=your-production-secret
+```
+
+## 📝 Coding Standards
+
+### **JavaScript/TypeScript**
+```javascript
+// ✅ DO: Usa ES6+ features
+const { name, email } = user
+const venues = await Venue.find({ tenantId: req.tenantId })
+
+// ✅ DO: Error handling
+try {
+  const result = await someAsyncOperation()
+  return res.json({ success: true, data: result })
+} catch (error) {
+  console.error('Operation failed:', error)
+  return res.status(500).json({ success: false, error: 'Operation failed' })
 }
 
-// Component structure
-const UserCard = ({ user, onUpdate }) => {
-  const [isLoading, setIsLoading] = useState(false)
-  
-  const handleUpdate = async () => {
-    setIsLoading(true)
-    try {
-      await onUpdate(user.id)
-    } finally {
-      setIsLoading(false)
-    }
+// ✅ DO: TypeScript per frontend
+interface Venue {
+  id: string
+  name: string
+  description?: string
+  tenantId: string
+}
+```
+
+### **React Components**
+```typescript
+// ✅ DO: Functional components con hooks
+import React from 'react'
+import { useQuery } from '@tanstack/react-query'
+
+interface VenueCardProps {
+  venue: Venue
+  onSelect?: (venue: Venue) => void
+}
+
+export const VenueCard: React.FC<VenueCardProps> = ({ venue, onSelect }) => {
+  const handleClick = () => {
+    onSelect?.(venue)
   }
-  
+
   return (
-    <div className="p-4 border rounded-lg">
-      {/* Component content */}
+    <div className="venue-card" onClick={handleClick}>
+      <h3>{venue.name}</h3>
+      <p>{venue.description}</p>
     </div>
   )
 }
 ```
 
-### File Naming
-```
-components/
-├── ui/
-│   ├── Button.jsx           # PascalCase per componenti
-│   ├── Input.jsx
-│   └── Modal.jsx
-├── auth/
-│   ├── LoginForm.jsx
-│   └── RegisterForm.jsx
-└── layout/
-    ├── Header.jsx
-    └── Footer.jsx
-
-services/
-├── authService.js           # camelCase per servizi
-├── apiService.js
-└── storageService.js
-
-utils/
-├── formatters.js            # camelCase per utilities
-├── validators.js
-└── constants.js
-```
-
-### CSS/Tailwind
-```css
-/* Utility-first approach */
-.btn-primary {
-  @apply bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors;
-}
-
-/* Component-specific classes */
-.venue-card {
-  @apply bg-white shadow-md rounded-lg p-6 hover:shadow-lg transition-shadow;
-}
-
-/* Responsive design */
-.hero-section {
-  @apply grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6;
-}
-```
-
-## 🔄 Workflow di Sviluppo
-
-### Branch Strategy
-```
-main                 # Production ready code
-├── develop          # Development integration
-├── feature/auth     # Feature branches
-├── feature/booking  
-├── hotfix/security  # Emergency fixes
-└── release/v1.0     # Release preparation
-```
-
-### Commit Messages
-```bash
-# Format: type(scope): description
-
-feat(auth): add JWT token refresh mechanism
-fix(booking): resolve date validation issue  
-docs(api): update authentication endpoints
-style(ui): improve button spacing
-refactor(db): optimize venue queries
-test(auth): add integration tests
-chore(deps): update React to v18.2
-```
-
-### Pull Request Process
-1. **Feature Branch**: Crea branch da `develop`
-2. **Development**: Implementa feature con test
-3. **Code Review**: PR verso `develop`
-4. **Testing**: CI/CD pipeline + manual testing
-5. **Merge**: Squash merge in `develop`
-
-## 🧪 Testing
-
-### Struttura Testing
-```
-tests/
-├── unit/                  # Unit tests
-│   ├── components/
-│   ├── services/
-│   └── utils/
-├── integration/           # Integration tests
-│   ├── api/
-│   └── database/
-└── e2e/                   # End-to-end tests
-    ├── auth.test.js
-    ├── booking.test.js
-    └── search.test.js
-```
-
-### Test Commands
-```bash
-# Frontend tests
-npm run frontend:test        # Jest + React Testing Library
-npm run frontend:test:watch  # Watch mode
-npm run frontend:test:coverage
-
-# Backend tests  
-npm run backend:test         # Jest + Supertest
-npm run backend:test:watch
-npm run backend:test:coverage
-
-# E2E tests
-npm run test:e2e            # Playwright/Cypress
-```
-
-### Test Examples
+### **API Design**
 ```javascript
-// Component test
-import { render, screen, fireEvent } from '@testing-library/react'
-import LoginForm from '../LoginForm'
+// ✅ DO: Response format consistente
+{
+  success: true,
+  data: { ... },
+  message: "Operation successful",
+  pagination: { ... } // se applicabile
+}
 
-test('shows validation error for invalid email', async () => {
-  render(<LoginForm />)
-  
-  const emailInput = screen.getByLabelText(/email/i)
-  const submitButton = screen.getByRole('button', { name: /login/i })
-  
-  fireEvent.change(emailInput, { target: { value: 'invalid-email' } })
-  fireEvent.click(submitButton)
-  
-  expect(await screen.findByText(/invalid email format/i)).toBeInTheDocument()
-})
-
-// API test
-const request = require('supertest')
-const app = require('../app')
-
-describe('POST /api/auth/login', () => {
-  test('returns JWT token for valid credentials', async () => {
-    const response = await request(app)
-      .post('/api/auth/login')
-      .send({
-        email: 'demo@sports.it',
-        password: 'demo123'
-      })
-      .expect(200)
-      
-    expect(response.body).toHaveProperty('token')
-    expect(response.body.user.email).toBe('demo@sports.it')
-  })
-})
+// ✅ DO: Error format consistente
+{
+  success: false,
+  error: "Error type",
+  message: "User-friendly message"
+}
 ```
 
-## 🚀 Deployment
+## 🔄 Git Workflow
 
-### Environment Configs
+### **Branch Strategy**
 ```bash
-# Development
-NODE_ENV=development
-PORT=5000
-MONGO_URI=mongodb://localhost:27017/sports-dev
+# Feature branch
+git checkout -b feature/venue-management
 
-# Production  
-NODE_ENV=production
-PORT=80
-MONGO_URI=mongodb://prod-cluster/sports
-JWT_SECRET=super-secure-secret
+# Bug fix
+git checkout -b fix/tenant-isolation
+
+# Hotfix
+git checkout -b hotfix/security-patch
 ```
 
-### Docker Production
+### **Commit Messages**
 ```bash
-# Build production images
-npm run docker:prod
-
-# Environment-specific compose
-docker-compose -f docker-compose.prod.yml up -d
-
-# Health checks
-curl http://localhost/health
+# Formato: type(scope): description
+feat(venues): add venue creation endpoint
+fix(auth): resolve tenant validation issue
+docs(api): update authentication documentation
+test(multi-tenant): add isolation tests
 ```
 
-### CI/CD Pipeline
-```yaml
-# .github/workflows/deploy.yml
-name: Deploy
-on:
-  push:
-    branches: [main]
-    
-jobs:
-  test:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-node@v3
-      - run: npm run install:all
-      - run: npm test
-      
-  deploy:
-    needs: test
-    runs-on: ubuntu-latest
-    steps:
-      - name: Deploy to production
-        run: |
-          docker build -t sports-app .
-          docker push registry/sports-app:latest
-```
+### **Pull Request**
+1. **Crea feature branch**
+2. **Implementa feature**
+3. **Aggiungi test**
+4. **Aggiorna documentazione**
+5. **Crea Pull Request**
+6. **Code review**
+7. **Merge**
 
-## 🐛 Debug e Troubleshooting
+## 🐛 Troubleshooting
 
-### Common Issues
+### **Problemi Comuni**
 
-#### Database Connection
+#### **1. Database Connection**
 ```bash
-# Check MongoDB status
-docker ps | grep mongo
-
-# View MongoDB logs
+# Verifica MongoDB
+docker ps | grep mongodb
 docker logs sports_mongodb_dev
 
-# Connect to MongoDB shell
-docker exec -it sports_mongodb_dev mongosh
+# Test connessione
+mongosh mongodb://localhost:27017/sports-bar
 ```
 
-#### API Errors
+#### **2. Port Conflicts**
 ```bash
-# Check backend logs
-docker logs sports_backend_dev
+# Verifica porte in uso
+lsof -i :3001
+lsof -i :5173
 
-# Test API endpoints
-curl -X GET http://localhost:5000/health
-curl -X POST http://localhost:5000/api/auth/login \
-  -H "Content-Type: application/json" \
-  -d '{"email":"demo@sports.it","password":"demo123"}'
+# Cambia porta
+PORT=3002 npm run backend:dev
 ```
 
-#### Frontend Issues
+#### **3. Multi-Tenant Issues**
 ```bash
-# Clear node modules
-rm -rf frontend/node_modules frontend/package-lock.json
-cd frontend && npm install
+# Debug tenant
+curl -H "X-Tenant-ID: default" http://localhost:3001/api/health
 
-# Check frontend logs
-npm run frontend:dev
-
-# Build issues
-npm run frontend:build
+# Verifica tenant nel database
+db.tenants.find({ slug: "default" })
 ```
 
-### Debug Tools
-
-#### Backend Debugging
-```javascript
-// Add debug logging
-const debug = require('debug')('sports:auth')
-debug('User login attempt:', { email: req.body.email })
-
-// Environment-based logging
-if (process.env.NODE_ENV === 'development') {
-  console.log('Debug info:', data)
-}
-```
-
-#### Frontend Debugging
-```javascript
-// React DevTools
-import { useDebugValue } from 'react'
-
-const useAuth = () => {
-  const [user, setUser] = useState(null)
-  useDebugValue(user ? `Logged in: ${user.email}` : 'Not logged in')
-  return { user, setUser }
-}
-
-// Console debugging
-console.group('Auth Flow')
-console.log('User:', user)
-console.log('Token:', token)
-console.groupEnd()
-```
-
-## 📊 Performance
-
-### Monitoring
-- **Frontend**: Web Vitals, Lighthouse
-- **Backend**: Response times, memory usage
-- **Database**: Query performance, indexes
-
-### Optimization Tips
-```javascript
-// React optimization
-const MemoizedComponent = React.memo(({ data }) => (
-  <div>{data.title}</div>
-))
-
-// Database optimization
-// Good: Indexed field query
-await Venue.find({ city: 'Milano' })
-
-// Bad: Full collection scan
-await Venue.find({ description: /pizza/ })
-
-// API optimization
-// Good: Pagination
-await Venue.find().limit(20).skip(page * 20)
-
-// Good: Field selection
-await Venue.find().select('name location rating')
-```
-
-## 🔧 Utilities e Scripts
-
-### Seeding Database
+#### **4. Frontend Build Issues**
 ```bash
-# Populate with demo data
-npm run seed
+# Pulisci cache
+cd frontend && rm -rf node_modules package-lock.json
+npm install
 
-# Custom seeding
-cd backend && node scripts/seed.js --venues=50 --bookings=200
+# Rebuild
+npm run build
 ```
 
-### Database Operations
+### **Logs e Monitoring**
 ```bash
-# Backup database
-mongodump --uri="mongodb://localhost:27017/sports" --out=./backup
+# Backend logs
+docker-compose -f docker-compose.dev.yml logs -f backend
 
-# Restore database
-mongorestore --uri="mongodb://localhost:27017/sports" ./backup/sports
+# Frontend logs
+docker-compose -f docker-compose.dev.yml logs -f frontend
 
-# Reset database
-npm run db:reset
+# Database logs
+docker-compose -f docker-compose.dev.yml logs -f mongodb
 ```
 
-### Code Quality
+## 📚 Risorse
+
+### **Documentazione**
+- [README.md](../README.md) - Overview progetto
+- [API.md](./API.md) - Documentazione API
+- [MULTI_TENANT.md](./MULTI_TENANT.md) - Sistema multi-tenant
+
+### **Regole Cursor**
+- [project_structure.mdc](../.cursor/rules/project_structure.mdc) - Struttura progetto
+- [multi_tenant.mdc](../.cursor/rules/multi_tenant.mdc) - Regole multi-tenant
+- [react_frontend.mdc](../.cursor/rules/react_frontend.mdc) - Frontend React
+
+### **Librerie Principali**
+- **Backend**: Express, Mongoose, JWT, bcryptjs
+- **Frontend**: React, TypeScript, Tailwind CSS, React Query
+- **Testing**: Jest, React Testing Library
+- **DevOps**: Docker, MongoDB
+
+### **Comandi Utili**
 ```bash
-# Linting
-npm run lint
-npm run lint:fix
+# Sviluppo
+npm run dev              # Avvia frontend + backend
+npm run frontend:dev     # Solo frontend
+npm run backend:dev      # Solo backend
 
-# Formatting
-npm run format
+# Build
+npm run build            # Build completo
+npm run build:prod       # Build production
 
-# Type checking (if using TypeScript)
-npm run type-check
-```
+# Test
+npm test                 # Tutti i test
+npm run test:multi-tenant # Test multi-tenant
 
----
+# Database
+npm run seed             # Popola database
+npm run db:reset         # Reset database
 
-## 📚 Risorse Aggiuntive
-
-- [React Documentation](https://react.dev)
-- [Express.js Guide](https://expressjs.com)
-- [MongoDB Manual](https://docs.mongodb.com)
-- [Tailwind CSS Docs](https://tailwindcss.com/docs)
-- [Testing Library](https://testing-library.com)
-
-Per domande specifiche, controlla:
-1. **Issues GitHub** per problemi noti
-2. **API Documentation** in `docs/api.md`
-3. **Component Storybook** (se configurato)
-4. **Team Chat** per supporto diretto 
+# Docker
+npm run docker:dev       # Development
+npm run docker:prod      # Production
+npm run docker:down      # Ferma container
+``` 
