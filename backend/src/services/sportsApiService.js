@@ -1,399 +1,163 @@
 const axios = require('axios');
+const path = require('path');
 const NodeCache = require('node-cache');
+const axiosRetry = require('axios-retry').default;
+const CircuitBreaker = require('opossum');
+require('dotenv').config({ path: path.resolve(__dirname, '../../.env') });
+const mockFixtures = require('./mocks/sportmonks_fixtures.json');
 
-// Cache per 30 minuti (API calls sono limitati)
-const cache = new NodeCache({ stdTTL: 1800 });
+const USE_MOCK_API = process.env.USE_MOCK_API === 'true';
 
-class SportsApiService {
-  constructor() {
-    this.rapidApiKey = process.env.RAPID_API_KEY || 'fd4d9d50ebmshe430dffa8b07089p19cfbfjsn70f03bbfeaef';
-    this.rapidApiHost = 'api-football-v1.p.rapidapi.com';
-    this.baseUrl = 'https://api-football-v1.p.rapidapi.com/v3';
-    
-    // Rate limiting (100 calls per month su plan gratuito)
-    this.rateLimiter = {
-      calls: 0,
-      resetTime: Date.now() + (24 * 60 * 60 * 1000), // Reset ogni 24h
-      maxCalls: 100
-    };
-  }
+const API_TOKEN = process.env.SPORTMONKS_API_TOKEN;
+const BASE_URL = 'https://api.sportmonks.com/v3/football';
 
-  // Headers standard per RapidAPI
-  getHeaders() {
-    return {
-      'X-RapidAPI-Key': this.rapidApiKey,
-      'X-RapidAPI-Host': this.rapidApiHost,
-      'Content-Type': 'application/json'
-    };
-  }
+// Istanza della cache
+const apiCache = new NodeCache({ stdTTL: 300 });
 
-  // Controllo rate limit
-  checkRateLimit() {
-    if (Date.now() > this.rateLimiter.resetTime) {
-      this.rateLimiter.calls = 0;
-      this.rateLimiter.resetTime = Date.now() + (24 * 60 * 60 * 1000);
+const apiClient = axios.create({
+    baseURL: BASE_URL,
+    params: {
+        api_token: API_TOKEN,
+    },
+});
+
+// Configurazione di axios-retry
+axiosRetry(apiClient, { 
+    retries: 3,
+    retryDelay: (retryCount) => {
+        console.log(`Tentativo di retry #${retryCount} per la chiamata API...`);
+        return retryCount * 1000;
+    },
+    retryCondition: (error) => {
+        return axiosRetry.isNetworkOrIdempotentRequestError(error) || (error.response && error.response.status >= 500);
     }
-    
-    if (this.rateLimiter.calls >= this.rateLimiter.maxCalls) {
-      throw new Error('Rate limit exceeded. Try again tomorrow.');
-    }
-    
-    this.rateLimiter.calls++;
-  }
+});
 
-  // Helper per fare chiamate API con cache e rate limiting
-  async makeApiCall(endpoint, params = {}) {
-    const cacheKey = `${endpoint}_${JSON.stringify(params)}`;
-    const cached = cache.get(cacheKey);
-    
-    if (cached) {
-      console.log(`📦 Cache hit for ${endpoint}`);
-      return cached;
-    }
+// Opzioni per il Circuit Breaker
+const circuitBreakerOptions = {
+    timeout: 10000, // 10 secondi
+    errorThresholdPercentage: 50,
+    resetTimeout: 30000 // 30 secondi
+};
 
-    this.checkRateLimit();
-    
-    try {
-      console.log(`🌐 API call to ${endpoint} (${this.rateLimiter.calls}/${this.rateLimiter.maxCalls})`);
-      
-      const response = await axios.get(`${this.baseUrl}${endpoint}`, {
-        headers: this.getHeaders(),
-        params,
-        timeout: 10000
-      });
+// Funzione generica per eseguire una chiamata API con circuit breaker
+async function callApiWithCircuitBreaker(name, apiCall) {
+    const breaker = new CircuitBreaker(apiCall, { ...circuitBreakerOptions, name });
 
-      const data = response.data;
-      cache.set(cacheKey, data);
-      
-      return data;
-    } catch (error) {
-      console.error(`❌ API Error for ${endpoint}:`, error.response?.data || error.message);
-      
-      // Fallback con dati mock se API fallisce
-      return this.getFallbackData(endpoint, params);
-    }
-  }
+    breaker.on('open', () => console.log(`[CircuitBreaker] Circuito '${name}' APERTO.`));
+    breaker.on('halfOpen', () => console.log(`[CircuitBreaker] Circuito '${name}' SEMI-APERTO.`));
+    breaker.on('close', () => console.log(`[CircuitBreaker] Circuito '${name}' CHIUSO.`));
 
-  // Ottieni leghe/competizioni disponibili
-  async getLeagues() {
-    try {
-      const data = await this.makeApiCall('/leagues', {
-        current: true,
-        type: 'league'
-      });
-
-      const leagues = data.response
-        ?.filter(league => 
-          ['Serie A', 'Premier League', 'Champions League', 'La Liga', 'Bundesliga', 'Ligue 1', 'Europa League']
-          .includes(league.league?.name)
-        )
-        .map(this.formatLeague) || [];
-
-      return {
-        success: true,
-        data: leagues,
-        source: 'api-football',
-        disclaimer: 'Dati forniti da API Football. Verificare sempre con fonti ufficiali.'
-      };
-    } catch (error) {
-      return this.getLeaguesFallback();
-    }
-  }
-
-  // Ricerca partite
-  async searchMatches(searchQuery = '', options = {}) {
-    try {
-      const today = new Date();
-      const nextWeek = new Date(today.getTime() + (7 * 24 * 60 * 60 * 1000));
-      
-      // Parametri per API Football
-      const params = {
-        from: options.fromDate || today.toISOString().split('T')[0],
-        to: options.toDate || nextWeek.toISOString().split('T')[0],
-        status: 'NS', // Not Started
-        timezone: 'Europe/Rome'
-      };
-
-      // Filtra per lega se specificata
-      if (options.league) {
-        params.league = this.getLeagueApiId(options.league);
-      }
-
-      const data = await this.makeApiCall('/fixtures', params);
-      
-      let matches = data.response?.map(this.formatMatch) || [];
-
-      // Filtro locale per search query
-      if (searchQuery) {
-        const query = searchQuery.toLowerCase();
-        matches = matches.filter(match => 
-          match.homeTeam.toLowerCase().includes(query) ||
-          match.awayTeam.toLowerCase().includes(query) ||
-          match.competition.name.toLowerCase().includes(query)
-        );
-      }
-
-      // Limita risultati per performance
-      matches = matches.slice(0, options.limit || 20);
-
-      // 🚀 Se l'API reale non trova partite, mostra dati di fallback per testing
-      if (matches.length === 0) {
-        console.log('⚠️ No real matches found, showing fallback data for testing');
-        const fallbackResult = this.getMatchesFallback(searchQuery, options);
-        return {
-          ...fallbackResult,
-          meta: {
-            source: 'api-football-fallback',
-            rateLimitRemaining: this.rateLimiter.maxCalls - this.rateLimiter.calls,
-            disclaimer: 'Nessuna partita trovata nel periodo specificato. Mostrando dati di esempio per test.'
-          },
-          message: `Trovate ${fallbackResult.data.length} partite (dati di esempio)`
-        };
-      }
-
-      return {
-        success: true,
-        data: matches,
-        count: matches.length,
-        source: 'api-football',
-        rateLimitRemaining: this.rateLimiter.maxCalls - this.rateLimiter.calls,
-        disclaimer: 'Dati forniti da API Football. SPOrTS non è responsabile dell\'accuratezza dei dati.',
-        message: `Trovate ${matches.length} partite`
-      };
-    } catch (error) {
-      console.error('❌ Error searching matches:', error.message);
-      return this.getMatchesFallback(searchQuery, options);
-    }
-  }
-
-  // Ottieni partite per data specifica
-  async getMatchesByDate(date, league = null) {
-    try {
-      const params = {
-        date,
-        timezone: 'Europe/Rome'
-      };
-
-      if (league) {
-        params.league = this.getLeagueApiId(league);
-      }
-
-      const data = await this.makeApiCall('/fixtures', params);
-      const matches = data.response?.map(this.formatMatch) || [];
-
-      return {
-        success: true,
-        data: matches,
-        count: matches.length,
-        source: 'api-football'
-      };
-    } catch (error) {
-      return this.getMatchesFallback('', { date, league });
-    }
-  }
-
-  // Formatta lega da API response
-  formatLeague(apiLeague) {
-    const league = apiLeague.league;
-    const logoMap = {
-      'Serie A': '🇮🇹',
-      'Premier League': '🏴󠁧󠁢󠁥󠁮󠁧󠁿',
-      'Champions League': '🏆',
-      'La Liga': '🇪🇸', 
-      'Bundesliga': '🇩🇪',
-      'Ligue 1': '🇫🇷',
-      'Europa League': '🏅'
-    };
-
-    return {
-      id: league.id.toString(),
-      name: league.name,
-      country: apiLeague.country?.name,
-      logo: logoMap[league.name] || '⚽',
-      season: apiLeague.seasons?.[0]?.year,
-      apiId: league.id
-    };
-  }
-
-  // Formatta partita da API response
-  formatMatch(apiFixture) {
-    const fixture = apiFixture.fixture;
-    const teams = apiFixture.teams;
-    const league = apiFixture.league;
-
-    // Emoji per squadre famose
-    const teamEmojis = {
-      'Juventus': '⚪⚫',
-      'Inter': '🔵⚫', 
-      'Milan': '🔴⚫',
-      'Napoli': '🔵',
-      'Roma': '🟡🔴',
-      'Lazio': '💙🤍',
-      'Real Madrid': '⚪',
-      'Barcelona': '🔴🔵',
-      'Liverpool': '🔴',
-      'Manchester City': '🔵',
-      'Arsenal': '🔴⚪',
-      'Chelsea': '🔵',
-      'Bayern Munich': '🔴⚪',
-      'Borussia Dortmund': '🟡⚫',
-      'PSG': '🔴🔵⚪'
-    };
-
-    const homeTeam = teams.home.name;
-    const awayTeam = teams.away.name;
-
-    return {
-      id: fixture.id.toString(),
-      homeTeam,
-      awayTeam,
-      competition: {
-        id: league.id.toString(),
-        name: league.name,
-        logo: this.getLeagueLogo(league.name)
-      },
-      date: new Date(fixture.date).toISOString().split('T')[0],
-      time: new Date(fixture.date).toLocaleTimeString('it-IT', { 
-        hour: '2-digit', 
-        minute: '2-digit' 
-      }),
-      homeTeamLogo: teamEmojis[homeTeam] || '🏠',
-      awayTeamLogo: teamEmojis[awayTeam] || '✈️',
-      venue: fixture.venue?.name,
-      source: 'api-football',
-      externalId: fixture.id.toString(),
-      isLive: fixture.status.short === '1H' || fixture.status.short === '2H'
-    };
-  }
-
-  // Mapping ID leghe per API
-  getLeagueApiId(leagueName) {
-    const mapping = {
-      'serie-a': 135,
-      'premier': 39,
-      'champions': 2,
-      'laliga': 140,
-      'bundesliga': 78,
-      'ligue1': 61,
-      'europa': 3
-    };
-    return mapping[leagueName] || null;
-  }
-
-  // Logo per leghe
-  getLeagueLogo(leagueName) {
-    const logos = {
-      'Serie A': '🇮🇹',
-      'Premier League': '🏴󠁧󠁢󠁥󠁮󠁧󠁿',
-      'UEFA Champions League': '🏆',
-      'La Liga': '🇪🇸',
-      'Bundesliga': '🇩🇪',
-      'Ligue 1': '🇫🇷',
-      'UEFA Europa League': '🏅'
-    };
-    return logos[leagueName] || '⚽';
-  }
-
-  // Fallback data quando API non disponibile
-  getFallbackData(endpoint, params) {
-    console.log(`📝 Using fallback data for ${endpoint}`);
-    
-    if (endpoint.includes('leagues')) {
-      return this.getLeaguesFallback();
-    }
-    
-    if (endpoint.includes('fixtures')) {
-      return this.getMatchesFallback();
-    }
-    
-    return { success: false, error: 'API unavailable and no fallback data' };
-  }
-
-  getLeaguesFallback() {
-    return {
-      success: true,
-      data: [
-        { id: 'serie-a', name: 'Serie A', logo: '🇮🇹', country: 'Italy' },
-        { id: 'premier', name: 'Premier League', logo: '🏴󠁧󠁢󠁥󠁮󠁧󠁿', country: 'England' },
-        { id: 'champions', name: 'Champions League', logo: '🏆', country: 'Europe' },
-        { id: 'laliga', name: 'La Liga', logo: '🇪🇸', country: 'Spain' },
-        { id: 'bundesliga', name: 'Bundesliga', logo: '🇩🇪', country: 'Germany' },
-        { id: 'ligue1', name: 'Ligue 1', logo: '🇫🇷', country: 'France' }
-      ],
-      source: 'fallback',
-      disclaimer: 'Dati mock - API non disponibile'
-    };
-  }
-
-  getMatchesFallback(searchQuery = '', options = {}) {
-    const mockMatches = [
-      {
-        id: 'mock_1',
-        homeTeam: 'Juventus',
-        awayTeam: 'Inter',
-        competition: { id: 'serie-a', name: 'Serie A', logo: '🇮🇹' },
-        date: '2024-01-20',
-        time: '20:45',
-        homeTeamLogo: '⚪⚫',
-        awayTeamLogo: '🔵⚫',
-        source: 'fallback'
-      },
-      {
-        id: 'mock_2',
-        homeTeam: 'Real Madrid',
-        awayTeam: 'Barcelona',
-        competition: { id: 'champions', name: 'Champions League', logo: '🏆' },
-        date: '2024-01-22',
-        time: '21:00',
-        homeTeamLogo: '⚪',
-        awayTeamLogo: '🔴🔵',
-        source: 'fallback'
-      }
-    ];
-
-    // Filtro per search query
-    let filteredMatches = mockMatches;
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase();
-      filteredMatches = mockMatches.filter(match =>
-        match.homeTeam.toLowerCase().includes(query) ||
-        match.awayTeam.toLowerCase().includes(query)
-      );
-    }
-
-    return {
-      success: true,
-      data: filteredMatches,
-      count: filteredMatches.length,
-      source: 'fallback',
-      disclaimer: 'Dati mock - API non disponibile. Utilizzare solo per test.'
-    };
-  }
-
-  // Metodo per testare connessione API
-  async testConnection() {
-    try {
-      const data = await this.makeApiCall('/status');
-      return {
-        success: true,
-        status: 'connected',
-        remaining: this.rateLimiter.maxCalls - this.rateLimiter.calls,
-        resetTime: this.rateLimiter.resetTime
-      };
-    } catch (error) {
-      return {
-        success: false,
-        status: 'disconnected',
-        error: error.message
-      };
-    }
-  }
-
-  // Pulisci cache (per admin)
-  clearCache() {
-    cache.flushAll();
-    return { success: true, message: 'Cache cleared' };
-  }
+    return breaker.fire();
 }
 
-module.exports = new SportsApiService(); 
+
+/**
+ * Recupera una lista di leghe, utilizzando cache e circuit breaker.
+ */
+async function getLeagues() {
+    const cacheKey = 'leagues_all';
+    const cachedData = apiCache.get(cacheKey);
+
+    if (cachedData) {
+        console.log(`[Cache] HIT per ${cacheKey}`);
+        return cachedData;
+    }
+    
+    const apiCall = async () => {
+        console.log(`[API] MISS per ${cacheKey}. Chiamata a Sportmonks...`);
+        const response = await apiClient.get('/leagues');
+        apiCache.set(cacheKey, response.data.data, 3600);
+        return response.data.data;
+    };
+
+    try {
+        return await callApiWithCircuitBreaker('getLeagues', apiCall);
+    } catch (error) {
+        console.error('Errore durante il recupero delle leghe (post circuit-breaker):', error.message);
+        throw error;
+    }
+}
+
+/**
+ * Recupera le partite per una data specifica, utilizzando cache e circuit breaker.
+ */
+async function getFixturesByDate(date) {
+    if (USE_MOCK_API) {
+        console.log(`[MOCK] Restituzione dati finti per le partite del giorno: ${date}`);
+        // Filtra i mock per la data richiesta (ignorando l'ora)
+        const requestedDate = new Date(date);
+        const startOfDay = new Date(requestedDate.setHours(0, 0, 0, 0));
+        const endOfDay = new Date(requestedDate.setHours(23, 59, 59, 999));
+
+        return mockFixtures.filter(fixture => {
+            const fixtureDate = new Date(fixture.starting_at);
+            return fixtureDate >= startOfDay && fixtureDate <= endOfDay;
+        });
+    }
+
+    const cacheKey = `fixtures_date_${date}_no_venue`;
+    const cachedData = apiCache.get(cacheKey);
+
+    if (cachedData) {
+        console.log(`[Cache] HIT per ${cacheKey}`);
+        return cachedData;
+    }
+
+    const apiCall = async () => {
+        console.log(`[API] MISS per ${cacheKey}. Chiamata a Sportmonks (senza venue)...`);
+        const response = await apiClient.get(`/fixtures/date/${date}`, {
+            params: { include: 'participants;league' }
+        });
+        apiCache.set(cacheKey, response.data.data, 60);
+        return response.data.data;
+    };
+    
+    try {
+        return await callApiWithCircuitBreaker('getFixturesByDate', apiCall);
+    } catch (error) {
+        console.error(`Errore durante il recupero delle partite per la data ${date} (post circuit-breaker):`, error.message);
+        throw error;
+    }
+}
+
+/**
+ * Recupera i dettagli di una singola partita, utilizzando cache e circuit breaker.
+ */
+async function getFixtureById(fixtureId) {
+    if (USE_MOCK_API) {
+        console.log(`[MOCK] Restituzione dati finti per la partita ID: ${fixtureId}`);
+        return mockFixtures.find(fixture => fixture.id === parseInt(fixtureId, 10));
+    }
+    
+    const cacheKey = `fixture_${fixtureId}_no_venue`;
+    const cachedData = apiCache.get(cacheKey);
+
+    if (cachedData) {
+        console.log(`[Cache] HIT per ${cacheKey}`);
+        return cachedData;
+    }
+
+    const apiCall = async () => {
+        console.log(`[API] MISS per ${cacheKey}. Chiamata a Sportmonks (senza venue)...`);
+        const response = await apiClient.get(`/fixtures/${fixtureId}`, {
+            params: { include: 'participants;league' }
+        });
+        apiCache.set(cacheKey, response.data.data, 60);
+        return response.data.data;
+    };
+
+    try {
+        return await callApiWithCircuitBreaker('getFixtureById', apiCall);
+    } catch (error) {
+        console.error(`Errore durante il recupero della partita con ID ${fixtureId} (post circuit-breaker):`, error.message);
+        throw error;
+    }
+}
+
+
+module.exports = {
+    getLeagues,
+    getFixturesByDate,
+    getFixtureById,
+}; 

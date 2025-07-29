@@ -1,5 +1,6 @@
 const fixturesService = require('../services/fixturesService')
 const Fixture = require('../models/Fixture')
+const TenantQuery = require('../utils/tenantQuery')
 
 class FixtureController {
   
@@ -169,14 +170,43 @@ class FixtureController {
     try {
       const { limit = 15 } = req.query
 
-      const fixtures = await Fixture.find({
+      // ✅ FIX: Usa TenantQuery per consistenza, ma con fallback per fixtures globali
+      let fixtures;
+      try {
+        // Prima prova con tenant context se disponibile
+        if (req.tenantId) {
+          fixtures = await TenantQuery.find(Fixture, req.tenantId, {
         isActive: true,
         date: { $gte: new Date() },
         status: 'scheduled'
       })
       .sort({ popularity: -1, totalBookings: -1, date: 1 })
       .limit(parseInt(limit))
-      .lean()
+          .lean();
+        }
+        
+        // Se non ci sono fixtures tenant-specific o non c'è tenant, usa query globale
+        if (!fixtures || fixtures.length === 0) {
+          fixtures = await Fixture.find({
+            isActive: true,
+            date: { $gte: new Date() },
+            status: 'scheduled'
+          })
+          .sort({ popularity: -1, totalBookings: -1, date: 1 })
+          .limit(parseInt(limit))
+          .lean();
+        }
+      } catch (error) {
+        console.log('⚠️ TenantQuery failed, falling back to direct query:', error.message);
+        fixtures = await Fixture.find({
+          isActive: true,
+          date: { $gte: new Date() },
+          status: 'scheduled'
+        })
+        .sort({ popularity: -1, totalBookings: -1, date: 1 })
+        .limit(parseInt(limit))
+        .lean();
+      }
 
       // Arricchisce con canali TV
       const enrichedFixtures = fixtures.map(fixture => 

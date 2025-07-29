@@ -81,7 +81,7 @@ const AuthTest = () => {
           <div style={buttonContainerStyle}>
             <Button 
               variant="primary" 
-              onClick={() => navigate('/login')}
+              onClick={() => navigate('/client-login')}
               style={{
                 padding: '0.75rem 2rem',
                 fontSize: '1.1rem',

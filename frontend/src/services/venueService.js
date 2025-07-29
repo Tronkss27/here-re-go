@@ -1,5 +1,6 @@
 // Servizio centralizzato per gestire tutti i dati del venue
 // Utilizzando localStorage per la persistenza con supporto multi-tenant
+import apiClient from './apiClient.js';
 
 const STORAGE_KEYS = {
   VENUE_PROFILE: 'venue_profile',
@@ -19,14 +20,39 @@ class VenueApiClient {
     this.baseUrl = '/api/venues';
   }
 
+  // Ottiene il tenantId corretto dall'utente
+  getTenantId() {
+    const user = JSON.parse(localStorage.getItem('user') || '{}');
+    
+    // ✅ FIX: Usa il tenantId dell'utente, non il suo ID
+    if (user.tenantId) {
+      console.log('✅ Using user.tenantId:', user.tenantId);
+      return user.tenantId;
+    }
+    
+    // Fallback per compatibilità con utenti vecchi
+    if (user.id) {
+      console.warn('⚠️ Using user.id as fallback tenantId:', user.id);
+      return user.id;
+    }
+    
+    console.error('❌ No tenantId found in user object');
+    return '';
+  }
+
   async createVenue(venueData) {
     try {
       const token = localStorage.getItem('token');
+      const tenantId = this.getTenantId();
+      
+      console.log('🏢 Creating venue with tenantId:', tenantId);
+      
       const response = await fetch(this.baseUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
+          'Authorization': `Bearer ${token}`,
+          'X-Tenant-ID': tenantId // ✅ Usa il tenantId corretto
         },
         body: JSON.stringify(venueData)
       });
@@ -47,11 +73,14 @@ class VenueApiClient {
   async updateVenue(venueId, venueData) {
     try {
       const token = localStorage.getItem('token');
+      const tenantId = this.getTenantId();
+      
       const response = await fetch(`${this.baseUrl}/${venueId}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
+          'Authorization': `Bearer ${token}`,
+          'X-Tenant-ID': tenantId // ✅ Usa il tenantId corretto
         },
         body: JSON.stringify(venueData)
       });
@@ -72,34 +101,137 @@ class VenueApiClient {
   async getVenue(venueId) {
     try {
       const token = localStorage.getItem('token');
+      const tenantId = this.getTenantId();
+      
       const response = await fetch(`${this.baseUrl}/${venueId}`, {
         headers: {
-          'Authorization': `Bearer ${token}`
+          'Authorization': `Bearer ${token}`,
+          'X-Tenant-ID': tenantId // ✅ Usa il tenantId corretto
         }
       });
 
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        const errorData = await response.json();
+        throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
       }
 
       const result = await response.json();
       return result.data;
     } catch (error) {
-      console.error('❌ Error fetching venue from backend:', error);
+      console.error('❌ Error getting venue from backend:', error);
+      throw error;
+    }
+  }
+
+  // ✅ Spostata qui per centralizzare la logica API
+  async updateBookingSettings(venueId, settings) {
+    try {
+      console.log('🔄 Calling API to update booking settings for venue:', venueId, settings);
+      
+      const token = localStorage.getItem('token');
+      const tenantId = this.getTenantId();
+      
+      const response = await fetch(`${this.baseUrl}/${venueId}/booking-settings`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+          'X-Tenant-ID': tenantId
+        },
+        body: JSON.stringify(settings)
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to update booking settings');
+      }
+
+      const result = await response.json();
+      console.log('✅ Booking settings updated successfully via API');
+      return result.data;
+      
+    } catch (error) {
+      console.error('❌ Error in API call for updateBookingSettings:', error);
       throw error;
     }
   }
 }
 
-const venueApiClient = new VenueApiClient();
+// ✅ Rinomina e esporta l'istanza
+export const venueApi = new VenueApiClient();
 
 // VENUE PROFILE MANAGEMENT
 export const venueProfileService = {
-  // Salva il profilo completo del venue
+  // Salva il profilo completo del venue (senza foto per evitare quota exceeded)
   saveProfile: (userId, profileData) => {
-    const key = getStorageKey(STORAGE_KEYS.VENUE_PROFILE, userId);
-    localStorage.setItem(key, JSON.stringify(profileData));
-    return profileData;
+    try {
+      const key = getStorageKey(STORAGE_KEYS.VENUE_PROFILE, userId);
+      
+      // Crea una copia dei dati escludendo le foto per ridurre dimensioni
+      const optimizedData = {
+        ...profileData,
+        photos: profileData.photos ? profileData.photos.map(photo => ({
+          id: photo.id,
+          name: photo.name,
+          // Mantieni solo l'URL, non la preview base64
+          preview: photo.preview?.startsWith('http') ? photo.preview : null
+        })) : []
+      };
+      
+      const dataString = JSON.stringify(optimizedData);
+      
+      // Controlla dimensioni prima di salvare (limite ~5MB per la maggior parte dei browser)
+      if (dataString.length > 4 * 1024 * 1024) { // 4MB di sicurezza
+        console.warn('⚠️ Profile data too large, saving essential data only');
+        
+        // Salva solo dati essenziali se troppo grande
+        const essentialData = {
+          name: profileData.name,
+          address: profileData.address,
+          city: profileData.city,
+          postalCode: profileData.postalCode,
+          description: profileData.description,
+          email: profileData.email,
+          phone: profileData.phone,
+          website: profileData.website,
+          hours: profileData.hours,
+          features: profileData.features,
+          lastSaved: new Date().toISOString()
+        };
+        
+        localStorage.setItem(key, JSON.stringify(essentialData));
+        return essentialData;
+      }
+      
+      localStorage.setItem(key, dataString);
+      return optimizedData;
+      
+    } catch (error) {
+      console.error('Error saving profile to localStorage:', error);
+      
+      // Fallback: salva solo dati essenziali
+      try {
+        const key = getStorageKey(STORAGE_KEYS.VENUE_PROFILE, userId);
+        const essentialData = {
+          name: profileData.name || '',
+          address: profileData.address || '',
+          city: profileData.city || '',
+          postalCode: profileData.postalCode || '',
+          description: profileData.description || '',
+          email: profileData.email || '',
+          phone: profileData.phone || '',
+          website: profileData.website || '',
+          lastSaved: new Date().toISOString(),
+          error: 'Saved in fallback mode due to storage quota'
+        };
+        
+        localStorage.setItem(key, JSON.stringify(essentialData));
+        return essentialData;
+      } catch (fallbackError) {
+        console.error('Even fallback save failed:', fallbackError);
+        throw new Error('Impossibile salvare il profilo: spazio di archiviazione insufficiente');
+      }
+    }
   },
 
   // Recupera il profilo del venue
@@ -134,7 +266,7 @@ export const venueProfileService = {
       const backendVenueData = venueProfileService.convertToBackendFormat(profileData, user);
       
       // Crea venue nel database backend
-      const savedVenue = await venueApiClient.createVenue(backendVenueData);
+      const savedVenue = await venueApi.createVenue(backendVenueData);
       
       console.log('✅ Venue successfully created in backend:', savedVenue);
 
@@ -218,30 +350,65 @@ export const venueProfileService = {
       }
     };
 
-    // Aggiungi features se presenti - ARRAY DI STRINGHE SEMPLICI
-    if (profileData.facilities && profileData.facilities.facilities && Array.isArray(profileData.facilities.facilities)) {
-      baseVenue.features = profileData.facilities.facilities
-        .filter(f => typeof f === 'string' && f.trim() !== '')
-        .map(f => f.toLowerCase().replace(/\s+/g, '_'));
+    // ✅ FIX: Aggiungi immagini se presenti
+    if (profileData.photos && Array.isArray(profileData.photos) && profileData.photos.length > 0) {
+      baseVenue.images = profileData.photos
+        .filter(photo => photo && photo.preview) // Solo foto con preview valida
+        .map((photo, index) => ({
+          url: photo.preview.startsWith('http://localhost:3001') 
+            ? photo.preview.replace('http://localhost:3001', '') // Rimuovi base URL se presente
+            : photo.preview,
+          caption: photo.name || `Foto ${index + 1}`,
+          isMain: index === 0, // Prima foto come principale
+          uploadedAt: new Date().toISOString()
+        }));
+      
+      console.log(`✅ Including ${baseVenue.images.length} images in venue creation`);
     } else {
-      baseVenue.features = ['wifi', 'tv_screens', 'food_service']; // Default features
+      console.log('⚠️ No photos found in profileData for venue creation');
+      baseVenue.images = [];
     }
 
-    // Aggiungi sport offerings se presenti - FORMATO CORRETTO
-    if (profileData.favourites && profileData.favourites.selectedCompetitions && Array.isArray(profileData.favourites.selectedCompetitions)) {
-      baseVenue.sportsOfferings = profileData.favourites.selectedCompetitions
-        .filter(comp => comp && comp.name)
-        .map(comp => ({
-          sport: comp.sport || 'football',
-          leagues: [comp.name],
-          isPrimary: true
-        }));
+    // ✅ FIX: Features come array di stringhe semplici con mapping ai valori enum corretti
+    if (profileData.facilities && profileData.facilities.services && Array.isArray(profileData.facilities.services)) {
+      // Caso 1: dati già processati con services array
+      baseVenue.features = profileData.facilities.services
+        .filter(f => typeof f === 'string' && f.trim() !== '')
+        .map(f => f.toLowerCase().replace(/\s+/g, '_'));
+    } else if (profileData.facilities && profileData.facilities.facilities && Array.isArray(profileData.facilities.facilities)) {
+      // Caso 2: dati dall'onboarding con oggetti Facility
+      const featureMapping = {
+        'wifi': 'wifi',
+        'tv_screens': 'multiple_screens', // ✅ FIX: Mapping corretto
+        'food_service': 'food_service',
+        'parking': 'parking',
+        'outdoor_seating': 'outdoor_seating',
+        'live_music': 'live_music'
+      };
+      
+      baseVenue.features = profileData.facilities.facilities
+        .filter(f => f && f.enabled && f.id) // Solo facilities abilitate
+        .map(f => featureMapping[f.id] || f.id.toLowerCase().replace(/\s+/g, '_'))
+        .filter(f => f); // Rimuovi valori undefined
     } else {
+      // Default features come array semplice con valori enum validi
+      baseVenue.features = ['wifi', 'multiple_screens', 'food_service'];
+    }
+
+    // ✅ FIX: Sports offerings con formato corretto
+    if (profileData.favouriteSports && Array.isArray(profileData.favouriteSports) && profileData.favouriteSports.length > 0) {
+      baseVenue.sportsOfferings = profileData.favouriteSports.map(sport => ({
+        sport: sport.sport ? sport.sport.toLowerCase() : 'football',
+        leagues: [sport.name || 'Serie A'],
+        isPrimary: true
+      }));
+    } else {
+      // Default sport offering
       baseVenue.sportsOfferings = [{
         sport: 'football',
         leagues: ['Serie A'],
         isPrimary: true
-      }]; // Default sport offering
+      }];
     }
 
     // Aggiungi orari di apertura se presenti
@@ -263,6 +430,31 @@ export const venueProfileService = {
     }
 
     return baseVenue;
+  },
+
+  // ✅ FIX: Usa il metodo centralizzato di apiClient
+  updateBookingSettings: async (venueId, settings) => {
+    return await venueApi.updateBookingSettings(venueId, settings);
+  },
+
+  // Funzioni per la gestione delle foto
+  uploadPhotos: async (venueId, photos) => {
+    // Implementazione per l'upload delle foto
+    // Questo è un esempio di come potresti gestire l'upload delle foto
+    // In un'applicazione reale, potresti inviare le foto al backend
+    // e aggiornare il profilo con l'URL delle immagini.
+    // Per ora, simuliamo l'upload e aggiungiamo un ID temporaneo.
+    const newPhotos = [...photos];
+    newPhotos.forEach(photo => {
+      photo.id = Date.now().toString(); // ID temporaneo
+      photo.uploadedAt = new Date().toISOString();
+    });
+    const updatedProfile = {
+      ...this.getProfile(venueId), // Recupera il profilo corrente
+      photos: newPhotos
+    };
+    this.saveProfile(venueId, updatedProfile);
+    return newPhotos;
   }
 };
 
@@ -315,33 +507,28 @@ export const bookingsService = {
   // Recupera tutte le prenotazioni del venue dal backend
   getBookings: async (userId) => {
     try {
-      // Usa l'endpoint pubblico temporaneo per recuperare prenotazioni dal backend
-      const response = await fetch(`/api/bookings/public/${userId}`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json'
-        }
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const result = await response.json();
+      console.log('🚀 DEBUG: Starting getBookings request for venueId:', userId);
       
-      if (result.success) {
-        console.log('✅ Prenotazioni caricate dal backend:', result.data.length);
-        return result.data || [];
+      // ✅ FIX: Usa apiClient per includere header tenant e autenticazione  
+      const response = await apiClient.get(`/bookings/venue/${userId}`);
+      
+      console.log('🚀 DEBUG: getBookings response received:', response);
+      
+      if (response.success) {
+        console.log('✅ Prenotazioni caricate dal backend:', response.data.length);
+        return response.data || [];
       } else {
-        throw new Error(result.message || 'Errore nel recupero prenotazioni');
+        console.log('❌ DEBUG: Response not successful:', response);
+        throw new Error(response.message || 'Errore nel recupero prenotazioni');
       }
     } catch (error) {
       console.error('❌ Errore caricamento prenotazioni dal backend:', error);
+      console.error('❌ DEBUG: Full error object:', error);
       
       // Fallback al localStorage
-    const key = getStorageKey(STORAGE_KEYS.VENUE_BOOKINGS, userId);
-    const data = localStorage.getItem(key);
-    return data ? JSON.parse(data) : [];
+      const key = getStorageKey(STORAGE_KEYS.VENUE_BOOKINGS, userId);
+      const data = localStorage.getItem(key);
+      return data ? JSON.parse(data) : [];
     }
   },
 
@@ -518,7 +705,7 @@ export const venueUtils = {
     });
   },
 
-  // Esporta tutti i dati del venue
+  // Export completo dei dati venue per debugging
   exportVenueData: (userId) => {
     return {
       profile: venueProfileService.getProfile(userId),

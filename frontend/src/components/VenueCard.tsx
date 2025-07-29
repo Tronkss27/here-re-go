@@ -42,7 +42,7 @@ const VenueCard = React.memo(({
   const navigate = useNavigate();
 
   const handleViewDetails = useCallback(() => {
-    navigate(`/venue/${id}`);
+    navigate(`/locale/${id}`);
   }, [navigate, id]);
 
   const getFeatureIcon = useCallback((feature: string) => {
@@ -84,10 +84,10 @@ const VenueCard = React.memo(({
     <div className="flex items-center space-x-1 mb-4">
       <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
       <span className="text-sm font-semibold text-gray-900">
-        {rating.toFixed(1)}
+        {rating ? rating.toFixed(1) : '4.0'}
       </span>
       <span className="text-xs text-gray-500">
-        ({reviewCount} recensioni)
+        ({reviewCount || 0} recensioni)
       </span>
     </div>
   ), [rating, reviewCount]);
@@ -146,7 +146,7 @@ const VenueCard = React.memo(({
     const premiumText = isPremium ? ', locale premium' : '';
     const bookableText = isBookable ? ', prenotabile' : '';
     
-    return `${name}, sport bar a ${city}, distanza ${distance}, valutazione ${rating.toFixed(1)} stelle${matchText}${premiumText}${bookableText}`;
+    return `${name}, sport bar a ${city}, distanza ${distance}, valutazione ${rating ? rating.toFixed(1) : '4.0'} stelle${matchText}${premiumText}${bookableText}`;
   };
 
   return (
@@ -188,7 +188,7 @@ const VenueCard = React.memo(({
             )}
             {isBookable && (
               <span 
-                className="bg-green-500 text-white text-xs font-bold px-2 py-1 rounded shadow-sm"
+                className="btn-primary text-xs font-bold px-2 py-1 rounded shadow-sm"
                 role="badge"
                 aria-label="Locale prenotabile"
               >
@@ -243,7 +243,7 @@ const VenueCard = React.memo(({
                 aria-hidden="true"
               />
               <span className="text-sm font-semibold text-gray-900">
-                {rating.toFixed(1)}
+                {rating ? rating.toFixed(1) : '4.0'}
               </span>
               <span 
                 className="text-xs text-gray-500"

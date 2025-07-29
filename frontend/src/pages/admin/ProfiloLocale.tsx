@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Edit, Upload, Star, Wifi, Monitor, Users, Coffee, Dog, Sun, X } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -8,6 +8,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useAuth } from '@/contexts/AuthContext';
 import { venueProfileService } from '@/services/venueService';
+import { venuesService } from '@/services/index.js';
+import BookingToggle from '@/components/BookingToggle';
 
 interface VenueProfile {
   name: string;
@@ -35,6 +37,15 @@ interface VenueProfile {
     id: string;
     preview: string;
   }>;
+  backendId?: string; // Aggiunto per il backendId
+  bookingSettings?: {
+    enabled: boolean;
+    requiresApproval?: boolean;
+    advanceBookingDays?: number;
+    minimumPartySize?: number;
+    maximumPartySize?: number;
+    timeSlotDuration?: number;
+  };
 }
 
 const ProfiloLocale = () => {
@@ -56,29 +67,79 @@ const ProfiloLocale = () => {
 
   // Carica i dati del profilo venue
   useEffect(() => {
-    if (user) {
-      const profile = venueProfileService.getProfile(user.id);
-      if (profile) {
-        // Trasforma i dati dal formato salvato al formato del componente
-        const transformedProfile: VenueProfile = {
-          name: profile.name || '',
-          address: profile.address || '',
-          city: profile.city || '',
-          postalCode: profile.postalCode || '',
-          description: profile.description || '',
-          website: profile.website || '',
-          phone: profile.phone || '',
-          openingHours: profile.openingHours || [],
-          facilities: {
-            screens: profile.facilities?.screens || 0,
-            services: profile.facilities?.services || []
-          },
-          photos: profile.photos || []
-        };
-        setVenueProfile(transformedProfile);
-        setFormData(transformedProfile);
+    const loadVenueProfile = async () => {
+      if (user) {
+        const profile = venueProfileService.getProfile(user.id);
+        if (profile) {
+          console.log('✅ Venue profile loaded:', profile);
+          
+          // Se abbiamo un backendId, carichiamo anche le foto dal backend
+          let backendPhotos = [];
+          if (profile.backendId) {
+            try {
+              const backendVenue = await venuesService.getFormattedVenueById(profile.backendId);
+              if (backendVenue && backendVenue.images) {
+                // Convertiamo le immagini dal backend nel formato corretto
+                backendPhotos = backendVenue.images
+                  .filter(img => img && typeof img === 'string') // Solo URL string validi
+                  .map(imageUrl => {
+                    // ✅ FIX: Assicuriamoci che l'URL sia assoluto
+                    let fullUrl = imageUrl;
+                    if (imageUrl.startsWith('/uploads/')) {
+                      const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+                      const baseUrl = API_BASE_URL.replace('/api', ''); // Rimuovi /api se presente
+                      fullUrl = `${baseUrl}${imageUrl}`;
+                    }
+                    return {
+                      id: fullUrl, // Usa URL completo come ID
+                      preview: fullUrl // E come preview per anteprime corrette
+                    };
+                  });
+                console.log('📸 Loaded photos from backend:', backendPhotos);
+              }
+            } catch (error) {
+              console.error('❌ Error loading photos from backend:', error);
+            }
+          }
+          
+          // Trasforma i dati dal formato salvato al formato del componente
+          const transformedProfile: VenueProfile = {
+            name: profile.name || '',
+            address: profile.address || '',
+            city: profile.city || '',
+            postalCode: profile.postalCode || '',
+            description: profile.description || profile.about || '',
+            website: profile.website || '',
+            phone: profile.phone || '',
+            openingHours: Array.isArray(profile.openingHours) ? profile.openingHours : [],
+            facilities: {
+              screens: profile.facilities?.screens || 0,
+              services: Array.isArray(profile.facilities?.services) ? profile.facilities.services : []
+            },
+            // Usa le foto dal backend se disponibili, altrimenti quelle salvate localmente
+            photos: backendPhotos.length > 0 ? backendPhotos : (Array.isArray(profile.photos) ? profile.photos.map((p: any) => {
+              if (typeof p === 'string') {
+                return { id: p, preview: p };
+              }
+              return {
+                id: p.id || p.url || '',
+                preview: p.preview || p.url || p.id || ''
+              };
+            }) : []),
+            backendId: profile.backendId, // Aggiunto backendId
+            bookingSettings: profile.bookingSettings || { enabled: true } // Aggiunto bookingSettings
+          };
+          
+          console.log('🔄 Transformed profile for component:', transformedProfile);
+          setVenueProfile(transformedProfile);
+          setFormData(transformedProfile);
+        } else {
+          console.log('⚠️ No venue profile found - user may need to complete onboarding');
+        }
       }
-    }
+    };
+
+    loadVenueProfile();
   }, [user]);
 
   // Gestisce i cambiamenti nei form fields
@@ -175,6 +236,46 @@ const ProfiloLocale = () => {
       
       // Salva utilizzando il servizio
       venueProfileService.saveProfile(user.id, profileData);
+      
+      // ✨ RIPRISTINO: Salvataggio backend per persistenza completa
+      if (formData.backendId) {
+        const backendPayload = {
+          name: formData.name,
+          description: formData.description,
+          location: {
+            address: {
+              street: formData.address,
+              city: formData.city,
+              postalCode: formData.postalCode,
+              country: 'Italy'
+            }
+          },
+          contact: {
+            email: user.email, // ✅ Email richiesto dal backend
+            phone: formData.phone,
+            website: formData.website
+          },
+          capacity: {
+            total: formData.facilities.screens || 50
+          },
+          images: formData.photos
+            .filter(p => p && p.preview) // Filtra foto con preview valido
+            .map((p, idx) => ({ url: p.preview, isMain: idx === 0 })),
+          // ✨ NUOVO: Aggiungi orari di apertura al backend
+          hours: formData.openingHours,
+          // ✨ NUOVO: Aggiungi facilities al backend
+          facilities: formData.facilities.services.map(s => s.id || s),
+          bookingSettings: formData.bookingSettings // Aggiungi bookingSettings al backend
+        };
+
+        try {
+          await venuesService.updateVenueProfile(formData.backendId, backendPayload);
+          console.log('✅ Backend venue updated successfully');
+        } catch (err) {
+          console.error('❌ Errore aggiornamento backend venue:', err);
+        }
+      }
+      
       setVenueProfile(formData);
       setEditMode(false);
       
@@ -209,38 +310,121 @@ const ProfiloLocale = () => {
   };
 
   // Gestisce l'upload delle foto
-  const handlePhotoUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handlePhotoUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
     if (!files || !formData) return;
 
-    const currentPhotos = formData.photos || [];
+    const currentPhotos = [...formData.photos];
     const newPhotos = [...currentPhotos];
 
-    Array.from(files).forEach((file, index) => {
-      if (newPhotos.length < 4) { // Massimo 4 foto
-        const reader = new FileReader();
-        reader.onload = (e) => {
-          const preview = e.target?.result as string;
-          newPhotos.push({
-            id: `photo_${Date.now()}_${index}`,
-            preview: preview
-          });
+    // ✨ RIPRISTINO: Upload backend per persistenza
+    if (formData.backendId) {
+      for (const file of Array.from(files)) {
+        if (newPhotos.length >= 4) break;
+        try {
+          const res = await venuesService.uploadVenuePhoto(file, formData.backendId);
+          console.log('📸 Upload response:', res);
           
-          setFormData({
-            ...formData,
-            photos: newPhotos
-          });
-        };
-        reader.readAsDataURL(file);
+          if (res && res.uploadedImages && res.uploadedImages[0]) {
+            const uploadedImage = res.uploadedImages[0];
+            // Assicuriamoci che l'URL sia valido e completo
+            let imageUrl = uploadedImage.url;
+            
+            if (imageUrl && imageUrl !== 'undefined') {
+              // ✅ FIX: Converti URL relativo in assoluto per anteprime corrette
+              if (imageUrl.startsWith('/uploads/')) {
+                const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+                const baseUrl = API_BASE_URL.replace('/api', ''); // Rimuovi /api se presente
+                imageUrl = `${baseUrl}${imageUrl}`;
+              }
+              
+              newPhotos.push({ 
+                id: imageUrl, // Uso l'URL completo come ID 
+                preview: imageUrl // E anche come preview per l'anteprima
+              });
+              console.log('✅ Foto caricata:', imageUrl);
+            } else {
+              console.error('❌ URL foto non valido:', uploadedImage);
+            }
+          } else {
+            console.error('❌ Risposta upload non valida:', res);
+          }
+        } catch (err) {
+          console.error('❌ Errore upload foto:', err);
+        }
       }
+    } else {
+      // Fallback locale se non c'è backendId
+      Array.from(files).forEach((file, index) => {
+        if (newPhotos.length < 4) {
+          const reader = new FileReader();
+          reader.onload = (e) => {
+            const preview = e.target?.result as string;
+            newPhotos.push({
+              id: `photo_${Date.now()}_${index}`,
+              preview: preview
+            });
+            setFormData(prev => prev ? { ...prev, photos: [...newPhotos] } : null);
+          };
+          reader.readAsDataURL(file);
+        }
+      });
+      return; // Exit early for local mode
+    }
+
+    setFormData({
+      ...formData,
+      photos: newPhotos
     });
   };
 
   // Rimuove una foto
-  const removePhoto = (photoId: string) => {
+  const removePhoto = async (photoId: string) => {
     if (!formData) return;
     
+    // Trova la foto da rimuovere per ottenere l'URL
+    const photoToRemove = formData.photos.find(photo => photo.id === photoId);
+    if (!photoToRemove) {
+      console.error('❌ Foto non trovata:', photoId);
+      return;
+    }
+
+    console.log('🗑️ Tentativo rimozione foto:', { photoId, photoToRemove });
+    
     const updatedPhotos = formData.photos.filter(photo => photo.id !== photoId);
+    
+    // ✨ RIPRISTINO: Rimozione backend per persistenza
+    if (formData.backendId && photoToRemove.preview) {
+      try {
+        // Verifica che l'URL non sia undefined
+        if (!photoToRemove.preview || photoToRemove.preview === 'undefined') {
+          console.error('❌ URL foto non valido:', photoToRemove.preview);
+          return;
+        }
+        
+        // ✅ FIX: Usa photoId (che è l'URL originale) invece di preview
+        // Il photoId contiene già l'URL corretto dalla conversione backend
+        let imageUrlToDelete = photoId;
+        
+        // Se l'URL contiene il dominio completo, estrapoliamo solo il path relativo
+        if (imageUrlToDelete.includes('/uploads/')) {
+          const urlParts = imageUrlToDelete.split('/uploads/');
+          if (urlParts.length > 1) {
+            imageUrlToDelete = '/uploads/' + urlParts[1];
+          }
+        }
+        
+        console.log('🗑️ URL da eliminare (relativo):', imageUrlToDelete);
+        
+        // Correzione: passiamo l'URL dell'immagine come primo parametro
+        await venuesService.deleteVenuePhoto(imageUrlToDelete, formData.backendId);
+        console.log('✅ Foto cancellata dal backend:', imageUrlToDelete);
+      } catch (err) {
+        console.error('❌ Errore cancellazione foto:', err);
+        return; // Non aggiornare il frontend se il backend fallisce
+      }
+    }
+    
     setFormData({
       ...formData,
       photos: updatedPhotos
@@ -514,7 +698,7 @@ const ProfiloLocale = () => {
                           </span>
                     </div>
                       )}
-                      {photo && editMode && (
+                      {photo && photo.id && editMode && (
                         <div className="absolute top-1 right-1">
                           <button 
                             onClick={() => removePhoto(photo.id)}
@@ -575,6 +759,16 @@ const ProfiloLocale = () => {
               </div>
             </CardContent>
           </Card>
+
+          {/* Gestione Prenotazioni Toggle */}
+          <BookingToggle 
+            venueId={user?.venue?.backendId || user?.venueId}
+            initialEnabled={venueProfile?.bookingSettings?.enabled ?? true}
+            onToggleChange={(enabled) => {
+              // Aggiorna lo stato locale se necessario
+              console.log('Booking toggle changed:', enabled);
+            }}
+          />
         </div>
       </div>
     </div>

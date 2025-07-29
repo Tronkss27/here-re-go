@@ -1,0 +1,100 @@
+{
+  "timestamp": "2025-07-21T16:08:25.519Z",
+  "summary": {
+    "total": 6,
+    "errors": 2,
+    "warnings": 4
+  },
+  "discrepancies": [
+    {
+      "level": "ERROR",
+      "category": "FIELD_TYPES",
+      "message": "Type mismatch in MatchAnnouncement.match",
+      "details": {
+        "expected": "Embedded",
+        "actual": "object",
+        "sampleValue": {
+          "id": "mock_2",
+          "homeTeam": "Real Madrid",
+          "awayTeam": "Barcelona",
+          "competition": {
+            "id": "champions",
+            "name": "Champions League",
+            "logo": "⚽"
+          },
+          "date": "2024-01-22",
+          "time": "21:00",
+          "homeTeamLogo": "🏠",
+          "awayTeamLogo": "✈️",
+          "source": "manual"
+        }
+      },
+      "timestamp": "2025-07-21T16:08:25.399Z"
+    },
+    {
+      "level": "ERROR",
+      "category": "FIELD_TYPES",
+      "message": "Type mismatch in MatchAnnouncement.eventDetails",
+      "details": {
+        "expected": "Embedded",
+        "actual": "object",
+        "sampleValue": {
+          "startDate": "2024-01-22",
+          "startTime": "21:00",
+          "endTime": "23:00",
+          "description": "Guarda Real Madrid vs Barcelona nel nostro locale!",
+          "selectedOffers": []
+        }
+      },
+      "timestamp": "2025-07-21T16:08:25.400Z"
+    },
+    {
+      "level": "WARNING",
+      "category": "OBJECTID_USAGE",
+      "message": "Booking.venue stored as string but could be ObjectId",
+      "details": {
+        "bookingId": "6857e97773d70389e2b10992",
+        "venue": "685691c233b270af0cf097ce",
+        "type": "string"
+      },
+      "timestamp": "2025-07-21T16:08:25.403Z"
+    },
+    {
+      "level": "WARNING",
+      "category": "OBJECTID_USAGE",
+      "message": "Booking.venue stored as string but could be ObjectId",
+      "details": {
+        "bookingId": "6857f0405764d31ffa49da98",
+        "venue": "685691c233b270af0cf097ce",
+        "type": "string"
+      },
+      "timestamp": "2025-07-21T16:08:25.403Z"
+    },
+    {
+      "level": "WARNING",
+      "category": "QUERY_PATTERNS",
+      "message": "Direct model queries found in fixtureController.js",
+      "details": {
+        "count": 2,
+        "patterns": [
+          "Fixture.find(",
+          "Fixture.find("
+        ]
+      },
+      "timestamp": "2025-07-21T16:08:25.490Z"
+    },
+    {
+      "level": "WARNING",
+      "category": "QUERY_PATTERNS",
+      "message": "Direct model queries found in venueController.js",
+      "details": {
+        "count": 2,
+        "patterns": [
+          "Venue.find(",
+          "Venue.find("
+        ]
+      },
+      "timestamp": "2025-07-21T16:08:25.492Z"
+    }
+  ]
+}

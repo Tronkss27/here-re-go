@@ -89,14 +89,16 @@ export const getHeaders = (includeAuth = true) => {
     }
   }
   
-  // Aggiungi tenant header per sistema multi-tenant
+  // Aggiungi tenant header solo se il ruolo dell'utente lo richiede
   const user = localStorage.getItem('user')
   if (user) {
     try {
       const userData = JSON.parse(user)
-      if (userData._id) {
-        headers['X-Tenant-ID'] = userData._id
+      // Invia l'header solo per venue_owner (o admin multi-tenant) e solo se presente tenantId
+      if (userData.tenantId && (userData.role === 'venue_owner' || userData.role === 'admin')) {
+        headers['X-Tenant-ID'] = userData.tenantId
       }
+      // In tutti gli altri casi NON impostare X-Tenant-ID
     } catch (error) {
       console.warn('Error parsing user data for tenant header:', error)
     }
@@ -105,9 +107,24 @@ export const getHeaders = (includeAuth = true) => {
   return headers
 }
 
-// Build full URL
-export const buildUrl = (endpoint) => {
-  return `${API_BASE_URL}${endpoint}`
+// Build full URL with optional query parameters
+export const buildUrl = (endpoint, params = {}) => {
+  const url = `${API_BASE_URL}${endpoint}`
+  
+  // Se non ci sono parametri, ritorna l'URL base
+  if (!params || Object.keys(params).length === 0) {
+    return url
+  }
+  
+  // Costruisci la query string
+  const queryString = new URLSearchParams()
+  Object.entries(params).forEach(([key, value]) => {
+    if (value !== undefined && value !== null) {
+      queryString.append(key, value)
+    }
+  })
+  
+  return `${url}?${queryString.toString()}`
 }
 
 export default {

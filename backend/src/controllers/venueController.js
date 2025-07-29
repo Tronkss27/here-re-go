@@ -1,7 +1,13 @@
+const MatchAnnouncement = require('../models/MatchAnnouncement');
+const PopularMatch = require('../models/PopularMatch');
 const Venue = require('../models/Venue');
 const TenantQuery = require('../utils/tenantQuery');
+const { processVenueWithImages } = require('../utils/imageUtils');
+const sportsApiService = require('../services/sportsApiService');
 const { validationResult } = require('express-validator');
-const MatchAnnouncement = require('../models/MatchAnnouncement');
+const mongoose = require('mongoose');
+const path = require('path');
+const fs = require('fs');
 
 // Funzione helper per i dati mock
 function generateMockVenuesForMatch(matchId) {
@@ -114,8 +120,8 @@ class VenueController {
       console.log('🔍 DEBUG: Creating venue...');
       console.log('Tenant:', req.tenant ? req.tenant.name : 'NO TENANT');
       console.log('User:', req.user ? req.user._id : 'NO USER');
-      console.log('Body:', JSON.stringify(req.body, null, 2));
-
+      console.log('🔍 DEBUG: Images in request body:', req.body.images ? req.body.images.length : 'NO IMAGES');
+      
       const errors = validationResult(req);
       if (!errors.isEmpty()) {
         console.log('❌ Validation errors:', errors.array());
@@ -135,7 +141,8 @@ class VenueController {
         features,
         sportsOfferings,
         bookingSettings,
-        pricing
+        pricing,
+        images // ✅ Aggiungo images al destructuring
       } = req.body;
 
       // Verifica che il tenant possa creare venue
@@ -176,17 +183,51 @@ class VenueController {
           currency: 'EUR',
           ...pricing
         },
+        // ✅ Aggiungo le immagini se presenti
+        images: Array.isArray(images) ? images : [],
         status: 'approved', // Auto-approve per ora
         isActive: true
       };
 
+      console.log('🔍 DEBUG: Creating venue with images:', venueData.images.length);
+      if (venueData.images.length > 0) {
+        console.log('📸 DEBUG: Images being saved:');
+        venueData.images.forEach((img, idx) => {
+          console.log(`  ${idx + 1}. ${img.url} (${img.caption})`);
+        });
+      }
+
       const venue = new Venue(venueData);
-      await venue.save();
+      
+      console.log('🔍 DEBUG: Venue object before save:');
+      console.log('- Name:', venue.name);
+      console.log('- Images count:', venue.images ? venue.images.length : 'NO IMAGES FIELD');
+      console.log('- Images:', venue.images);
+      
+      try {
+        await venue.save();
+        
+        console.log('🔍 DEBUG: Venue object after save:');
+        console.log('- ID:', venue._id);
+        console.log('- Name:', venue.name);
+        console.log('- Images count:', venue.images ? venue.images.length : 'NO IMAGES FIELD');
+        console.log('- Images:', venue.images);
+      } catch (saveError) {
+        console.error('❌ DEBUG: Error saving venue:', saveError);
+        console.error('❌ DEBUG: Validation errors:', saveError.errors);
+        throw saveError;
+      }
 
       // Aggiorna usage del tenant
       await req.tenant.updateOne({
         $inc: { 'usage.currentVenues': 1 }
       });
+
+      console.log('🔍 DEBUG: Venue before response:');
+      console.log('- ID:', venue._id);
+      console.log('- Name:', venue.name);
+      console.log('- Images count:', venue.images ? venue.images.length : 'NO IMAGES FIELD');
+      console.log('- Images:', JSON.stringify(venue.images, null, 2));
 
       res.status(201).json({
         success: true,
@@ -327,13 +368,22 @@ class VenueController {
    */
   async updateVenue(req, res) {
     try {
+      console.log('🔍 DEBUG: updateVenue called');
+      console.log('- Venue ID:', req.params.id);
+      console.log('- User:', req.user ? req.user._id : 'NO USER');
+      console.log('- Tenant:', req.tenant ? req.tenant._id : 'NO TENANT');
+      console.log('- TenantId:', req.tenantId);
+      
       const { id } = req.params;
       const updates = req.body;
 
       // Trova venue nel tenant context
+      console.log('🔍 DEBUG: Searching venue with TenantQuery...');
       const venue = await TenantQuery.findById(Venue, req.tenantId, id);
+      console.log('🔍 DEBUG: Venue found:', venue ? venue.name : 'null');
 
       if (!venue) {
+        console.log('❌ DEBUG: Venue not found');
         return res.status(404).json({
           success: false,
           error: 'Venue not found'
@@ -341,7 +391,13 @@ class VenueController {
       }
 
       // Verifica ownership (solo owner o admin)
+      console.log('🔍 DEBUG: Checking ownership...');
+      console.log('- User role:', req.user.role);
+      console.log('- Venue owner:', venue.owner.toString());
+      console.log('- Request user:', req.user._id.toString());
+      
       if (req.user.role !== 'admin' && venue.owner.toString() !== req.user._id.toString()) {
+        console.log('❌ DEBUG: Not authorized');
         return res.status(403).json({
           success: false,
           error: 'Not authorized to update this venue'
@@ -353,8 +409,11 @@ class VenueController {
       delete updates.owner;
       delete updates._id;
 
+      console.log('🔍 DEBUG: Updating venue with:', Object.keys(updates));
       Object.assign(venue, updates);
       await venue.save();
+      
+      console.log('✅ DEBUG: Venue updated successfully');
 
       res.json({
         success: true,
@@ -363,7 +422,8 @@ class VenueController {
       });
 
     } catch (error) {
-      console.error('Update venue error:', error);
+      console.error('❌ Update venue error:', error);
+      console.error('Error stack:', error.stack);
       res.status(500).json({
         success: false,
         error: 'Server error while updating venue'
@@ -425,16 +485,58 @@ class VenueController {
    */
   async getPublicVenues(req, res) {
     try {
+      console.log('🌍 DEBUG: getPublicVenues method called!');
       const { 
         city, 
         amenities, 
         minRating = 0,
         limit = 50, 
-        page = 1 
+        page = 1,
+        matchId // ✅ FIX: Nuovo parametro per filtrare per match
       } = req.query;
 
-      console.log('🌍 Getting public venues with filters:', { city, amenities, minRating });
+      console.log('🌍 Getting public venues with filters:', { city, amenities, minRating, matchId });
 
+      // ✅ FIX: Se c'è matchId, usa logica speciale per venue della partita
+      if (matchId) {
+        console.log(`🏟️ Fetching venues specifically for match: ${matchId}`);
+        
+        const popularMatch = await PopularMatch.findOne({ matchId }).lean();
+        
+        if (!popularMatch) {
+          return res.json([]); // Restituisci array vuoto se non trova la partita
+        }
+        
+        // Ottieni i dettagli dei venues per questa partita
+        const venues = await Promise.all(
+          popularMatch.venues.map(async (v) => {
+            const venue = await Venue.findById(v.venueId)
+              .select('name slug location contact amenities capacity rating totalReviews description images')
+              .lean();
+              
+            if (!venue) return null;
+            
+            // Process venue with fixed image URLs usando stesso formato di getPublicVenues
+            const processedVenue = processVenueWithImages(venue, req);
+            
+            return {
+              _id: venue._id, // ✅ IMPORTANTE: Usa lo stesso ID del venue originale
+              ...processedVenue,
+              announcement: {
+                addedAt: v.addedAt,
+                announcementId: v.announcementId
+              }
+            };
+          })
+        );
+        
+        const validVenues = venues.filter(v => v !== null);
+        console.log(`✅ Found ${validVenues.length} venues for match ${matchId} using unified format`);
+        
+        return res.json(validVenues);
+      }
+
+      // ✅ Logica normale per tutti i venue (senza filtro match)
       const query = {
         status: 'approved',
         isActive: true
@@ -464,13 +566,16 @@ class VenueController {
 
       console.log(`✅ Found ${filteredVenues.length} public venues`);
 
+      // Process venues with fixed image URLs
+      const processedVenues = filteredVenues.map(venue => processVenueWithImages(venue, req));
+
       res.json({
         success: true,
-        data: filteredVenues,
+        data: processedVenues,
         pagination: {
-          totalDocs: filteredVenues.length,
+          totalDocs: processedVenues.length,
           limit: parseInt(limit, 10),
-          totalPages: Math.ceil(filteredVenues.length / parseInt(limit, 10)),
+          totalPages: Math.ceil(processedVenues.length / parseInt(limit, 10)),
           page: parseInt(page, 10)
         }
       });
@@ -550,6 +655,8 @@ class VenueController {
       }
 
       console.log(`✅ Found venue: ${venue.name} (${venue._id})`);
+      console.log(`🖼️ Venue images:`, venue.images);
+      console.log(`📊 Images count:`, venue.images ? venue.images.length : 0);
 
       // Ottieni gli annunci attivi per questo venue
       const announcements = await MatchAnnouncement.find({
@@ -565,10 +672,14 @@ class VenueController {
 
       console.log(`✅ Found venue "${venue.name}" with ${announcements.length} active announcements`);
 
+      // Process venue with fixed image URLs
+      const processedVenue = processVenueWithImages(venue, req);
+
       res.json({
         success: true,
+        venue: processedVenue, // ✅ Aggiungi venue come campo separato per compatibilità frontend
         data: {
-          ...venue,
+          ...processedVenue,
           announcements
         }
       });
@@ -676,6 +787,523 @@ class VenueController {
     } catch (error) {
       console.error('Search Venues Error:', error);
       res.status(500).json({ success: false, message: 'Server Error' });
+    }
+  }
+
+  /**
+   * @desc    Upload venue images
+   * @route   POST /api/venues/:id/images
+   * @access  Private (Owner/Admin)
+   */
+  async uploadVenueImages(req, res) {
+    try {
+      const { id } = req.params;
+      
+      console.log(`📸 Uploading images for venue: ${id}`);
+      console.log(`📁 Files received: ${req.files ? req.files.length : 0}`);
+      console.log(`🔍 TenantId: ${req.tenantId}`);
+      console.log(`🔍 User: ${req.user._id} (role: ${req.user.role})`);
+
+      if (!req.files || req.files.length === 0) {
+        return res.status(400).json({
+          success: false,
+          message: 'Nessun file ricevuto'
+        });
+      }
+
+      // Trova venue nel tenant context (con fallback)
+      console.log(`🔍 Searching venue ${id} with tenantId ${req.tenantId}`);
+      let venue = await TenantQuery.findById(Venue, req.tenantId, id);
+      
+      // Fallback: se non trovato con TenantQuery, prova ricerca diretta
+      if (!venue) {
+        console.log(`⚠️ Venue not found with TenantQuery, trying direct search...`);
+        venue = await Venue.findById(id);
+        
+        // Verifica ownership come sicurezza aggiuntiva
+        if (venue && venue.owner.toString() !== req.user._id.toString()) {
+          console.log(`❌ Ownership mismatch: venue.owner=${venue.owner}, user=${req.user._id}`);
+          venue = null;
+        }
+      }
+      
+      if (!venue) {
+        console.log(`❌ Venue not found or access denied`);
+        
+        // Pulisci file uploadati se venue non trovato
+        req.files.forEach(file => {
+          fs.unlinkSync(file.path);
+        });
+        return res.status(404).json({
+          success: false,
+          message: 'Venue non trovato'
+        });
+      }
+
+      console.log(`✅ Found venue: ${venue.name} (owner: ${venue.owner})`);
+
+      // Verifica ownership (solo owner o admin)
+      if (req.user.role !== 'admin' && venue.owner.toString() !== req.user._id.toString()) {
+        // Pulisci file uploadati se non autorizzato
+        req.files.forEach(file => {
+          fs.unlinkSync(file.path);
+        });
+        return res.status(403).json({
+          success: false,
+          message: 'Non autorizzato a caricare immagini per questo venue'
+        });
+      }
+
+      // Imposta limite massimo immagini per venue
+      const MAX_IMAGES = 5;
+      if (venue.images.length + req.files.length > MAX_IMAGES) {
+        // Pulisci file appena caricati
+        req.files.forEach(file => {
+          try { fs.unlinkSync(file.path); } catch (e) { /* ignore */ }
+        });
+        return res.status(400).json({
+          success: false,
+          message: `Limite massimo di ${MAX_IMAGES} foto raggiunto. Elimina alcune immagini prima di caricarne di nuove.`
+        });
+      }
+
+      // Prepara array immagini da aggiungere
+      const newImages = req.files.map((file, index) => ({
+        url: `/uploads/venues/${file.filename}`,
+        caption: req.body[`caption_${index}`] || '',
+        isMain: venue.images.length === 0 && index === 0, // Prima immagine come principale se non ce ne sono altre
+        uploadedAt: new Date()
+      }));
+
+      // Aggiungi le nuove immagini
+      venue.images.push(...newImages);
+
+      // Salva venue
+      await venue.save();
+
+      console.log(`✅ Successfully uploaded ${newImages.length} images for venue ${venue.name}`);
+
+      res.json({
+        success: true,
+        message: `${newImages.length} immagini caricate con successo`,
+        data: {
+          venue: {
+            id: venue._id,
+            name: venue.name,
+            images: venue.images
+          },
+          uploadedImages: newImages
+        }
+      });
+
+    } catch (error) {
+      console.error('Upload venue images error:', error);
+      
+      // Pulisci file in caso di errore
+      if (req.files) {
+        req.files.forEach(file => {
+          try {
+            fs.unlinkSync(file.path);
+          } catch (unlinkError) {
+            console.error('Error cleaning up file:', unlinkError);
+          }
+        });
+      }
+
+      res.status(500).json({
+        success: false,
+        message: 'Errore durante l\'upload delle immagini',
+        error: error.message
+      });
+    }
+  }
+
+  /**
+   * @desc    Delete venue image
+   * @route   DELETE /api/venues/:id/images/:imageId
+   * @access  Private (Owner/Admin)
+   */
+  async deleteVenueImage(req, res) {
+    try {
+      const { id, imageId } = req.params;
+      
+      console.log(`🗑️ Deleting image ${imageId} from venue: ${id}`);
+
+      // Trova venue nel tenant context
+      const venue = await TenantQuery.findById(Venue, req.tenantId, id);
+
+      if (!venue) {
+        return res.status(404).json({
+          success: false,
+          message: 'Venue non trovato'
+        });
+      }
+
+      // Verifica ownership (solo owner o admin)
+      if (req.user.role !== 'admin' && venue.owner.toString() !== req.user._id.toString()) {
+        return res.status(403).json({
+          success: false,
+          message: 'Non autorizzato a eliminare immagini per questo venue'
+        });
+      }
+
+      // Trova l'immagine da eliminare
+      const imageIndex = venue.images.findIndex(img => img._id.toString() === imageId);
+
+      if (imageIndex === -1) {
+        return res.status(404).json({
+          success: false,
+          message: 'Immagine non trovata'
+        });
+      }
+
+      const imageToDelete = venue.images[imageIndex];
+
+      // Elimina file fisico se esiste
+      if (imageToDelete.url.startsWith('/uploads/')) {
+        const filePath = path.join(__dirname, '../../', imageToDelete.url);
+        try {
+          if (fs.existsSync(filePath)) {
+            fs.unlinkSync(filePath);
+            console.log(`🗑️ Physical file deleted: ${filePath}`);
+          }
+        } catch (fileError) {
+          console.error('Error deleting physical file:', fileError);
+          // Non bloccare l'operazione se il file non può essere eliminato
+        }
+      }
+
+      // Rimuovi l'immagine dall'array
+      venue.images.splice(imageIndex, 1);
+
+      // Se era l'immagine principale e ci sono altre immagini, imposta la prima come principale
+      if (imageToDelete.isMain && venue.images.length > 0) {
+        venue.images[0].isMain = true;
+      }
+
+      // Salva venue
+      await venue.save();
+
+      console.log(`✅ Successfully deleted image from venue ${venue.name}`);
+
+      res.json({
+        success: true,
+        message: 'Immagine eliminata con successo',
+        data: {
+          venue: {
+            id: venue._id,
+            name: venue.name,
+            images: venue.images
+          }
+        }
+      });
+
+    } catch (error) {
+      console.error('Delete venue image error:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Errore durante l\'eliminazione dell\'immagine',
+        error: error.message
+      });
+    }
+  }
+
+  /**
+   * @desc    Delete venue image by URL (alternative method)
+   * @route   DELETE /api/venues/:id/images
+   * @access  Private (Owner/Admin)
+   */
+  async deleteVenueImageByUrl(req, res) {
+    try {
+      const { id } = req.params;
+      const { imageUrl } = req.body;
+      
+      console.log(`🗑️ Deleting image by URL from venue: ${id}`);
+      console.log(`🔗 Image URL: ${imageUrl}`);
+
+      // Validazione input
+      if (!imageUrl) {
+        return res.status(400).json({
+          success: false,
+          message: 'URL immagine richiesto'
+        });
+      }
+
+      // Trova venue nel tenant context
+      const venue = await TenantQuery.findById(Venue, req.tenantId, id);
+
+      if (!venue) {
+        return res.status(404).json({
+          success: false,
+          message: 'Venue non trovato'
+        });
+      }
+
+      // Verifica ownership (solo owner o admin)
+      if (req.user.role !== 'admin' && venue.owner.toString() !== req.user._id.toString()) {
+        return res.status(403).json({
+          success: false,
+          message: 'Non autorizzato a eliminare immagini per questo venue'
+        });
+      }
+
+      // Trova l'immagine da eliminare per URL
+      // Normalizza l'URL per il confronto
+      let normalizedImageUrl = imageUrl;
+      
+      // Decodifica caratteri HTML encoded
+      normalizedImageUrl = normalizedImageUrl
+        .replace(/&#x2F;/g, '/')
+        .replace(/&amp;/g, '&');
+      
+      // Se l'URL include il dominio, estrailo solo la parte relativa
+      if (normalizedImageUrl.includes('localhost:3001')) {
+        const urlParts = normalizedImageUrl.split('localhost:3001');
+        normalizedImageUrl = urlParts[1] || normalizedImageUrl;
+      }
+      
+      // Assicurati che inizi con /
+      if (!normalizedImageUrl.startsWith('/')) {
+        normalizedImageUrl = '/' + normalizedImageUrl;
+      }
+      
+      console.log(`🔍 Original URL: ${imageUrl}`);
+      console.log(`🔍 Normalized URL: ${normalizedImageUrl}`);
+      
+      const imageIndex = venue.images.findIndex(img => {
+        // Normalizza anche l'URL dell'immagine nel database
+        let dbImageUrl = img.url;
+        dbImageUrl = dbImageUrl
+          .replace(/&#x2F;/g, '/')
+          .replace(/&amp;/g, '&');
+          
+        if (dbImageUrl.includes('localhost:3001')) {
+          const urlParts = dbImageUrl.split('localhost:3001');
+          dbImageUrl = urlParts[1] || dbImageUrl;
+        }
+        
+        if (!dbImageUrl.startsWith('/')) {
+          dbImageUrl = '/' + dbImageUrl;
+        }
+        
+        return dbImageUrl === normalizedImageUrl;
+      });
+
+      if (imageIndex === -1) {
+        console.log(`❌ Image not found with URL: ${imageUrl}`);
+        console.log(`📋 Available images:`, venue.images.map(img => img.url));
+        return res.status(404).json({
+          success: false,
+          message: 'Immagine non trovata'
+        });
+      }
+
+      const imageToDelete = venue.images[imageIndex];
+      console.log(`✅ Found image to delete: ${imageToDelete.url}`);
+
+      // Elimina file fisico se esiste
+      if (imageToDelete.url.startsWith('/uploads/')) {
+        const filePath = path.join(__dirname, '../../', imageToDelete.url);
+        try {
+          if (fs.existsSync(filePath)) {
+            fs.unlinkSync(filePath);
+            console.log(`🗑️ Physical file deleted: ${filePath}`);
+          }
+        } catch (fileError) {
+          console.error('Error deleting physical file:', fileError);
+          // Non bloccare l'operazione se il file non può essere eliminato
+        }
+      }
+
+      // Rimuovi l'immagine dall'array
+      venue.images.splice(imageIndex, 1);
+
+      // Se era l'immagine principale e ci sono altre immagini, imposta la prima come principale
+      if (imageToDelete.isMain && venue.images.length > 0) {
+        venue.images[0].isMain = true;
+      }
+
+      // Salva venue
+      await venue.save();
+
+      console.log(`✅ Successfully deleted image from venue ${venue.name}`);
+
+      res.json({
+        success: true,
+        message: 'Immagine eliminata con successo',
+        data: {
+          venue: {
+            id: venue._id,
+            name: venue.name,
+            images: venue.images
+          }
+        }
+      });
+
+    } catch (error) {
+      console.error('Delete venue image by URL error:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Errore durante l\'eliminazione dell\'immagine',
+        error: error.message
+      });
+    }
+  }
+
+  /**
+   * @desc    Update venue booking settings
+   * @route   PATCH /api/venues/:id/booking-settings
+   * @access  Private (Venue Owner/Admin)
+   */
+  async updateBookingSettings(req, res) {
+    try {
+      console.log('🔍 DEBUG: Updating booking settings for venue:', req.params.id);
+      console.log('🔍 DEBUG: New settings:', req.body);
+      
+      const { enabled, requiresApproval, advanceBookingDays, minimumPartySize, maximumPartySize, timeSlotDuration, cancellationPolicy } = req.body;
+      
+      // Trova il venue (tenant-aware)
+      const venue = await TenantQuery.findById(Venue, req.tenantId, req.params.id);
+      
+      if (!venue) {
+        return res.status(404).json({
+          success: false,
+          error: 'Venue not found'
+        });
+      }
+      
+      // Verifica che l'utente sia owner del venue o admin
+      if (req.user.role !== 'admin' && venue.owner.toString() !== req.user._id.toString()) {
+        return res.status(403).json({
+          success: false,
+          error: 'Not authorized to update this venue'
+        });
+      }
+      
+      // Aggiorna solo i campi forniti
+      const updateFields = {};
+      if (enabled !== undefined) {
+        updateFields['bookingSettings.enabled'] = enabled;
+        console.log(`🔄 ${enabled ? 'Enabling' : 'Disabling'} bookings for venue: ${venue.name}`);
+      }
+      if (requiresApproval !== undefined) updateFields['bookingSettings.requiresApproval'] = requiresApproval;
+      if (advanceBookingDays !== undefined) updateFields['bookingSettings.advanceBookingDays'] = advanceBookingDays;
+      if (minimumPartySize !== undefined) updateFields['bookingSettings.minimumPartySize'] = minimumPartySize;
+      if (maximumPartySize !== undefined) updateFields['bookingSettings.maximumPartySize'] = maximumPartySize;
+      if (timeSlotDuration !== undefined) updateFields['bookingSettings.timeSlotDuration'] = timeSlotDuration;
+      if (cancellationPolicy !== undefined) updateFields['bookingSettings.cancellationPolicy'] = cancellationPolicy;
+      
+      // Aggiorna il venue
+      const updatedVenue = await Venue.findByIdAndUpdate(
+        req.params.id,
+        { $set: updateFields },
+        { new: true, runValidators: true }
+      );
+      
+      console.log('✅ Booking settings updated successfully');
+      console.log('📊 New booking enabled status:', updatedVenue.bookingSettings.enabled);
+      
+      // IMPORTANTE: Le prenotazioni esistenti NON vengono toccate
+      // Il toggle influenza solo la possibilità di fare NUOVE prenotazioni
+      
+      res.json({
+        success: true,
+        data: {
+          venue: updatedVenue,
+          bookingSettings: updatedVenue.bookingSettings
+        },
+        message: enabled !== undefined 
+          ? `Bookings ${enabled ? 'enabled' : 'disabled'} successfully. Existing bookings remain unchanged.`
+          : 'Booking settings updated successfully'
+      });
+      
+    } catch (error) {
+      console.error('❌ Error updating booking settings:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Failed to update booking settings',
+        details: error.message
+      });
+    }
+  }
+
+  // 🏟️ GET VENUES WITH ACTIVE ANNOUNCEMENTS
+  async getVenuesWithAnnouncements(req, res) {
+    try {
+      console.log('🏟️ Getting venues with active announcements');
+      
+      // Trova tutti gli annunci attivi e raggruppa per venue
+      const activeAnnouncements = await MatchAnnouncement.find({
+        status: 'published',
+        isActive: true
+      }).distinct('venueId');
+      
+      if (activeAnnouncements.length === 0) {
+        return res.json({
+          success: true,
+          data: [],
+          message: 'Nessun venue con annunci attivi trovato'
+        });
+      }
+      
+      // Ottieni i venue con annunci attivi
+      const venues = await Venue.find({
+        _id: { $in: activeAnnouncements },
+        isActive: true,
+        status: { $in: ['approved', 'active'] }
+      })
+      .select('name location.address.city location.address.street images slug rating totalReviews amenities features capacity')
+      .lean();
+      
+      // Arricchisci ogni venue con info sugli annunci
+      const venuesWithInfo = await Promise.all(
+        venues.map(async (venue) => {
+          const announcements = await MatchAnnouncement.find({
+            venueId: venue._id,
+            status: 'published',
+            isActive: true
+          })
+          .select('match eventDetails createdAt')
+          .limit(3) // Max 3 annunci più recenti
+          .sort({ createdAt: -1 });
+          
+          // Process venue with fixed image URLs
+          const processedVenue = processVenueWithImages(venue, req);
+          
+          return {
+            ...processedVenue,
+            _id: venue._id,
+            id: venue._id, // Compatibility
+            announcementsCount: announcements.length,
+            latestAnnouncements: announcements.map(ann => ({
+              matchId: ann.match.id,
+              homeTeam: ann.match.homeTeam,
+              awayTeam: ann.match.awayTeam,
+              date: ann.eventDetails.startDate,
+              time: ann.eventDetails.startTime
+            }))
+          };
+        })
+      );
+      
+      console.log(`✅ Found ${venuesWithInfo.length} venues with active announcements`);
+      
+      res.json({
+        success: true,
+        data: venuesWithInfo,
+        meta: {
+          total: venuesWithInfo.length,
+          totalAnnouncements: activeAnnouncements.length
+        }
+      });
+      
+    } catch (error) {
+      console.error('❌ Error getting venues with announcements:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Errore nel caricamento dei locali con annunci',
+        error: error.message
+      });
     }
   }
 }

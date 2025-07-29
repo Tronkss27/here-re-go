@@ -1,3 +1,34 @@
+USER WORKFLOW:
+
+1. Directory base su localhost:5174/ -> Visualizzazione delle partite disponibili che locali hanno gia pubblicato
+2. Seleziono la partita di interesse una partita -> Navigo alla pagina dei locali che hanno pubblicato la partita -> localhost:5174/locali/(id-partita)
+3. Seleziono il locale di interesse -> Navigo alla pagina del locale -> localhost:5174/locali/(id-locale) correlato alla partita selezionata, quindi tipo localhost:5174/locali/(id-partita)/(id-locale)
+4. Visualizzo i dettagli del locale e della partita, con possibilita di prenotare o chiamare od eseguire azioni. 
+5. Per eseguire azioni come prenotare o aggiungere ai preferiti devo essere loggato.
+6. Se non sono loggato mi viene chiesto di loggarsi o registrarmi.
+7. Se sono loggato ho modo di visualizzare il mio profilo con i miei preferiti e le mie prenotazioni ecc.. -> localhost:5174/profilo
+ 
+
+
+ --------
+
+ADMIN WORKFLOW:
+
+1. Se sono un nuovo admin mi viene chiesto di loggarsi con le credenziali di accesso. -> "http://localhost:5174/sports-register"
+2. Completata la registrazione fa rdeirect su "http://localhost:5174/admin/onboarding" 
+3. In questa pagina mi viene chiesto di compilare i campi richiesti per la registrazione. è ESSENZIALE che le iformazioni presenti nei campi già compilati in "http://localhost:5174/sports-register  vengano trasportate  direttamente nel form di "http://localhost:5174/admin/onboarding" senza dover reinserire tutto di nuovo. ES Nome utente, nome locale, Numero di telefono, Indirizzo, Città..
+4. Dopo aver compilato i campi richiesti mi viene chiesto di confermare la registrazione alla fine dei form di onboarding, carico le foto e do conferma.
+5. Dopo la conferma mi viene rediretto alla pagina home lato admin "http://localhost:5174/admin/" da qui ho modo di visualizzare tutte le funzionalita lato admin. es. creazione parite, gestione prenotazioni, gestione profilo, account ecc..
+6. A) http://localhost:5174/admin/calendario -> Visualizzo il calendario con le partite disponibili e di maggiore interesse per me e i miei utenti, quindi visualizzo le partite disponibili e le partite in programma, ho modo di postare le partite in programma e di eliminare le partite in programma (soprattutto tramite utilizzo di API-Sport)
+7. B) http://localhost:5174/admin/Bookings-> Visualizzo le prenotazioni degli utenti, ho modo di creare nuove prenotazioni, eliminare prenotazioni esistenti, modificare prenotazioni esistenti.
+8. C) http://localhost:5174/admin/account -> Ho modo di modificare le informazioni dell'admin, email, password, nome locale, numero di telefono, ed eseguire il logout.
+9. D) http://localhost:5174/admin/profilo -> Visualizzo il profilo dell'admin, ho modo di modificare il profilo dell'admin e soprattutto le informazioni visibili dal profilo pubblico, Quindi orari di apertura, indirizzo, informazini di contatto, servizi disponibili, modifica foto, descrizione, sito web ecc...
+10. E) http://localhost:5174/admin/offers -> Visualizzo le offerte disponibili, ho modo di creare nuove offerte, eliminare offerte esistenti, modificare offerte esistenti.
+11. F) http://localhost:5174/admin/statistiche Viauslizzo le statistiche e gli insight della mia pagina pubblica, del locale, delle partite pubblicate, dei click ed interazioni.
+12. è ESSENZIALE che le informazioni inserite nel form di onboarding vengano trasportate direttamente nel form di "http://localhost:5174/admin/profilo" senza dover reinserire tutto di nuovo. ES Nome utente, nome locale, Numero di telefono, Indirizzo, Città e soprattuto le foto.
+13. Il pulsante visualizza Profilo pubblico mi porta alla pagina del profilo pubblico del locale "http://localhost:5174/locali/(id-locale)" e mi permetet di visualizzare come appare al pubblico.
+
+
 # 📋 WorkflowUX - SPOrTS Platform
 ## La Bibbia Completa dei Flussi Utente
 

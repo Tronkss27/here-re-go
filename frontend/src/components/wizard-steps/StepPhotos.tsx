@@ -20,8 +20,13 @@ const StepPhotos: React.FC<StepPhotosProps> = ({ profile, onUpdate }) => {
   const { user } = useAuth();
   const { toast } = useToast();
   
-  // ✅ CONTROLLO DI SICUREZZA: profile può essere undefined al primo render
-  const [photos, setPhotos] = useState<PhotoFile[]>((profile?.photos) || []);
+  // ✅ FIX: Assicurati che photos sia sempre un array valido
+  const [photos, setPhotos] = useState<PhotoFile[]>(() => {
+    if (profile?.photos && Array.isArray(profile.photos)) {
+      return profile.photos;
+    }
+    return [];
+  });
   const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [needsSync, setNeedsSync] = useState(false);
@@ -35,7 +40,7 @@ const StepPhotos: React.FC<StepPhotosProps> = ({ profile, onUpdate }) => {
     }
   }, [user.id]);
 
-  const handleFiles = (files: File[]) => {
+  const handleFiles = async (files: File[]) => {
     if (photos.length + files.length > 5) {
       setError('Puoi caricare un massimo di 5 foto.');
       return;
@@ -44,56 +49,86 @@ const StepPhotos: React.FC<StepPhotosProps> = ({ profile, onUpdate }) => {
     setIsUploading(true);
     setError(null);
 
-    const newPhotosPromises = files.map(file => {
-      return new Promise<PhotoFile>((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => resolve({
-          id: `${file.name}-${Date.now()}`,
-          name: file.name,
-          preview: reader.result as string,
-        });
-        reader.onerror = error => reject(error);
-        reader.readAsDataURL(file);
-      });
-    });
+    try {
+      console.log('📸 Starting photo upload process...');
+      console.log('User venue ID:', user.venueId);
 
-    Promise.all(newPhotosPromises)
-      .then(async newPhotos => {
-        const updatedPhotos = [...photos, ...newPhotos];
-        setPhotos(updatedPhotos);
-        onUpdate({ photos: updatedPhotos }); // Aggiorna lo stato del wizard localmente
+      // Verifica che abbiamo un venue ID
+      if (!user.venueId) {
+        throw new Error('ID venue non trovato. Assicurati di aver completato la registrazione.');
+      }
 
-        // Logica di salvataggio automatico
-        try {
-          console.log('🔄 Automatic sync triggered after photo upload.');
-          // ✅ CONTROLLO DI SICUREZZA: assicurati che profile esista
-          const fullProfileToSync = { ...(profile || {}), photos: updatedPhotos };
-          await venuesService.updateVenueProfile(user.id, fullProfileToSync);
-          toast({
-            title: 'Foto Caricata e Sincronizzata!',
-            description: "L'immagine è stata salvata correttamente sul server.",
-            variant: 'success',
-          });
-        } catch (syncError: any) {
-          setError('Le foto sono state caricate ma non sincronizzate. Usa il pulsante di Sincronizzazione manuale.');
-          setNeedsSync(true); // Mostra il pulsante di migrazione come fallback
+      // Upload reale delle foto al server (una alla volta)
+      console.log('🔍 Frontend: About to upload files:', files.length);
+      console.log('🔍 Frontend: User venueId:', user.venueId);
+      
+      const allUploadedImages = [];
+      
+      // Upload ogni file individualmente
+      for (const file of files) {
+        console.log(`📤 Uploading file: ${file.name}`);
+        const uploadResponse = await venuesService.uploadVenuePhoto(file, user.venueId);
+        
+        // ✅ FIX: uploadResponse contiene {venue: ..., uploadedImages: [...]}
+        if (uploadResponse && uploadResponse.uploadedImages && Array.isArray(uploadResponse.uploadedImages)) {
+          // Aggiungi le immagini caricate da questa risposta
+          allUploadedImages.push(...uploadResponse.uploadedImages);
         }
-      })
-      .catch(() => setError('Errore durante la lettura di uno dei file.'))
-      .finally(() => setIsUploading(false));
+      }
+
+      console.log('✅ Photos uploaded successfully:', allUploadedImages);
+
+      // ✅ FIX: Verifica che allUploadedImages sia un array valido
+      if (!Array.isArray(allUploadedImages)) {
+        console.error('❌ allUploadedImages is not an array:', allUploadedImages);
+        throw new Error('Formato risposta server non valido');
+      }
+
+      // Converti le immagini del server nel formato PhotoFile per il frontend
+      const newPhotos: PhotoFile[] = allUploadedImages.map((img: any) => ({
+        id: img.url, // Usa l'URL come ID unico
+        name: img.caption || 'Foto venue',
+        preview: `http://localhost:3001${img.url}` // URL completo per preview
+      }));
+
+      // ✅ FIX: Assicurati che photos sia un array prima dello spread
+      const currentPhotos = Array.isArray(photos) ? photos : [];
+      const updatedPhotos = [...currentPhotos, ...newPhotos];
+      setPhotos(updatedPhotos);
+      
+      // Aggiorna il parent component
+      onUpdate({ photos: updatedPhotos });
+      
+      console.log('✅ Frontend: Photos state updated with:', updatedPhotos);
+
+    } catch (error) {
+      console.error('❌ Photo upload error:', error);
+      setError(error instanceof Error ? error.message : 'Errore durante l\'upload delle foto');
+    } finally {
+      setIsUploading(false);
+    }
   };
 
   const handleRemovePhoto = async (photoId: string) => {
-    const updatedPhotos = photos.filter(p => p.id !== photoId);
-    setPhotos(updatedPhotos);
-    onUpdate({ photos: updatedPhotos });
-
     try {
-      // ✅ CONTROLLO DI SICUREZZA: assicurati che profile esista
-      const fullProfile = { ...(profile || {}), photos: updatedPhotos };
-      await venuesService.updateVenueProfile(user.id, fullProfile);
-      toast({ title: 'Foto Rimossa', description: 'Il profilo è stato aggiornato sul server.', variant: 'success' });
+      // ✅ FIX: Assicurati che photos sia un array prima del filter
+      const currentPhotos = Array.isArray(photos) ? photos : [];
+      const updatedPhotos = currentPhotos.filter(p => p.id !== photoId);
+      
+      setPhotos(updatedPhotos);
+      onUpdate({ photos: updatedPhotos });
+
+      // ✅ FIX: Usa user.venueId invece di user.id per l'aggiornamento del venue
+      if (user.venueId) {
+        const fullProfile = { ...(profile || {}), photos: updatedPhotos };
+        await venuesService.updateVenueProfile(user.venueId, fullProfile);
+        toast({ title: 'Foto Rimossa', description: 'Il profilo è stato aggiornato sul server.', variant: 'success' });
+      } else {
+        console.warn('⚠️ No venueId found, skipping server update');
+        toast({ title: 'Foto Rimossa', description: 'Foto rimossa localmente.', variant: 'success' });
+      }
     } catch (err) {
+      console.error('❌ Photo removal error:', err);
       toast({ title: 'Errore Sincronizzazione', description: 'Impossibile aggiornare il server.', variant: 'destructive' });
       setNeedsSync(true); // Mostra il pulsante di migrazione come fallback
     }

@@ -8,8 +8,7 @@ const Register = () => {
     name: '',
     email: '',
     password: '',
-    confirmPassword: '',
-    role: 'user'
+    confirmPassword: ''
   })
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
@@ -143,17 +142,15 @@ const Register = () => {
     marginTop: '0.25rem'
   }
 
-  const demoButtonStyle = {
-    ...buttonStyle,
-    backgroundColor: 'transparent',
-    color: '#f97316',
-    border: '2px solid #f97316'
-  }
+  // Rimosso bottone demo
   
-  // Clear error when component unmounts
+  // Pulisce eventuali errori residui una sola volta in fase di mount
   useEffect(() => {
-    return () => clearError()
-  }, [clearError])
+    if (error) {
+      clearError()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const validateForm = () => {
     const errors = {}
@@ -212,28 +209,25 @@ const Register = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault()
-    
+
     if (!validateForm()) {
       return
     }
 
-    const result = await register(formData.name, formData.email, formData.password, formData.role)
-    
+    // Registra l'utente passando un oggetto conforme alle attese del context
+    const result = await register({
+      name: formData.name,
+      email: formData.email,
+      password: formData.password
+    })
+
     if (result.success) {
-      // Redirect to intended page or dashboard
       const from = location.state?.from?.pathname || '/admin'
       navigate(from, { replace: true })
     }
   }
 
-  const handleDemoLogin = async () => {
-    const result = await loginDemo()
-    
-    if (result.success) {
-      const from = location.state?.from?.pathname || '/admin'
-      navigate(from, { replace: true })
-    }
-  }
+  // Funzione demo rimossa
 
   return (
     <div style={containerStyle}>
@@ -318,22 +312,7 @@ const Register = () => {
             )}
           </div>
 
-          <div>
-            <label htmlFor="role" style={labelStyle}>
-              Tipologia Account*
-            </label>
-            <select
-              id="role"
-              name="role"
-              value={formData.role}
-              onChange={handleInputChange}
-              style={selectStyle}
-            >
-              <option value="user">👤 Utente</option>
-              <option value="venue_owner">🏢 Proprietario Locale</option>
-              <option value="admin">👨‍💼 Amministratore</option>
-            </select>
-          </div>
+          {/* Campo ruolo rimosso - default gestito lato backend */}
 
           <div>
             <label htmlFor="password" style={labelStyle}>
@@ -457,65 +436,11 @@ const Register = () => {
             )}
           </button>
 
-          <div style={{ position: 'relative', textAlign: 'center', margin: '1rem 0' }}>
-            <div style={{
-              position: 'absolute',
-              top: '50%',
-              left: 0,
-              right: 0,
-              height: '1px',
-              backgroundColor: '#e5e7eb'
-            }} />
-            <span style={{
-              backgroundColor: 'white',
-              padding: '0 1rem',
-              color: '#6b7280',
-              fontSize: '0.875rem'
-            }}>
-              oppure
-            </span>
-          </div>
-
-          <button
-            type="button"
-            onClick={handleDemoLogin}
-            disabled={isLoading}
-            style={{
-              ...demoButtonStyle,
-              opacity: isLoading ? 0.7 : 1,
-              cursor: isLoading ? 'not-allowed' : 'pointer'
-            }}
-            onMouseOver={(e) => {
-              if (!isLoading) {
-                e.target.style.backgroundColor = '#fff7ed'
-              }
-            }}
-            onMouseLeave={(e) => {
-              if (!isLoading) {
-                e.target.style.backgroundColor = 'transparent'
-              }
-            }}
-          >
-            {isLoading ? (
-              <>
-                <div style={{
-                  width: '1rem',
-                  height: '1rem',
-                  border: '2px solid transparent',
-                  borderTop: '2px solid #f97316',
-                  borderRadius: '50%',
-                  animation: 'spin 1s linear infinite'
-                }} />
-                Accesso Demo...
-              </>
-            ) : (
-              '🚀 Accesso Demo'
-            )}
-          </button>
+          {/* Bottone demo rimosso */}
         </form>
       </div>
 
-      <style jsx>{`
+      <style>{`
         @keyframes spin {
           0% { transform: rotate(0deg); }
           100% { transform: rotate(360deg); }

@@ -24,6 +24,7 @@ export default defineConfig({
   server: {
     host: true,
     port: 5174,
+    strictPort: true, // Forza la porta 5174, non usare fallback
     proxy: {
       '/api': {
         target: 'http://localhost:3001',

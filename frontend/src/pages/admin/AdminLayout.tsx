@@ -37,192 +37,183 @@ const AdminLayout = () => {
     }
   }, [user]);
 
-  // Utility per generare tenantId univoco dall'user ID
-  const generateTenantId = (userId: string): string => {
-    if (!userId) {
-      console.error('❌ Cannot generate tenantId: userId is missing');
-      return '';
+  // Utility per ottenere il tenantId corretto dall'utente
+  const getTenantId = (): string => {
+    // ✅ FIX: Usa il tenantId dell'utente, non il suo ID
+    if (user?.tenantId) {
+      console.log('✅ Using user.tenantId:', user.tenantId);
+      return user.tenantId;
     }
-    // Generiamo un tenantId deterministico dall'ID utente
-    // Nel backend, durante la registrazione, viene usato lo stesso algoritmo
-    return userId; // Per ora semplice: tenantId = userId
+    
+    // Fallback per compatibilità con utenti vecchi
+    if (user?.id) {
+      console.warn('⚠️ Using user.id as fallback tenantId:', user.id);
+      return user.id;
+    }
+    
+    console.error('❌ No tenantId found in user object');
+    return '';
   };
 
   const handleViewPublicProfile = async () => {
+    setIsCreatingVenue(true);
+    console.log('🔍 Verifying venue profile...');
+
     try {
-      setIsCreatingVenue(true);
+      const tenantId = getTenantId();
+      if (!tenantId) {
+        alert('❌ Errore: tenantId non trovato. Rifare il login.');
+        setIsCreatingVenue(false);
+        return;
+      }
+
+      // ✅ FIX: Usa venueId dell'utente invece del tenantId per l'accesso pubblico
+      let venueId = user?.venue?._id || user?.venue?.id;
       
-      console.log('🕵️‍♂️ [DEBUG] User context at handleViewPublicProfile:', {
-        userId: user?.id,
-        venueId: user?.venueId,
-        venue: user?.venue,
-        email: user?.email
-      });
-      
-      // STRATEGIA SEMPLIFICATA: Usa solo il venue associato all'user
-      let venueId = user?.venueId || user?.venue?.id || user?.venue?._id;
+      if (!venueId) {
+        console.log('🔍 Venue ID not in user object, trying to fetch from API...');
+        
+        // Fallback: cerca il venue tramite API usando tenantId
+        const venueResponse = await fetch('/api/auth/me', {
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`,
+            'x-tenant-id': tenantId
+          }
+        });
+        
+        if (venueResponse.ok) {
+          const responseData = await venueResponse.json();
+          console.log('🔍 API Response from /api/auth/me:', responseData);
+          
+          // 🔧 FIX: L'endpoint restituisce {success: true, user: {venueId: ...}}
+          venueId = responseData.user?.venueId?._id || responseData.user?.venueId?.id || responseData.user?.venueId;
+          console.log('✅ Found venue ID from API:', venueId);
+        }
+      }
 
       if (!venueId) {
-        console.error('❌ No venue associated with this user');
-        alert('❌ Nessun locale associato a questo account. Completa prima la registrazione.');
+        alert('❌ Venue non trovato. Completa prima l\'onboarding del locale.');
         setIsCreatingVenue(false);
         return;
       }
-      
-      console.log('✅ Found venue ID from user context:', venueId);
-      
-      // Genera tenantId dall'user ID
-      const tenantId = generateTenantId(user?.id);
-      if (!tenantId) {
-        console.error('❌ Cannot generate tenantId from user ID');
-        alert("❌ Errore nell'identificazione del tenant. Riprova il login.");
-        setIsCreatingVenue(false);
-        return;
-      }
-      
-      console.log('🏢 Generated tenantId:', tenantId);
-      
-      // Verifica che il venue esista nel database con tenant-aware query
-      console.log('🔍 Verifying venue exists with tenant-aware query...');
-      const response = await fetch(`/api/venues/${venueId}`, {
-        method: 'GET',
-            headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-              'Content-Type': 'application/json',
-          'X-Tenant-ID': tenantId // AGGIUNTO: Header tenant per query tenant-aware
-            }
-          });
-      
-      console.log('📡 Venue verification response status:', response.status);
 
-          if (!response.ok) {
+      console.log('🔍 Verifying venue exists:', { venueId, tenantId });
+
+      // Verifica che il venue esista ed è accessibile pubblicamente
+      const response = await fetch(`/api/venues/public/${venueId}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json'
+          // NON includere x-tenant-id per accesso pubblico
+        }
+      });
+
+      if (!response.ok) {
         console.error('❌ Venue verification failed:', response.status, response.statusText);
         alert(`❌ Venue non trovato (${response.status}). Verifica che il profilo sia stato completato correttamente.`);
-          setIsCreatingVenue(false);
-          return;
-        }
-      
-      const venueData = await response.json();
-      console.log('✅ Venue verification successful:', {
-        venueId: venueData._id,
-        venueName: venueData.name,
-        tenantId: venueData.tenantId
-      });
-      
-      // Apri la pagina pubblica del venue (senza header tenant, per accesso pubblico)
-      const publicUrl = `${window.location.origin}/venue/${venueId}`;
-      console.log('🌐 Opening public profile URL:', publicUrl);
-      
-      // Safari-friendly: Usa location.href invece di window.open per evitare blocco popup
-      if (confirm('🔗 Aprire il profilo pubblico del locale? (Si aprirà in questa finestra)')) {
-        window.location.href = publicUrl;
+        setIsCreatingVenue(false);
+        return;
       }
-      
-    } catch (error) {
-      console.error('❌ Error in handleViewPublicProfile:', error);
-      alert('❌ Errore durante la verifica del profilo. Riprova più tardi.');
-    } finally {
-      setIsCreatingVenue(false);
+    
+    const venueData = await response.json();
+    console.log('✅ Venue verification successful:', {
+      venueId: venueData._id,
+      venueName: venueData.name,
+      tenantId: venueData.tenantId
+    });
+    
+    // Apri la pagina pubblica del venue (senza header tenant, per accesso pubblico)
+    const publicUrl = `${window.location.origin}/locale/${venueId}`;
+    console.log('🌐 Opening public profile URL:', publicUrl);
+    
+    // Safari-friendly: Usa location.href invece di window.open per evitare blocco popup
+    if (confirm('🔗 Aprire il profilo pubblico del locale? (Si aprirà in questa finestra)')) {
+      window.location.href = publicUrl;
     }
-  };
+    
+  } catch (error) {
+    console.error('❌ Error in handleViewPublicProfile:', error);
+    alert('❌ Errore durante la verifica del profilo. Riprova più tardi.');
+  } finally {
+    setIsCreatingVenue(false);
+  }
+};
 
-  const menuItems = [
-    { icon: House, label: 'HOME', path: '/admin' },
-    { icon: Calendar, label: 'CALENDARIO PARTITE', path: '/admin/calendario' },
-    { icon: CalendarCheck, label: 'PRENOTAZIONI', path: '/admin/bookings' },
-    { icon: Tag, label: 'GESTIONE OFFERTE', path: '/admin/offers' },
-    { icon: BarChart3, label: 'STATISTICHE', path: '/admin/statistiche' },
-    { icon: User, label: 'PROFILO', path: '/admin/profilo' },
-    { icon: Settings, label: 'ACCOUNT', path: '/admin/account' }
-  ];
+const menuItems = [
+  { icon: House, label: 'HOME', path: '/admin' },
+  { icon: Calendar, label: 'CALENDARIO PARTITE', path: '/admin/calendario' },
+  { icon: CalendarCheck, label: 'PRENOTAZIONI', path: '/admin/bookings' },
+  { icon: Tag, label: 'GESTIONE OFFERTE', path: '/admin/offers' },
+  { icon: BarChart3, label: 'STATISTICHE', path: '/admin/statistiche' },
+  { icon: User, label: 'PROFILO', path: '/admin/profilo' },
+  { icon: Settings, label: 'ACCOUNT', path: '/admin/account' }
+];
 
-  const currentPageTitle = () => {
-    const currentItem = menuItems.find(item => item.path === location.pathname);
-    return currentItem ? currentItem.label : 'ADMIN';
-  };
+const currentPageTitle = () => {
+  const currentItem = menuItems.find(item => item.path === location.pathname);
+  return currentItem ? currentItem.label : 'ADMIN';
+};
 
-  return (
-    <div className="min-h-screen flex w-full bg-fanzo-light-bg">
-      {/* Sidebar */}
-      <div className={`bg-white border-r border-gray-200 transition-all duration-300 ${
-        sidebarCollapsed ? 'w-18' : 'w-60'
-      } h-screen fixed left-0 top-0 z-40`}>
-        {/* Header */}
-        <div className="p-4 border-b border-gray-200 flex items-center justify-between">
-          {!sidebarCollapsed && (
-            <h2 className="font-racing text-lg text-fanzo-dark">BARMATCH ADMIN</h2>
-          )}
-          <button
-            onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-            className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
-          >
-            {sidebarCollapsed ? <Menu className="h-4 w-4" /> : <X className="h-4 w-4" />}
-          </button>
+return (
+  <div className="admin-layout">
+    {/* Sidebar */}
+    <div className={`admin-sidebar ${sidebarCollapsed ? '' : 'open'}`}>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center space-x-3">
+          <div className="text-xl font-special text-white">
+            🏆 SPOrTS
+          </div>
         </div>
-
-        {/* Menu Items */}
-        <nav className="p-4 space-y-2">
-          {menuItems.map((item) => (
-            <NavLink
-              key={item.path}
-              to={item.path}
-              className={({ isActive }) => 
-                `flex items-center space-x-3 p-3 rounded-lg transition-colors group ${
-                  sidebarCollapsed ? 'justify-center' : ''
-                } ${
-                  isActive 
-                    ? 'bg-fanzo-yellow text-fanzo-dark border-l-4 border-fanzo-teal' 
-                    : 'hover:bg-gray-100 text-gray-600 hover:text-fanzo-dark'
-                }`
-              }
-            >
-              <item.icon className="h-5 w-5" />
-              {!sidebarCollapsed && (
-                <span className="font-kanit font-semibold text-sm uppercase tracking-wide">
-                  {item.label}
-                </span>
-              )}
-            </NavLink>
-          ))}
-        </nav>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+          className="text-white hover:bg-white/10 md:hidden"
+        >
+          {sidebarCollapsed ? <Menu size={20} /> : <X size={20} />}
+        </Button>
       </div>
 
-      {/* Main Content */}
-      <div className={`flex-1 transition-all duration-300 ${
-        sidebarCollapsed ? 'ml-18' : 'ml-60'
-      }`}>
-        {/* Header */}
-        <header className="bg-white border-b border-gray-200 h-16 flex items-center justify-between px-6">
-          <h1 className="font-racing text-2xl text-fanzo-dark">
-            BENVENUTO, {venueName.toUpperCase()}!
-          </h1>
-          <Button
-            onClick={handleViewPublicProfile}
-            disabled={isCreatingVenue}
-            variant="outline"
-            className="border-fanzo-teal text-fanzo-teal hover:bg-fanzo-teal hover:text-white disabled:opacity-50"
+      <nav className="mt-8 space-y-2">
+        {menuItems.map((item) => (
+          <NavLink
+            key={item.path}
+            to={item.path}
+            className={({ isActive }) =>
+              `nav-link flex items-center space-x-3 p-3 rounded-lg transition-colors ${
+                isActive 
+                  ? 'bg-white/10 text-white font-medium active' 
+                  : 'text-white/80 hover:bg-white/5 hover:text-white'
+              }`
+            }
           >
-            {isCreatingVenue ? (
-              <>
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-fanzo-teal mr-2"></div>
-                Creazione...
-              </>
-            ) : (
-              <>
-                <ExternalLink className="h-4 w-4 mr-2" />
-                Visualizza Profilo Pubblico
-              </>
-            )}
-          </Button>
-        </header>
+            <item.icon size={20} />
+            <span>{item.label}</span>
+          </NavLink>
+        ))}
+      </nav>
 
-        {/* Page Content */}
-        <main className="p-6">
-          <Outlet />
-        </main>
+      {/* Public Profile Link */}
+      <div className="absolute bottom-6 left-6 right-6">
+        <Button
+          onClick={handleViewPublicProfile}
+          disabled={isCreatingVenue}
+          className="w-full bg-white/10 hover:bg-white/20 text-white border-white/20"
+          variant="outline"
+        >
+          <Eye size={16} className="mr-2" />
+          Visualizza Profilo Pubblico
+          <ExternalLink size={14} className="ml-2" />
+        </Button>
       </div>
     </div>
-  );
+
+    {/* Main Content */}
+    <div className="admin-main">
+      <Outlet />
+    </div>
+  </div>
+);
 };
 
 export default AdminLayout;

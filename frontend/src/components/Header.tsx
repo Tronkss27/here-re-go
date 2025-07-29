@@ -1,9 +1,10 @@
 import { useState } from 'react';
-import { Search, User, X, Menu, CalendarCheck, LogOut, LogIn, UserPlus } from 'lucide-react';
+import { Search, User, X, Menu, CalendarCheck, LogOut, LogIn, UserPlus, Building2, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
+import ThemeToggle from './ThemeToggle';
 
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -19,7 +20,7 @@ const Header = () => {
     { label: 'Chi Siamo', href: '/chi-siamo' }
   ];
 
-  const handleAuthAction = (action: 'login' | 'register' | 'logout' | 'my-bookings' | 'admin' | 'profile') => {
+  const handleAuthAction = (action: 'logout' | 'my-bookings' | 'admin' | 'profile') => {
     setIsMenuOpen(false);
     
     if (action === 'logout') {
@@ -31,247 +32,211 @@ const Header = () => {
       navigate('/admin');
     } else if (action === 'profile') {
       navigate('/profile');
-    } else {
-      navigate(`/${action}`);
     }
   };
 
   return (
-    <header className="sticky top-0 z-50 bg-fanzo-yellow shadow-sm">
+    <header className="header sticky top-0 z-50">
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between h-16 md:h-16 lg:h-16">
           {/* Mobile hamburger menu */}
           <button
-            className="md:hidden p-2"
+            className="md:hidden p-2 text-white hover:bg-white/10 rounded-md transition-colors"
             onClick={() => setIsMenuOpen(!isMenuOpen)}
             aria-label="Menu"
           >
             {isMenuOpen ? (
-              <X className="h-6 w-6 text-fanzo-dark" />
+              <X size={24} className="text-white" />
             ) : (
-              <Menu className="h-6 w-6 text-fanzo-dark" />
+              <Menu size={24} className="text-white" />
             )}
           </button>
 
-          {/* Logo */}
-          <div className="flex items-center cursor-pointer" onClick={() => navigate('/')}>
-            <h1 className="text-2xl md:text-3xl font-racing text-fanzo-dark tracking-tight font-bold">
-              BARMATCH
+          {/* Logo - Verde con accento */}
+          <div className="logo flex items-center">
+            <h1 className="text-2xl md:text-3xl font-special">
+              🏆 SPOrTS
             </h1>
           </div>
 
-          {/* Search and Auth */}
-          <div className="flex items-center space-x-4">
-            {/* Desktop Search */}
-            <div className="hidden md:block">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-500" />
-                <Input
-                  type="text"
-                  placeholder="Search teams, competitions and venues"
-                  className="pl-10 w-80 lg:w-96 bg-white border-none rounded-full"
-                />
-              </div>
-            </div>
+          {/* Desktop Navigation */}
+          <nav className="hidden md:flex items-center space-x-8">
+            {navigationItems.map((item) => (
+              <a
+                key={item.href}
+                href={item.href}
+                className="text-white hover:text-green-300 transition-colors font-medium"
+              >
+                {item.label}
+              </a>
+            ))}
+          </nav>
 
-            {/* Mobile Search Toggle */}
+          {/* Search & Auth Actions */}
+          <div className="flex items-center space-x-4">
+            {/* Search Toggle */}
             <button
-              className="md:hidden p-2"
               onClick={() => setIsSearchOpen(!isSearchOpen)}
-              aria-label="Cerca"
+              className="p-2 text-white hover:bg-white/10 rounded-md transition-colors"
+              aria-label="Search"
             >
-              <Search className="h-5 w-5 text-fanzo-dark" />
+              <Search size={20} />
             </button>
 
-            {/* Auth Section */}
-            {isAuthenticated && user ? (
-              <div className="flex items-center space-x-2">
-                {/* User Bookings Button - Desktop */}
-                <Button 
-                  variant="outline"
-                  className="hidden md:flex items-center gap-2 border-fanzo-teal text-fanzo-teal hover:bg-fanzo-teal hover:text-white font-kanit font-semibold rounded-full px-4"
-                  onClick={() => handleAuthAction('my-bookings')}
-                >
-                  <CalendarCheck className="h-4 w-4" />
-                  Le mie prenotazioni
-                </Button>
+            {/* Theme Toggle */}
+            <ThemeToggle />
 
-                {/* User Menu - Desktop */}
-                <div className="hidden md:flex items-center space-x-2">
-                  <span className="text-fanzo-dark font-kanit font-medium">
-                    Ciao, {user.name}
+            {/* Auth Buttons */}
+            <div className="hidden md:flex items-center space-x-3">
+              {isAuthenticated ? (
+                <div className="flex items-center space-x-2">
+                  <span className="text-white text-sm">
+                    Ciao, {user?.name || 'Utente'}!
                   </span>
                   
-                  {/* Accesso appropriato basato sul ruolo */}
-                  {user.role === 'venue_owner' ? (
+                  {user?.isVenueOwner && (
                     <Button
-                      variant="outline"
-                      size="sm"
-                      className="border-fanzo-teal text-fanzo-teal hover:bg-fanzo-teal hover:text-white font-kanit rounded-full"
                       onClick={() => handleAuthAction('admin')}
+                      size="sm"
+                      className="btn-accent"
                     >
+                      <CalendarCheck size={16} className="mr-1" />
                       Admin
                     </Button>
-                  ) : (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="border-fanzo-teal text-fanzo-teal hover:bg-fanzo-teal hover:text-white font-kanit rounded-full"
-                      onClick={() => handleAuthAction('profile')}
-                    >
-                      Profilo
-                    </Button>
                   )}
-                  
+
                   <Button
+                    onClick={() => handleAuthAction('logout')}
                     variant="outline"
                     size="sm"
-                    className="border-red-500 text-red-500 hover:bg-red-500 hover:text-white font-kanit rounded-full"
-                    onClick={() => handleAuthAction('logout')}
+                    className="text-white border-white hover:bg-white hover:text-gray-900"
                   >
-                    <LogOut className="h-4 w-4" />
+                    <LogOut size={16} className="mr-1" />
+                    Esci
                   </Button>
                 </div>
+              ) : (
+                <div className="flex items-center space-x-3">
+                  {/* 🎯 BOTTONE VENUE OWNERS - Con icona distintiva */}
+                  <Button
+                    onClick={() => navigate('/sports-login')}
+                    size="sm"
+                    className="bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white font-semibold px-4 py-2 flex items-center space-x-2"
+                  >
+                    <Building2 size={16} />
+                    <span>Accedi come Locale</span>
+                  </Button>
 
-                {/* Mobile User Indicator */}
-                <div className="md:hidden">
-                  <div className="flex items-center space-x-2">
-                    <div className="w-8 h-8 bg-fanzo-teal rounded-full flex items-center justify-center">
-                      <User className="h-4 w-4 text-white" />
-                    </div>
-                  </div>
+                  {/* 🎯 BOTTONE CLIENT/USERS - Con icona distintiva */}
+                  <Button
+                    onClick={() => navigate('/client-login')}
+                    size="sm"
+                    variant="outline"
+                    className="text-white border-white hover:bg-white hover:text-gray-900 px-4 py-2 flex items-center space-x-2"
+                  >
+                    <Users size={16} />
+                    <span>Accedi come Cliente</span>
+                  </Button>
                 </div>
-              </div>
-            ) : (
-              /* Not Authenticated - New Dual Access */
-              <div className="flex items-center space-x-4">
-                {/* Desktop Auth Buttons */}
-                <div className="hidden md:flex items-center space-x-6">
-                  {/* Tifoso Access */}
-                  <div className="text-center">
-                    <p className="text-xs text-fanzo-dark mb-1 font-kanit font-medium">Tifoso?</p>
-                    <Button 
-                      className="bg-blue-500 hover:bg-blue-600 text-white font-kanit font-semibold rounded-full px-4 py-1 text-sm"
-                      onClick={() => window.location.href = '/client-login'}
-                    >
-                      Accedi
-                    </Button>
-                  </div>
+              )}
+            </div>
 
-                  <div className="h-8 w-px bg-gray-300"></div>
-
-                  {/* Sports/Venue Access */}
-                  <div className="text-center">
-                    <Button 
-                      className="bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white font-kanit font-semibold rounded-full px-4 py-2"
-                      onClick={() => window.location.href = '/sports-login'}
-                    >
-                      🚀 Accesso SPOrTS
-                    </Button>
-                  </div>
-                </div>
-
-                {/* Mobile Auth Button */}
-                <Button 
-                  className="md:hidden bg-fanzo-teal hover:bg-fanzo-teal/90 text-white font-kanit font-semibold rounded-full px-4"
-                  onClick={() => handleAuthAction('login')}
-                >
-                  <User className="h-4 w-4 mr-2" />
-                  Accedi
-                </Button>
-              </div>
-            )}
+            {/* Mobile User Menu */}
+            <div className="md:hidden">
+              <button
+                className="p-2 text-white hover:bg-white/10 rounded-md transition-colors"
+                onClick={() => setIsMenuOpen(!isMenuOpen)}
+                aria-label="User menu"
+              >
+                <User size={20} />
+              </button>
+            </div>
           </div>
         </div>
 
-        {/* Mobile Search Bar */}
+        {/* Search Bar */}
         {isSearchOpen && (
-          <div className="md:hidden py-4 border-t border-fanzo-teal/20 animate-fade-in">
+          <div className="py-4 border-t border-white/20">
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-500" />
               <Input
                 type="text"
-                placeholder="Search teams, competitions and venues"
-                className="pl-10 w-full bg-white border-none rounded-full"
-                autoFocus
+                placeholder="Cerca squadre, competizioni e locali"
+                className="w-full bg-white/10 border-white/20 text-white placeholder-white/70 focus:bg-white/20"
               />
-              <button
-                className="absolute right-3 top-1/2 transform -translate-y-1/2"
-                onClick={() => setIsSearchOpen(false)}
-              >
-                <X className="h-4 w-4 text-gray-400" />
-              </button>
+              <Search className="absolute right-3 top-1/2 transform -translate-y-1/2 text-white/70" size={20} />
             </div>
           </div>
         )}
 
-        {/* Mobile Navigation Menu */}
+        {/* Mobile Menu */}
         {isMenuOpen && (
-          <div className="md:hidden py-4 border-t border-fanzo-teal/20 animate-fade-in">
-            <nav className="flex flex-col space-y-4">
+          <div className="md:hidden py-4 border-t border-white/20">
+            <nav className="space-y-2">
               {navigationItems.map((item) => (
                 <a
-                  key={item.label}
+                  key={item.href}
                   href={item.href}
-                  className="text-fanzo-dark hover:text-fanzo-teal font-kanit font-medium transition-colors duration-200 py-2 text-lg"
+                  className="block px-4 py-2 text-white hover:bg-white/10 rounded-md transition-colors"
                   onClick={() => setIsMenuOpen(false)}
                 >
                   {item.label}
                 </a>
               ))}
-              
-              {/* Mobile Auth Actions */}
-              {isAuthenticated && user ? (
-                <div className="border-t border-fanzo-teal/20 pt-4 space-y-3">
-                  <div className="text-fanzo-dark font-kanit font-medium">
-                    Ciao, {user.name}
+            </nav>
+            
+            <div className="mt-4 pt-4 border-t border-white/20 space-y-2">
+              {isAuthenticated ? (
+                <>
+                  <div className="px-4 py-2 text-white text-sm">
+                    Ciao, {user?.name || 'Utente'}!
                   </div>
                   
-                  <button
-                    className="flex items-center gap-2 text-fanzo-teal hover:text-fanzo-dark font-kanit font-medium transition-colors duration-200 py-2 text-lg w-full text-left"
-                    onClick={() => handleAuthAction('my-bookings')}
-                  >
-                    <CalendarCheck className="h-5 w-5" />
-                    Le mie prenotazioni
-                  </button>
-                  
-                  {user.role === 'admin' && (
+                  {user?.isVenueOwner && (
                     <button
-                      className="flex items-center gap-2 text-fanzo-teal hover:text-fanzo-dark font-kanit font-medium transition-colors duration-200 py-2 text-lg w-full text-left"
                       onClick={() => handleAuthAction('admin')}
+                      className="w-full text-left px-4 py-2 text-white hover:bg-white/10 rounded-md transition-colors flex items-center"
                     >
-                      <User className="h-5 w-5" />
-                      Pannello Admin
+                      <CalendarCheck size={16} className="mr-2" />
+                      Admin Panel
                     </button>
                   )}
-                  
+
                   <button
-                    className="flex items-center gap-2 text-red-500 hover:text-red-600 font-kanit font-medium transition-colors duration-200 py-2 text-lg w-full text-left"
                     onClick={() => handleAuthAction('logout')}
+                    className="w-full text-left px-4 py-2 text-white hover:bg-white/10 rounded-md transition-colors flex items-center"
                   >
-                    <LogOut className="h-5 w-5" />
-                    Logout
+                    <LogOut size={16} className="mr-2" />
+                    Esci
                   </button>
-                </div>
+                </>
               ) : (
-                <div className="border-t border-fanzo-teal/20 pt-4 space-y-3">
+                <>
+                  {/* 🎯 ACCESSO LOCALE - Con icona distintiva */}
                   <button
-                    className="flex items-center gap-2 text-fanzo-teal hover:text-fanzo-dark font-kanit font-medium transition-colors duration-200 py-2 text-lg w-full text-left"
-                    onClick={() => handleAuthAction('login')}
+                    onClick={() => navigate('/sports-login')}
+                    className="w-full text-left px-4 py-3 text-white hover:bg-white/10 rounded-md transition-colors flex items-center text-sm border-b border-white/10"
                   >
-                    <LogIn className="h-5 w-5" />
-                    Accedi
+                    <Building2 size={16} className="mr-3" />
+                    <div>
+                      <div className="font-medium">Accedi come Locale</div>
+                      <div className="text-xs text-white/70">Gestisci il tuo sport bar</div>
+                    </div>
                   </button>
+
+                  {/* 🎯 ACCESSO CLIENTE - Con icona distintiva */}
                   <button
-                    className="flex items-center gap-2 text-fanzo-teal hover:text-fanzo-dark font-kanit font-medium transition-colors duration-200 py-2 text-lg w-full text-left"
-                    onClick={() => handleAuthAction('register')}
+                    onClick={() => navigate('/client-login')}
+                    className="w-full text-left px-4 py-3 text-white hover:bg-white/10 rounded-md transition-colors flex items-center text-sm"
                   >
-                    <UserPlus className="h-5 w-5" />
-                    Registrati
+                    <Users size={16} className="mr-3" />
+                    <div>
+                      <div className="font-medium">Accedi come Cliente</div>
+                      <div className="text-xs text-white/70">Trova locali per le partite</div>
+                    </div>
                   </button>
-                </div>
+                </>
               )}
-            </nav>
+            </div>
           </div>
         )}
       </div>

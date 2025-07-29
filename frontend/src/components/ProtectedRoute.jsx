@@ -17,9 +17,9 @@ const ProtectedRoute = ({ children }) => {
     )
   }
 
-  // Se non autenticato, redirect al login salvando la destinazione
+  // Se non autenticato, redirect alla homepage (pagine protette devono gestire questo caso)
   if (!isAuthenticated) {
-    return <Navigate to="/login" state={{ from: location }} replace />
+    return <Navigate to="/" state={{ from: location }} replace />
   }
 
   // Se autenticato, mostra il contenuto protetto

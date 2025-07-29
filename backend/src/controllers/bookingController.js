@@ -83,6 +83,11 @@ class BookingController {
    */
   async getBookings(req, res) {
     try {
+      console.log('🚀 DEBUG: getBookings called with params:', req.params);
+      console.log('🚀 DEBUG: getBookings query:', req.query);
+      console.log('🚀 DEBUG: getBookings user:', req.user?.id);
+      console.log('🚀 DEBUG: getBookings tenantId:', req.tenantId);
+      
       const {
         venue,
         status,
@@ -101,11 +106,14 @@ class BookingController {
       // Venue filter (per venue owners)
       if (venue) {
         filter.venue = venue
+        console.log('🚀 DEBUG: Added venue filter:', venue);
       } else if (req.user && req.user.role === 'venue_owner') {
         // Venue owners can only see their bookings (tenant-aware)
         const userVenues = await TenantQuery.find(Venue, req.tenantId, { owner: req.user._id }).select('_id')
         if (userVenues.length > 0) {
-          filter.venue = { $in: userVenues.map(v => v._id) }
+          // ✅ FIX: Usa il nuovo metodo normalizzato invece del mix manuale
+          filter.venue = { $in: userVenues.map(v => v._id) };
+          console.log('🚀 DEBUG: Added user venues filter:', userVenues.map(v => v._id));
         }
       }
 
@@ -127,17 +135,24 @@ class BookingController {
         if (dateTo) filter.bookingDate.$lte = new Date(dateTo)
       }
 
+      console.log('🚀 DEBUG: Final filter:', filter);
+      console.log('🚀 DEBUG: Using tenantId:', req.tenantId);
+
       // Pagination
       const skip = (page - 1) * limit
       const sort = { [sortBy]: sortOrder === 'desc' ? -1 : 1 }
 
       // Execute query WITHOUT populate (to avoid ObjectId issues with mock venues) - tenant-aware
-      const bookings = await TenantQuery.find(Booking, req.tenantId, filter)
+      const bookings = await Booking.findWithNormalizedVenue(req.tenantId, filter)
         .sort(sort)
         .skip(skip)
         .limit(parseInt(limit))
 
-      const total = await TenantQuery.count(Booking, req.tenantId, filter)
+      console.log('🚀 DEBUG: Found bookings:', bookings.length);
+
+      const total = await TenantQuery.count(Booking, req.tenantId, Booking.normalizeVenueQuery(filter.venue) || filter)
+
+      console.log('🚀 DEBUG: Total bookings:', total);
 
       // Process bookings to handle mock venues manually
       const processedBookings = bookings.map(booking => {

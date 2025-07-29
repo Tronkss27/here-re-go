@@ -3,14 +3,19 @@ const jwt = require('jsonwebtoken')
 const { body, validationResult } = require('express-validator')
 const User = require('../models/User')
 const Venue = require('../models/Venue')
+const Tenant = require('../models/Tenant') // Importa il modello Tenant
 const { auth } = require('../middlewares/auth')
 const TenantMiddleware = require('../middlewares/TenantMiddleware')
 
 const router = express.Router()
 
-// Generate JWT token
-const generateToken = (id) => {
-  return jwt.sign({ id }, process.env.JWT_SECRET || 'your-secret-key', {
+// Generate JWT token - ora accetta anche tenantId
+const generateToken = (id, tenantId = null) => {
+  const payload = { id }
+  if (tenantId) {
+    payload.tenantId = tenantId
+  }
+  return jwt.sign(payload, process.env.JWT_SECRET || 'your-secret-key', {
     expiresIn: process.env.JWT_EXPIRE || '30d'
   })
 }
@@ -18,7 +23,9 @@ const generateToken = (id) => {
 // @route   POST /api/auth/register
 // @desc    Register a new user and create venue if isVenueOwner
 // @access  Public
-router.post('/register', [
+router.post(
+  '/register',
+  [
   body('name').trim().isLength({ min: 2 }).withMessage('Name must be at least 2 characters'),
   body('email').isEmail().normalizeEmail().withMessage('Please provide a valid email'),
   body('password').isLength({ min: 6 }).withMessage('Password must be at least 6 characters'),
@@ -28,7 +35,6 @@ router.post('/register', [
   body('businessInfo.businessAddress').optional().isLength({ min: 5 }).withMessage('Business address must be at least 5 characters'),
   body('businessInfo.businessCity').optional().isLength({ min: 2 }).withMessage('Business city must be at least 2 characters')
 ], 
-TenantMiddleware.extractTenant,
 async (req, res) => {
   try {
     const errors = validationResult(req)
@@ -38,16 +44,13 @@ async (req, res) => {
 
     const { name, email, password, isVenueOwner, businessInfo } = req.body
 
-    // Check if user already exists
     const existingUser = await User.findOne({ email })
     if (existingUser) {
-      return res.status(400).json({ message: 'User already exists' })
+      return res.status(400).json({ message: 'Un utente con questa email esiste già. Prova ad effettuare il login o usa un\'altra email.' })
     }
 
-    // Determine role based on isVenueOwner flag
     const role = isVenueOwner ? 'venue_owner' : 'user'
 
-    // Create user
     const user = await User.create({
       name,
       email,
@@ -55,21 +58,30 @@ async (req, res) => {
       role
     })
 
-    // If it's a venue owner, create the venue
     let venue = null
+      let tenant = null
+      let tokenPayload = { id: user._id }
+
     if (isVenueOwner && businessInfo) {
-      try {
-        // STRATEGIA TENANTID: Usa l'ID dell'utente come tenantId per creare tenant univoci
-        const tenantId = user._id.toString();
-        
-        console.log('🏗️ DEBUG: Creating venue with user-based tenant context');
-        console.log('- User ID:', user._id.toString());
-        console.log('- Generated TenantId:', tenantId);
-        
+        // 1. Crea un Tenant unico per il nuovo venue_owner
+        const tenantSlug = businessInfo.businessName.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '') + '-' + user._id.toString().slice(-4)
+        tenant = await Tenant.create({
+          name: businessInfo.businessName,
+          slug: tenantSlug,
+          ownerUser: user._id
+        })
+
+        console.log(`✅ [REGISTER] Tenant creato:`, {
+          tenantId: tenant._id,
+          slug: tenant.slug,
+          name: tenant.name
+        })
+
+        // 2. Crea il Venue associato a questo nuovo Tenant
         venue = await Venue.create({
           name: businessInfo.businessName,
           owner: user._id,
-          tenantId: tenantId, // CORRETTO: Usa user._id come tenantId
+          tenantId: tenant._id,
           contact: {
             email: email,
             phone: businessInfo.businessPhone
@@ -78,45 +90,87 @@ async (req, res) => {
             address: {
               street: businessInfo.businessAddress,
               city: businessInfo.businessCity,
-              postalCode: '00000', // Default, can be updated later
+              postalCode: businessInfo.businessPostalCode || '00000',
               country: 'Italy'
             }
           },
           capacity: {
             total: 50 // Default capacity, can be updated later
           },
+          bookingSettings: {
+            enabled: true // ✅ Assicura che le prenotazioni siano abilitate di default
+          },
           status: 'approved',
           isActive: true
         })
 
-        console.log('✅ DEBUG: Venue created with ID:', venue._id, 'and tenantId:', venue.tenantId);
+        console.log(`✅ [REGISTER] Venue creato:`, {
+          venueId: venue._id,
+          tenantId: venue.tenantId,
+          name: venue.name
+        })
 
-        // Update user with venue reference
+        // 3. Aggiorna l'utente con i riferimenti corretti
         user.venueId = venue._id
+        user.tenantId = tenant._id
         await user.save()
-      } catch (venueError) {
-        console.error('Venue creation error:', venueError)
-        // If venue creation fails, still return success for user creation
-        // The venue can be created later through the admin panel
-      }
+
+        console.log(`✅ [REGISTER] User aggiornato:`, {
+          userId: user._id,
+          venueId: user.venueId,
+          tenantId: user.tenantId
+        })
+
+        // 4. Aggiungi tenantId al payload del token
+        tokenPayload.tenantId = tenant._id
     }
 
-    const token = generateToken(user._id)
+      const token = generateToken(tokenPayload.id, tokenPayload.tenantId)
+
+      // Ricarica l'utente per avere i dati più recenti
+      const updatedUser = await User.findById(user._id)
+
+      console.log(`✅ [REGISTER] UpdatedUser dopo il reload:`, {
+        userId: updatedUser._id,
+        venueId: updatedUser.venueId,
+        tenantId: updatedUser.tenantId
+      })
 
     res.status(201).json({
       success: true,
       token,
       user: {
-        ...user.toJSON(),
-        isVenueOwner: role === 'venue_owner'
+        id: updatedUser._id,
+        _id: updatedUser._id,
+        name: updatedUser.name,
+        email: updatedUser.email,
+        role: updatedUser.role,
+        venueId: updatedUser.venueId,
+          tenantId: updatedUser.tenantId, // ✅ Il tenantId corretto è qui
+        isActive: updatedUser.isActive,
+        isVenueOwner: role === 'venue_owner',
+        createdAt: updatedUser.createdAt,
+        updatedAt: updatedUser.updatedAt
       },
-      venue: venue ? venue.toJSON() : null
+        venue: venue
+          ? {
+        id: venue._id,
+        _id: venue._id,
+        name: venue.name,
+        owner: venue.owner,
+        contact: venue.contact,
+        location: venue.location,
+        status: venue.status,
+        isActive: venue.isActive
+            }
+          : null
     })
   } catch (error) {
     console.error('Registration error:', error)
     res.status(500).json({ message: 'Server error during registration' })
   }
-})
+  }
+)
 
 // @route   POST /api/auth/login
 // @desc    Login user

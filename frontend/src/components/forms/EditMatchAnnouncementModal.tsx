@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { Save, Loader2, Plus, Trash2 } from 'lucide-react';
-import matchAnnouncementService from '@/services/matchAnnouncementService';
+// import matchAnnouncementService from '@/services/matchAnnouncementService'; // TODO: Implementare funzioni mancanti
 
 // Template offerte predefinite
 const TEMPLATE_OFFERS = [

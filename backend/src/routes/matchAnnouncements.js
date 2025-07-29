@@ -58,6 +58,16 @@ router.post('/track/click/:id',
   matchAnnouncementController.trackClick
 );
 
+// Track click su match (per analytics - NO AUTH RICHIESTA)
+router.post('/track/match-click',
+  [
+    body('matchId').isString().notEmpty(),
+    body('venueId').optional().isString(),
+    body('timestamp').optional().isISO8601()
+  ],
+  matchAnnouncementController.trackMatchClick
+);
+
 // Test connessione API (admin)
 router.get('/test/api-connection',
   matchAnnouncementController.testApiConnection
@@ -190,6 +200,12 @@ const validateDateRange = (req, res, next) => {
 
 // Validazione date applicata direttamente alle route specifiche che la necessitano
 
+// 🔥 HOT MATCHES per Homepage (pubblico)
+router.get('/hot', matchAnnouncementController.getHotMatches);
+
+// 🏟️ Venues per una partita specifica (pubblico)
+router.get('/match/:matchId/venues', matchAnnouncementController.getVenuesForMatch);
+
 // Error handler per route non trovate
 router.use((req, res) => {
   res.status(404).json({
@@ -199,6 +215,8 @@ router.use((req, res) => {
       'GET /search/matches - Ricerca partite',
       'GET /search/public - Ricerca pubblica annunci',
       'GET /competitions - Lista competizioni',
+      'GET /hot - Hot matches per homepage',
+      'GET /match/:matchId/venues - Venues per partita specifica',
       'GET /public/:id - Dettaglio annuncio pubblico',
       'POST /track/click/:id - Track click',
       'POST / - Crea annuncio (auth)',

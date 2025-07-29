@@ -91,17 +91,21 @@ const VenueOnboarding = () => {
 
   // Pre-populate form data with user registration info
   useEffect(() => {
-    if (user && user.venue) {
+    if (user) {
+      console.log('🔄 Pre-populating onboarding with user data:', user);
+      
+      // ✅ FIX: Usa dati di registrazione se disponibili
       setData(prev => ({
         ...prev,
         keyInfo: {
-          name: user.venue.name || '',
-          address: user.venue.address || '',
-          city: user.venue.city || '',
-          postalCode: user.venue.postalCode || '',
-          about: '',
-          website: '',
-          phone: user.venue.phone || ''
+          // Prima prova user.venue (se esiste), poi fallback sui dati di registrazione
+          name: user.venue?.name || user.businessName || '',
+          address: user.venue?.address || user.businessAddress || '',
+          city: user.venue?.city || user.businessCity || '',
+          postalCode: user.venue?.postalCode || user.businessPostalCode || '',
+          about: user.venue?.about || '',
+          website: user.venue?.website || '',
+          phone: user.venue?.phone || user.businessPhone || user.phone || ''
         }
       }));
     }
@@ -188,6 +192,13 @@ const VenueOnboarding = () => {
         // Continua comunque l'onboarding, l'admin può ritentare la sync più tardi
       } else {
         console.log('✅ Venue successfully synced to backend!', syncResult.venue);
+        // ✨ IMPORTANTE: Aggiorna i dati locali con backendId per future operazioni
+        venueProfileData.backendId = syncResult.venue._id;
+        venueProfileData.syncedAt = new Date().toISOString();
+        venueProfileData.status = 'synced';
+        
+        // Risalva con i dati di sync aggiornati
+        venueProfileService.saveProfile(user.id, venueProfileData);
       }
       
       // Prepara i dati account iniziali
@@ -219,12 +230,14 @@ const VenueOnboarding = () => {
       // Ricrea l'oggetto utente aggiornato
       const updatedUserData = {
         ...user,
+        venueId: syncResult.success ? syncResult.venue._id : user.venueId, // salva anche a livello top per comodità
         venue: {
-          name: data.keyInfo.name,
-          id: `venue_${user.id}`
+          ...(user.venue || {}),
+          id: syncResult.success ? syncResult.venue._id : (user.venue?.id || ''),
+          name: data.keyInfo.name
         },
-        // Aggiungo un flag per forzare il re-render se necessario
-        updatedAt: new Date().toISOString() 
+        // Flag per forzare re-render
+        updatedAt: new Date().toISOString()
       };
 
       // Aggiorna l'utente nel localStorage e context

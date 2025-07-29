@@ -2,7 +2,7 @@ import React, { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { useModal } from '../contexts/ModalContext'
-import { AuthContainer } from '../components/ui'
+import { LogIn } from 'lucide-react'
 
 const SportsLogin = () => {
   const [formData, setFormData] = useState({
@@ -33,7 +33,14 @@ const SportsLogin = () => {
         // Check if user is venue owner
         if (result.user?.isVenueOwner) {
           showSuccessModal('Benvenuto su SPOrTS Admin!')
-          navigate('/admin')
+          
+          // Se ha completato l'onboarding, vai al dashboard
+          // Altrimenti, vai all'onboarding
+          if (result.user?.venue || result.data?.venue) {
+            navigate('/admin')
+          } else {
+            navigate('/admin/onboarding')
+          }
         } else {
           showErrorModal('Accesso negato. Devi essere registrato come proprietario di locale.')
         }
@@ -42,116 +49,97 @@ const SportsLogin = () => {
       }
     } catch (error) {
       console.error('Login error:', error)
-      showErrorModal('Errore durante l\'accesso. Riprova.')
+      showErrorModal('Errore durante l\'accesso. Riprova più tardi.')
     } finally {
       setIsLoading(false)
     }
   }
 
   return (
-    <AuthContainer 
-      title="Accesso SPOrTS"
-      subtitle="Area riservata ai gestori di locali"
-    >
-      <div className="mb-6 p-4 bg-orange-50 border border-orange-200 rounded-lg">
-        <div className="flex items-center">
-          <div className="text-orange-500 text-2xl mr-3">🏆</div>
+    <div className="login-container">
+      <div className="login-card">
+        <div className="text-center mb-8">
+          <h1 className="text-3xl font-special mb-2" style={{color: '#069e2d'}}>
+            🏆 SPOrTS
+          </h1>
+          <h2 className="text-2xl font-semibold mb-2">Accedi</h2>
+          <p className="text-muted">Accedi alla tua area riservata</p>
+        </div>
+
+        <form onSubmit={handleSubmit} className="space-y-6">
           <div>
-            <h3 className="font-semibold text-orange-800">Area Gestori</h3>
-            <p className="text-orange-700 text-sm">
-              Accedi per gestire il tuo locale, prenotazioni e offerte
-            </p>
+            <label htmlFor="email" className="form-label">
+              Email*
+            </label>
+            <input
+              type="email"
+              id="email"
+              name="email"
+              value={formData.email}
+              onChange={handleInputChange}
+              placeholder="Inserisci la tua email"
+              required
+              className="w-full"
+            />
           </div>
-        </div>
-      </div>
 
-      <form onSubmit={handleSubmit} className="space-y-6">
-        <div>
-          <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
-            Email Aziendale*
-          </label>
-          <input
-            type="email"
-            id="email"
-            name="email"
-            value={formData.email}
-            onChange={handleInputChange}
-            placeholder="nome@iltuolocale.com"
-            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-colors"
-            required
-          />
-        </div>
+          <div>
+            <label htmlFor="password" className="form-label">
+              Password*
+            </label>
+            <input
+              type="password"
+              id="password"
+              name="password"
+              value={formData.password}
+              onChange={handleInputChange}
+              placeholder="Inserisci la password"
+              required
+              className="w-full"
+            />
+          </div>
 
-        <div>
-          <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
-            Password*
-          </label>
-          <input
-            type="password"
-            id="password"
-            name="password"
-            value={formData.password}
-            onChange={handleInputChange}
-            placeholder="Password sicura"
-            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-colors"
-            required
-          />
-          <p className="text-xs text-gray-500 mt-1">
-            La password deve essere sicura per proteggere i dati del tuo locale
-          </p>
-        </div>
+          <button
+            type="submit"
+            disabled={isLoading}
+            className="btn-primary w-full flex items-center justify-center"
+          >
+            {isLoading ? (
+              <div className="loading mr-2"></div>
+            ) : (
+              <LogIn className="mr-2" size={20} />
+            )}
+            Accedi
+          </button>
+        </form>
 
-        <button
-          type="submit"
-          disabled={isLoading}
-          className="w-full bg-gradient-to-r from-orange-500 to-orange-600 text-white py-3 px-4 rounded-lg hover:from-orange-600 hover:to-orange-700 focus:ring-2 focus:ring-orange-500 focus:ring-offset-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed font-semibold"
-        >
-          {isLoading ? (
-            <div className="flex items-center justify-center">
-              <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
-              Accesso in corso...
-            </div>
-          ) : (
-            '🚀 Accesso SPOrTS'
-          )}
-        </button>
-
-        <div className="text-center">
-          <p className="text-gray-600 text-sm">
-            Non hai ancora registrato il tuo locale?{' '}
-            <Link 
-              to="/sports-register" 
-              className="text-orange-500 hover:text-orange-600 font-medium"
-            >
-              Registra il tuo locale
+        <div className="mt-6 text-center">
+          <p className="text-muted">
+            Non hai un account?{' '}
+            <Link to="/register" className="font-medium hover:underline" style={{color: '#069e2d'}}>
+              Crea un nuovo account
             </Link>
           </p>
         </div>
 
-        <div className="text-center pt-4 border-t border-gray-200">
-          <p className="text-gray-600 text-sm mb-2">
-            Sei un cliente? 
-          </p>
+        <div className="mt-4 text-center">
+          <p className="text-muted">Sei un locale?</p>
           <Link 
-            to="/client-login" 
-            className="text-orange-500 hover:text-orange-600 font-medium text-sm"
+            to="/sports-register" 
+            className="btn-secondary mt-2 inline-flex items-center"
           >
-            🏠 Accesso Cliente
+            🏟️ Accesso SPOrTS per Locali
           </Link>
         </div>
 
-        <div className="mt-6 p-4 bg-gray-50 rounded-lg">
-          <h4 className="font-medium text-gray-800 mb-2">Cosa puoi fare con SPOrTS:</h4>
-          <ul className="text-sm text-gray-600 space-y-1">
-            <li>• Gestire prenotazioni e tavoli</li>
-            <li>• Creare offerte e promozioni</li>
-            <li>• Aggiornare profilo e orari</li>
-            <li>• Visualizzare statistiche e analytics</li>
-          </ul>
+        <div className="text-center mt-4">
+          <Link to="/" className="hover:underline" style={{color: '#069e2d'}}>
+            Torna alla Homepage
+          </Link>
         </div>
-      </form>
-    </AuthContainer>
+      </div>
+    </div>
   )
 }
 
-export default SportsLogin 
+export default SportsLogin

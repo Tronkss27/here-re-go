@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Bell, Globe, Lock, Mail, Save } from 'lucide-react';
+import { Bell, Globe, Lock, Mail, Save, LogOut } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -8,6 +8,7 @@ import { Switch } from '@/components/ui/switch';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useAuth } from '@/contexts/AuthContext';
 import { accountService } from '@/services/venueService';
+import { useNavigate } from 'react-router-dom';
 
 interface AccountData {
   email: string;
@@ -25,7 +26,8 @@ interface AccountData {
 }
 
 const AccountSettings = () => {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
   const [accountData, setAccountData] = useState<AccountData | null>(null);
@@ -180,6 +182,14 @@ const AccountSettings = () => {
     }
   };
 
+  // ✨ NUOVO: Gestisce il logout
+  const handleLogout = () => {
+    if (window.confirm('Sei sicuro di voler disconnetterti dal tuo account?')) {
+      logout();
+      navigate('/');
+    }
+  };
+
   if (!accountData) {
     return (
       <div className="space-y-6">
@@ -196,15 +206,25 @@ const AccountSettings = () => {
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-      <h2 className="font-racing text-2xl text-fanzo-dark">IMPOSTAZIONI ACCOUNT</h2>
-        <Button 
-          onClick={handleSave}
-          disabled={saving}
-          className="bg-fanzo-yellow hover:bg-fanzo-yellow/90 text-fanzo-dark"
-        >
-          <Save className="h-4 w-4 mr-2" />
-          {saving ? 'Salvataggio...' : 'Salva Modifiche'}
-        </Button>
+        <h2 className="font-racing text-2xl text-fanzo-dark">IMPOSTAZIONI ACCOUNT</h2>
+        <div className="flex gap-3">
+          <Button 
+            onClick={handleSave}
+            disabled={saving}
+            className="bg-fanzo-yellow hover:bg-fanzo-yellow/90 text-fanzo-dark"
+          >
+            <Save className="h-4 w-4 mr-2" />
+            {saving ? 'Salvataggio...' : 'Salva Modifiche'}
+          </Button>
+          <Button 
+            onClick={handleLogout}
+            variant="outline"
+            className="border-red-500 text-red-500 hover:bg-red-500 hover:text-white"
+          >
+            <LogOut className="h-4 w-4 mr-2" />
+            Logout
+          </Button>
+        </div>
       </div>
 
       {/* Success/Error Message */}

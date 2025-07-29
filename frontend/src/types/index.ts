@@ -168,7 +168,7 @@ export interface BookingTimeSlot {
   end: string   // Format: "21:00"
 }
 
-export type BookingTablePreference = 'any' | 'near_screen' | 'quiet_area' | 'outdoor' | 'bar_area'
+export type BookingTablePreference = 'any' | 'window' | 'bar' | 'booth' | 'outdoor'
 export type BookingStatus = 'pending' | 'confirmed' | 'cancelled' | 'completed' | 'no_show'
 export type BookingPaymentStatus = 'none' | 'pending' | 'partial' | 'paid' | 'refunded'
 

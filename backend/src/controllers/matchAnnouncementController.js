@@ -1,8 +1,58 @@
 const MatchAnnouncement = require('../models/MatchAnnouncement');
+const PopularMatch = require('../models/PopularMatch');
 const Venue = require('../models/Venue');
+const TenantQuery = require('../utils/tenantQuery');
+const { processVenueWithImages } = require('../utils/imageUtils');
 const sportsApiService = require('../services/sportsApiService');
 const { validationResult } = require('express-validator');
 const mongoose = require('mongoose');
+
+// 🎯 FUNZIONE STANDALONE PER POPULAR MATCH
+async function updateOrCreatePopularMatchStandalone(match, venueId, announcementId) {
+  try {
+    console.log(`🎯 Updating PopularMatch for matchId: ${match.id}`);
+    
+    // Cerca se esiste già un PopularMatch per questo matchId
+    let popularMatch = await PopularMatch.findOne({ matchId: match.id });
+    
+    if (popularMatch) {
+      // Aggiorna PopularMatch esistente
+      console.log(`🔄 Updating existing PopularMatch: ${popularMatch._id}`);
+      await popularMatch.addVenue(venueId, announcementId);
+      console.log(`✅ PopularMatch updated: ${popularMatch.venueCount} venues, score: ${popularMatch.popularityScore}`);
+    } else {
+      // Crea nuovo PopularMatch
+      console.log(`🆕 Creating new PopularMatch for: ${match.homeTeam} vs ${match.awayTeam}`);
+      
+      popularMatch = new PopularMatch({
+        matchId: match.id,
+        homeTeam: match.homeTeam,
+        awayTeam: match.awayTeam,
+        competition: match.competition,
+        date: match.date,
+        time: match.time,
+        venues: [{
+          venueId,
+          announcementId,
+          addedAt: new Date()
+        }],
+        venueCount: 1,
+        firstAnnouncedAt: new Date()
+      });
+      
+      await popularMatch.save();
+      await popularMatch.updatePopularity();
+      
+      console.log(`✅ PopularMatch created: ${popularMatch._id} with matchId: ${match.id}`);
+    }
+    
+    return popularMatch;
+  } catch (error) {
+    console.error('❌ Error updating PopularMatch:', error);
+    // Non bloccare la creazione dell'annuncio per errori di PopularMatch
+    return null;
+  }
+}
 
 class MatchAnnouncementController {
   
@@ -69,41 +119,17 @@ class MatchAnnouncementController {
         offers: eventDetails.selectedOffers?.length || 0
       });
 
-      // Verifica che il locale esista - se non esiste, crea uno di default per testing
-      let venue = await Venue.findById(venueId);
+      // Verifica che il locale esista nel tenant context
+      const venue = await TenantQuery.findById(Venue, req.tenantId, venueId);
       if (!venue) {
-        console.log('🏗️ Creating demo venue for testing...');
-        venue = new Venue({
-          _id: venueId,
-          name: 'Demo Sports Bar',
-          owner: req.user._id,
-          contact: {
-            email: req.user.email,
-            phone: '+39 123 456 7890'
-          },
-          location: {
-            address: {
-              street: 'Via Demo 123',
-              city: 'Roma',
-              postalCode: '00100',
-              country: 'Italy'
-            },
-            coordinates: {
-              lat: 41.9028,
-              lng: 12.4964
-            }
-          },
-          capacity: {
-            total: 100,
-            standing: 60,
-            seating: 40
-          },
-          amenities: ['tv_screens', 'food', 'drinks'],
-          status: 'approved'
+        console.log(`❌ Venue not found: venueId=${venueId}, tenantId=${req.tenantId}`);
+        return res.status(404).json({
+          success: false,
+          message: 'Locale non trovato. Completa prima l\'onboarding del tuo locale.'
         });
-        await venue.save();
-        console.log('✅ Demo venue created');
       }
+      
+      console.log(`✅ Venue found: ${venue.name} (ID: ${venue._id})`);;
 
       // 🎯 STEP 1: CONTROLLO DUPLICATO PER LO STESSO VENUE
       const existingVenueAnnouncement = await MatchAnnouncement.findOne({
@@ -199,6 +225,15 @@ class MatchAnnouncementController {
       try {
         await announcement.save();
         console.log(`✅ Announcement saved successfully with ID: ${announcement._id}`);
+        
+        // 🎯 AGGIORNA/CREA POPULAR MATCH
+        try {
+          await updateOrCreatePopularMatchStandalone(matchToUse, venueId, announcement._id);
+        } catch (popularMatchError) {
+          console.error('❌ Error with PopularMatch (non-blocking):', popularMatchError);
+          // Non bloccare la creazione dell'annuncio per errori di PopularMatch
+        }
+        
       } catch (saveError) {
         console.error('💥 Error saving announcement:', saveError);
         throw saveError;
@@ -732,6 +767,202 @@ class MatchAnnouncementController {
       res.status(500).json({
         success: false,
         error: 'Error cleaning test data'
+      });
+    }
+  }
+
+
+
+  // 🎯 ENDPOINT PER OTTENERE HOT MATCHES (HOMEPAGE)
+  async getHotMatches(req, res) {
+    try {
+      const { limit = 10 } = req.query;
+      
+      console.log(`🔥 Getting hot matches, limit: ${limit}`);
+      console.log(`🚨 DEBUG: About to call PopularMatch.getHotMatches(${limit})`);
+      
+      const hotMatches = await PopularMatch.getHotMatches(parseInt(limit));
+      console.log(`🚨 DEBUG: PopularMatch.getHotMatches returned:`, hotMatches.length, 'matches');
+      console.log(`🚨 DEBUG: Matches data:`, JSON.stringify(hotMatches, null, 2));
+      
+      // Popola i dati dei venues per ogni partita
+      const enrichedMatches = await Promise.all(
+        hotMatches.map(async (match) => {
+          const venues = await Promise.all(
+            match.venues.map(async (v) => {
+              console.log(`🔍 DEBUG: Looking for venue ID: ${v.venueId}`);
+              const venue = await Venue.findById(v.venueId)
+                .select('name location.address.city location.address.street images slug')
+                .lean();
+              console.log(`🔍 DEBUG: Venue found:`, venue);
+              
+              const result = {
+                ...venue,
+                _id: v.venueId,
+                announcementId: v.announcementId,
+                addedAt: v.addedAt
+              };
+              console.log(`🔍 DEBUG: Final venue result:`, result);
+              return result;
+            })
+          );
+          
+          return {
+            matchId: match.matchId,
+            homeTeam: match.homeTeam,
+            awayTeam: match.awayTeam,
+            competition: match.competition,
+            date: match.date,
+            time: match.time,
+            venueCount: match.venueCount,
+            popularityScore: match.popularityScore,
+            isHot: match.isHot,
+            venues: venues.filter(v => v !== null) // Rimuovi venues cancellati
+          };
+        })
+      );
+      
+      console.log(`✅ Found ${enrichedMatches.length} hot matches`);
+      
+      res.json({
+        success: true,
+        data: enrichedMatches,
+        meta: {
+          total: enrichedMatches.length,
+          limit: parseInt(limit)
+        }
+      });
+    } catch (error) {
+      console.error('❌ Error getting hot matches:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Errore durante il recupero delle partite popolari',
+        error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
+      });
+    }
+  }
+
+  // 🎯 ENDPOINT PER OTTENERE VENUES DI UNA PARTITA SPECIFICA
+  async getVenuesForMatch(req, res) {
+    try {
+      const { matchId } = req.params;
+      
+      console.log(`🏟️ Getting venues for match: ${matchId}`);
+      
+      const popularMatch = await PopularMatch.findOne({ matchId }).lean();
+      
+      if (!popularMatch) {
+        return res.status(404).json({
+          success: false,
+          message: 'Partita non trovata'
+        });
+      }
+      
+      // Ottieni i dettagli dei venues
+      const venues = await Promise.all(
+        popularMatch.venues.map(async (v) => {
+          const venue = await Venue.findById(v.venueId)
+            .select('name location contact images amenities slug status')
+            .lean();
+            
+          if (!venue) return null;
+          
+          // Ottieni anche i dettagli dell'annuncio
+          const announcement = await MatchAnnouncement.findById(v.announcementId)
+            .select('eventDetails views clicks status')
+            .lean();
+          
+          // Process venue with fixed image URLs
+          const processedVenue = processVenueWithImages(venue, req);
+          
+          return {
+            ...processedVenue,
+            _id: v.venueId,
+            announcement: announcement || {},
+            addedAt: v.addedAt
+          };
+        })
+      );
+      
+      const validVenues = venues.filter(v => v !== null);
+      
+      console.log(`✅ Found ${validVenues.length} venues for match ${matchId}`);
+      
+      res.json({
+        success: true,
+        data: {
+          match: {
+            matchId: popularMatch.matchId,
+            homeTeam: popularMatch.homeTeam,
+            awayTeam: popularMatch.awayTeam,
+            competition: popularMatch.competition,
+            date: popularMatch.date,
+            time: popularMatch.time,
+            venueCount: validVenues.length,
+            popularityScore: popularMatch.popularityScore
+          },
+          venues: validVenues
+        },
+        meta: {
+          total: validVenues.length
+        }
+      });
+    } catch (error) {
+      console.error('❌ Error getting venues for match:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Errore durante il recupero dei locali per la partita',
+        error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
+      });
+    }
+  }
+
+  // Track click su match per analytics (PUBLIC - NO AUTH)
+  async trackMatchClick(req, res) {
+    try {
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        return res.status(400).json({
+          success: false,
+          message: 'Dati di input non validi',
+          errors: errors.array()
+        });
+      }
+
+      const { matchId, venueId, timestamp } = req.body;
+      
+      console.log(`📊 Tracking click for match: ${matchId}, venue: ${venueId || 'N/A'}`);
+
+      // Incrementa il clickCount nella PopularMatch
+      const updateResult = await PopularMatch.updateOne(
+        { matchId },
+        { 
+          $inc: { clickCount: 1 },
+          $set: { lastActivity: new Date() }
+        }
+      );
+
+      if (updateResult.matchedCount === 0) {
+        console.log(`⚠️ PopularMatch not found for matchId: ${matchId}`);
+        return res.status(404).json({
+          success: false,
+          message: 'Partita non trovata'
+        });
+      }
+
+      console.log(`✅ Click tracked for match ${matchId}`);
+
+      res.json({
+        success: true,
+        message: 'Click tracciato con successo'
+      });
+
+    } catch (error) {
+      console.error('❌ Error tracking match click:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Errore durante il tracking del click',
+        error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
       });
     }
   }

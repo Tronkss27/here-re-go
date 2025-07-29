@@ -1,35 +1,78 @@
-import React, { useState, useMemo, useCallback } from 'react';
-import { useParams, useLocation } from 'react-router-dom';
-import { Search, Map as MapIcon, ChevronDown, ChevronUp, Calendar } from 'lucide-react';
-import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { Search, MapPin, Calendar, ChevronDown, ChevronUp, Star, Users, Clock, TrendingUp } from 'lucide-react';
+import Header from '@/components/Header';
 import VenueCard from '@/components/VenueCard';
 import MatchCard from '@/components/MatchCard';
-import Header from '@/components/Header';
-import { useVenues, useVenueFilters, useVenuesForMatch } from '@/hooks/useVenues';
-import { useDebounce } from '@/hooks/useDebounce';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { useVenues, useVenueFilters } from '@/hooks/useVenues';
 import { useTodaysMatches } from '@/hooks/useTodaysMatches';
+import { useDebounce } from '@/hooks/useDebounce';
+import { useParams, useLocation } from 'react-router-dom';
+import { fixturesService } from '@/services/fixturesService';
+import { hotMatchesService } from '@/services/hotMatchesService';
+import { getLeagueLogo, getLeagueDisplayName, getTeamAbbreviation } from '@/utils/leagueUtils';
 
 // Memoized components for performance
 const MemoizedVenueCard = React.memo(VenueCard);
 const MemoizedMatchCard = React.memo(MatchCard);
 
 const Locali = React.memo(() => {
-  const { matchId } = useParams();
+  const { matchId, date, teamsSlug, fixtureId } = useParams();
   const location = useLocation();
   const matchDate = location.state?.matchDate;
   
+  // Determina il matchId dalla route strutturata o semplice
+  const actualMatchId = useMemo(() => {
+    if (fixtureId) {
+      // Route strutturata: /locali/[date]/[teams-slug]/[fixtureId]
+      return fixtureId;
+    }
+    // Route semplice: /locali/:matchId
+    return matchId;
+  }, [matchId, fixtureId]);
+  
   const [showMap, setShowMap] = useState(false);
   const [showMatches, setShowMatches] = useState(true); // Matches section expanded by default
+  const [filtersOpen, setFiltersOpen] = useState(false); // Stato per filtri a comparsa
 
   // Use custom hooks for venues data and filtering
   const { venues: allVenues, loading: allVenuesLoading, error: allVenuesError } = useVenues();
-  const { venues: matchVenues, loading: matchVenuesLoading, error: matchVenuesError } = useVenuesForMatch(matchId, matchDate);
   
-  // Determina quali dati usare in base alla presenza di matchId
-  const venues = matchId ? matchVenues : allVenues;
-  const loading = matchId ? matchVenuesLoading : allVenuesLoading;
-  const error = matchId ? matchVenuesError : allVenuesError;
+  // Per venue con annunci attivi - nuova logica
+  const [venuesWithAnnouncements, setVenuesWithAnnouncements] = useState([]);
+  const [announcementsLoading, setAnnouncementsLoading] = useState(false);
+  
+  // Se abbiamo un matchId, usa il nuovo sistema PopularMatch
+  const [popularMatchData, setPopularMatchData] = useState(null);
+  const [popularMatchLoading, setPopularMatchLoading] = useState(false);
+  
+  React.useEffect(() => {
+    if (actualMatchId) {
+      setPopularMatchLoading(true);
+      // Usa hotMatchesService per ottenere i dati completi con immagini processate
+      hotMatchesService.getVenuesForMatch(actualMatchId)
+        .then(response => {
+          if (response.success) {
+            setPopularMatchData(response.data);
+            console.log('🔥 PopularMatch data loaded with processed images:', response.data);
+          } else {
+            console.error('❌ Error in getVenuesForMatch response:', response.error);
+          }
+        })
+        .catch(err => console.error('❌ Error loading PopularMatch data:', err))
+        .finally(() => setPopularMatchLoading(false));
+    } else {
+      // Se NON abbiamo matchId, usa tutti i venue (non solo quelli con annunci)
+      console.log('🏟️ Loading all venues for general /locali page');
+      // Non serve caricare venuesWithAnnouncements, usiamo allVenues
+    }
+  }, [actualMatchId, allVenues]);
+  
+  // Determina quali dati usare in base alla presenza di actualMatchId
+  const venues = actualMatchId ? (popularMatchData?.venues || []) : (allVenues || []);
+  const loading = actualMatchId ? popularMatchLoading : allVenuesLoading;
+  const error = actualMatchId ? null : allVenuesError;
   
   // Use today's matches hook
   const { 
@@ -75,12 +118,85 @@ const Locali = React.memo(() => {
 
   // Enhanced venue filtering with match information
   const enhancedFilteredVenues = useMemo(() => {
-    let filtered = filteredVenues;
-
-    // Apply "Partita oggi" filter
-    if (selectedFilters.includes('Partita oggi') && hasMatches) {
-      filtered = filtered.filter(venue => isVenueShowingMatch(venue));
+    // ✅ FIX: Controllo di sicurezza per evitare errori
+    let filtered = filteredVenues || [];
+    
+    // Se non abbiamo venues, ritorniamo array vuoto
+    if (!Array.isArray(filtered)) {
+      console.warn('filteredVenues is not an array:', filtered);
+      return [];
     }
+
+    // Apply real venue filters based on facilities
+    selectedFilters.forEach(filter => {
+      switch(filter) {
+        case 'Partita oggi':
+          if (hasMatches) {
+            filtered = filtered.filter(venue => isVenueShowingMatch(venue));
+          }
+          break;
+        case 'Wi-Fi':
+          filtered = filtered.filter(venue => 
+            venue.facilities?.includes('Wi-Fi') || 
+            venue.features?.wifi === true ||
+            venue.amenities?.includes('WiFi')
+          );
+          break;
+        case 'Grande schermo':
+          filtered = filtered.filter(venue => 
+            venue.facilities?.includes('Grande schermo') || 
+            venue.features?.bigScreen === true ||
+            venue.amenities?.includes('Grande schermo')
+          );
+          break;
+        case 'Prenotabile':
+          filtered = filtered.filter(venue => 
+            venue.bookingEnabled === true || 
+            venue.features?.bookable === true ||
+            venue.isBookable === true
+          );
+          break;
+        case 'Giardino':
+          filtered = filtered.filter(venue => 
+            venue.facilities?.includes('Giardino') || 
+            venue.features?.garden === true ||
+            venue.amenities?.includes('Giardino')
+          );
+          break;
+        case 'Schermo esterno':
+          filtered = filtered.filter(venue => 
+            venue.facilities?.includes('Schermo esterno') || 
+            venue.features?.outdoorScreen === true ||
+            venue.amenities?.includes('Schermo esterno')
+          );
+          break;
+        case 'Servi cibo':
+          filtered = filtered.filter(venue => 
+            venue.facilities?.includes('Servi cibo') || 
+            venue.features?.food === true ||
+            venue.amenities?.includes('Cibo') ||
+            venue.cuisine?.length > 0
+          );
+          break;
+        case 'Pet friendly':
+          filtered = filtered.filter(venue => 
+            venue.facilities?.includes('Pet friendly') || 
+            venue.features?.petFriendly === true ||
+            venue.amenities?.includes('Pet friendly')
+          );
+          break;
+        case 'Commentatore':
+          filtered = filtered.filter(venue => 
+            venue.facilities?.includes('Commentatore') || 
+            venue.features?.commentary === true ||
+            venue.amenities?.includes('Commentatore')
+          );
+          break;
+        default:
+          // Per filtri non riconosciuti, non filtrare
+          break;
+      }
+    });
 
     // Add match information to venues
     return filtered.map(venue => ({
@@ -89,6 +205,9 @@ const Locali = React.memo(() => {
       matchInfo: getVenueMatchInfo(venue)
     }));
   }, [filteredVenues, selectedFilters, hasMatches, isVenueShowingMatch, getVenueMatchInfo]);
+
+  // ✅ FIX: Aggiunto controllo per evitare che enhancedFilteredVenues sia undefined
+  const safeEnhancedVenues = enhancedFilteredVenues || [];
 
   // Memoized handlers for performance
   const handleSearchChange = useCallback((e) => {
@@ -199,9 +318,112 @@ const Locali = React.memo(() => {
         {/* Page Title */}
         <div className="mb-8">
           <h1 className="text-3xl md:text-4xl font-black text-gray-900 mb-2 uppercase tracking-tight">
-            Sport Bar e Pub
+            {actualMatchId ? 'Locali per la Partita' : 'Sport Bar e Pub'}
           </h1>
-          {matchId && (
+          
+          {/* Match Details Header - MIGLIORATO */}
+          {actualMatchId && popularMatchData?.match && (
+            <div className={`match-banner ${
+              (popularMatchData.match.homeTeam?.toLowerCase().includes('paris') || 
+               popularMatchData.match.awayTeam?.toLowerCase().includes('paris') ||
+               popularMatchData.match.homeTeam?.toLowerCase().includes('psg') || 
+               popularMatchData.match.awayTeam?.toLowerCase().includes('psg')) ? 'with-stadium' : ''
+            }`}>
+              {/* Competition Header */}
+              <div className="competition-header">
+                <div className="flex items-center justify-center gap-3 mb-2">
+                  <div className="bg-orange-100 p-3 rounded-full">
+                    {getLeagueLogo(popularMatchData.match.competition?.name) ? (
+                      <img 
+                        src={getLeagueLogo(popularMatchData.match.competition?.name)} 
+                        alt={getLeagueDisplayName(popularMatchData.match.competition?.name)}
+                        className="w-8 h-8 object-contain"
+                      />
+                    ) : (
+                      <span className="text-2xl">⚽</span>
+                    )}
+                  </div>
+                  <div className="bg-orange-100 text-orange-700 px-4 py-2 rounded-full text-sm font-bold">
+                    {getLeagueDisplayName(popularMatchData.match.competition?.name) || 'Calcio'}
+                  </div>
+                </div>
+              </div>
+
+              {/* Teams Section - Centrato con Loghi */}
+              <div className="match-teams-container">
+                {/* Squadra Casa */}
+                <div className="team-section">
+                  <div className="team-logo-large bg-gradient-to-br from-gray-100 to-gray-200 rounded-full flex items-center justify-center border-2 border-gray-300">
+                    <span className="font-bold text-gray-600">
+                      {popularMatchData.match.homeTeam.charAt(0)}
+                    </span>
+                  </div>
+                  <h3 className="text-lg font-bold text-gray-900">
+                    {getTeamAbbreviation(popularMatchData.match.homeTeam)}
+                  </h3>
+                </div>
+
+                {/* VS Section */}
+                <div className="vs-section">
+                  <div className="bg-orange-500 text-white px-4 py-2 rounded-full font-bold text-sm">
+                    VS
+                  </div>
+                  <div className="text-center">
+                    <div className="text-sm text-gray-600">
+                      {new Date(popularMatchData.match.date).toLocaleDateString('it-IT', { 
+                        weekday: 'short', 
+                        day: 'numeric', 
+                        month: 'short' 
+                      })}
+                    </div>
+                    <div className="text-lg font-bold text-orange-600">
+                      {new Date(popularMatchData.match.date).toLocaleTimeString('it-IT', { 
+                        hour: '2-digit', 
+                        minute: '2-digit' 
+                      })}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Squadra Ospite */}
+                <div className="team-section">
+                  <div className="team-logo-large bg-gradient-to-br from-gray-100 to-gray-200 rounded-full flex items-center justify-center border-2 border-gray-300">
+                    <span className="font-bold text-gray-600">
+                      {popularMatchData.match.awayTeam.charAt(0)}
+                    </span>
+                  </div>
+                  <h3 className="text-lg font-bold text-gray-900">
+                    {getTeamAbbreviation(popularMatchData.match.awayTeam)}
+                  </h3>
+                </div>
+              </div>
+
+              {/* Stats e Descrizione */}
+              <div className="text-center">
+                <div className="match-stats">
+                  <div className="bg-white rounded-lg px-4 py-2 shadow-sm">
+                    <MapPin className="text-orange-500" size={16} />
+                    <span className="font-semibold text-gray-900">
+                      {popularMatchData.match.venueCount} {popularMatchData.match.venueCount === 1 ? 'locale' : 'locali'}
+                    </span>
+                  </div>
+                  {popularMatchData.match.popularityScore && (
+                    <div className="bg-white rounded-lg px-4 py-2 shadow-sm">
+                      <TrendingUp className="text-orange-500" size={16} />
+                      <span className="font-semibold text-gray-900">
+                        Score: {Math.round(popularMatchData.match.popularityScore)}
+                      </span>
+                    </div>
+                  )}
+                </div>
+                <p className="text-gray-700 font-medium">
+                  📍 Trova il locale perfetto per guardare questa partita. Confronta offerte, atmosfera e prenotazioni disponibili.
+                </p>
+              </div>
+            </div>
+          )}
+          
+          {actualMatchId && !popularMatchData && !popularMatchLoading && (
             <div className="bg-orange-50 border border-orange-200 rounded-lg p-4 mb-4">
               <div className="flex items-center space-x-2">
                 <Calendar className="h-5 w-5 text-orange-600" />
@@ -218,7 +440,7 @@ const Locali = React.memo(() => {
         </div>
 
         {/* Today's Matches Section - SOLO se NON siamo in una pagina specifica di match */}
-        {!matchId && (hasMatches || matchesLoading) && (
+                  {!actualMatchId && (hasMatches || matchesLoading) && (
           <section className="bg-white rounded-lg border border-gray-200 shadow-sm mb-8" aria-labelledby="todays-matches-heading">
             <div className="p-4 border-b border-gray-100">
               <button
@@ -336,57 +558,95 @@ const Locali = React.memo(() => {
             </div>
           </div>
 
-          {/* Filter Tags */}
-          <div className="mb-4">
-            <h3 className="text-sm font-medium text-gray-700 mb-3">Filtra per caratteristiche</h3>
-            <div className="flex flex-wrap gap-3" role="group" aria-labelledby="filter-heading">
-              {filters.map((filter) => (
-                <button
-                  key={filter}
-                  onClick={() => toggleFilter(filter)}
-                  onKeyDown={(e) => handleFilterKeyDown(e, filter)}
-                  className={`px-4 py-2 rounded-full text-sm font-medium transition-colors duration-200 ${
-                    selectedFilters.includes(filter)
-                      ? 'bg-primary text-primary-foreground'
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200 border border-gray-300'
-                  } ${filter === 'Partita oggi' && !hasMatches ? 'opacity-50 cursor-not-allowed' : ''}`}
-                  aria-pressed={selectedFilters.includes(filter)}
-                  role="button"
-                  tabIndex={0}
-                  disabled={filter === 'Partita oggi' && !hasMatches}
-                >
-                  {filter}
-                  {filter === 'Partita oggi' && hasMatches && (
-                    <span className="ml-2 bg-primary-foreground text-primary text-xs font-bold px-1.5 py-0.5 rounded-full">
-                      {enhancedFilteredVenues.filter(v => v.isShowingMatch).length}
-                    </span>
-                  )}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Filter Actions */}
-          {selectedFilters.length > 0 && (
-            <div className="flex items-center justify-between" role="status" aria-live="polite">
-              <span className="text-sm text-gray-600">
-                {selectedFilters.length} filtri attivi
-              </span>
+          {/* Filter Section - Mobile First Dropdown */}
+          <div className="filters-section">
+            <div className="filters-header">
+              <h3 className="filters-title">Filtra per caratteristiche</h3>
               <button
-                onClick={clearFilters}
-                className="text-sm text-primary hover:text-primary/80 font-medium"
-                aria-label="Cancella tutti i filtri attivi"
+                onClick={() => setFiltersOpen(!filtersOpen)}
+                className="filters-toggle"
+                aria-expanded={filtersOpen}
+                aria-controls="filters-dropdown"
               >
-                Cancella tutti
+                <span>Filtri</span>
+                {selectedFilters.length > 0 && (
+                  <span className="count-badge">{selectedFilters.length}</span>
+                )}
+                <ChevronDown 
+                  size={14} 
+                  className={`transition-transform ${filtersOpen ? 'rotate-180' : ''}`} 
+                />
               </button>
             </div>
-          )}
+            
+            <div 
+              id="filters-dropdown"
+              className={`filters-dropdown ${filtersOpen ? 'open' : 'closed'}`}
+              role="group" 
+              aria-labelledby="filter-heading"
+            >
+              <div className="filters-grid">
+                {filters.map((filter) => (
+                  <button
+                    key={filter}
+                    onClick={() => toggleFilter(filter)}
+                    onKeyDown={(e) => handleFilterKeyDown(e, filter)}
+                    className={`filter-tag ${
+                      selectedFilters.includes(filter) ? 'active' : ''
+                    } ${filter === 'Partita oggi' && !hasMatches ? 'disabled' : ''}`}
+                    aria-pressed={selectedFilters.includes(filter)}
+                    role="button"
+                    tabIndex={0}
+                    disabled={filter === 'Partita oggi' && !hasMatches}
+                  >
+                    {filter}
+                    {filter === 'Partita oggi' && hasMatches && (
+                      <span className="count-badge">
+                        {safeEnhancedVenues.filter(v => v.isShowingMatch).length}
+                      </span>
+                    )}
+                    {filter !== 'Partita oggi' && (
+                      <span className="count-badge">
+                        {safeEnhancedVenues.filter(venue => {
+                          if (filter === 'Wi-Fi') return venue.features?.wifi;
+                          if (filter === 'Grande schermo') return venue.features?.largeScreen;
+                          if (filter === 'Prenotabile') return venue.features?.bookable;
+                          if (filter === 'Giardino') return venue.features?.garden;
+                          if (filter === 'Schermo esterno') return venue.features?.outdoorScreen;
+                          if (filter === 'Servi cibo') return venue.features?.servesFood;
+                          if (filter === 'Pet friendly') return venue.features?.petFriendly;
+                          if (filter === 'Commentatore') return venue.features?.commentator;
+                          return false;
+                        }).length}
+                      </span>
+                    )}
+                  </button>
+                ))}
+              </div>
+              
+              {/* Filter Actions */}
+              {selectedFilters.length > 0 && (
+                <div className="flex items-center justify-between mt-4 pt-4 border-t border-gray-200">
+                  <span className="text-sm text-gray-600">
+                    {selectedFilters.length} filtri attivi
+                  </span>
+                  <button
+                    onClick={clearFilters}
+                    className="text-sm text-orange-600 hover:text-orange-700 font-medium"
+                    aria-label="Cancella tutti i filtri attivi"
+                  >
+                    Cancella tutti
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
         </section>
 
         {/* Results Summary */}
         <div className="flex items-center justify-between mb-6">
           <p className="text-gray-600" role="status" aria-live="polite">
-            {enhancedFilteredVenues.length} {enhancedFilteredVenues.length === 1 ? 'locale trovato' : 'locali trovati'}
+            {safeEnhancedVenues.length} {safeEnhancedVenues.length === 1 ? 'locale trovato' : 'locali trovati'}
             {(searchQuery || selectedFilters.length > 0) && (
               <span className="text-primary font-medium ml-1">
                 con i filtri applicati
@@ -394,7 +654,7 @@ const Locali = React.memo(() => {
             )}
             {selectedFilters.includes('Partita oggi') && (
               <span className="text-green-600 font-medium ml-1">
-                • {enhancedFilteredVenues.filter(v => v.isShowingMatch).length} con partita oggi
+                • {safeEnhancedVenues.filter(v => v.isShowingMatch).length} con partita oggi
               </span>
             )}
           </p>
@@ -406,7 +666,7 @@ const Locali = React.memo(() => {
             aria-label={showMap ? 'Mostra lista locali' : 'Mostra mappa locali'}
             aria-pressed={showMap}
           >
-            <MapIcon className="h-4 w-4" aria-hidden="true" />
+            {/* MapIcon className="h-4 w-4" aria-hidden="true" /> */}
             {showMap ? 'Lista' : 'Mappa'}
           </button>
         </div>
@@ -419,11 +679,11 @@ const Locali = React.memo(() => {
             aria-label="Lista locali"
             role="list"
           >
-            {enhancedFilteredVenues.length === 0 ? (
+            {safeEnhancedVenues.length === 0 ? (
               emptyStateContent
             ) : (
               <>
-                {enhancedFilteredVenues.map((venue, index) => (
+                {safeEnhancedVenues.map((venue, index) => (
                   <div 
                     key={`venue_${venue.id}_${index}`} 
                     className="animate-fade-in" 
@@ -448,7 +708,7 @@ const Locali = React.memo(() => {
                 ))}
 
                 {/* Load More - For future pagination */}
-                {enhancedFilteredVenues.length >= 6 && (
+                {safeEnhancedVenues.length >= 6 && (
                   <div className="text-center py-6 sm:py-8">
                     <Button 
                       variant="outline" 
@@ -469,7 +729,7 @@ const Locali = React.memo(() => {
             <div className="sticky top-24 bg-white rounded-lg border border-gray-200 overflow-hidden">
               <div className="h-96 bg-gray-200 flex items-center justify-center">
                 <div className="text-center">
-                  <MapIcon className="h-16 w-16 text-gray-400 mx-auto mb-4" aria-hidden="true" />
+                  {/* MapIcon className="h-16 w-16 text-gray-400 mx-auto mb-4" aria-hidden="true" /> */}
                   <p className="text-gray-600 font-medium">Mappa in arrivo</p>
                   <p className="text-gray-500 text-sm">
                     Visualizzazione geografica dei locali
@@ -485,7 +745,7 @@ const Locali = React.memo(() => {
               <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
                 <div className="h-96 bg-gray-200 flex items-center justify-center">
                   <div className="text-center">
-                    <MapIcon className="h-16 w-16 text-gray-400 mx-auto mb-4" aria-hidden="true" />
+                    {/* MapIcon className="h-16 w-16 text-gray-400 mx-auto mb-4" aria-hidden="true" /> */}
                     <p className="text-gray-600 font-medium">Mappa in arrivo</p>
                     <p className="text-gray-500 text-sm">
                       Visualizzazione geografica dei locali

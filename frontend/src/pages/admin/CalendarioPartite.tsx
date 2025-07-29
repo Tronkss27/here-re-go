@@ -5,10 +5,10 @@ import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/ca
 import { Alert, AlertDescription } from '../../components/ui/alert';
 import { Badge } from '../../components/ui/badge';
 import { useAuth } from '../../contexts/AuthContext';
-import matchAnnouncementService from '../../services/matchAnnouncementService';
-import CreateMatchAnnouncementForm from '../../components/forms/CreateMatchAnnouncementForm';
-import EditMatchAnnouncementModal from '../../components/forms/EditMatchAnnouncementModal';
-import ViewAnnouncementModal from '../../components/ui/ViewAnnouncementModal';
+import { getVenueAnnouncements, deleteAnnouncement, getAnnouncement, updateAnnouncement, archiveAnnouncement } from '../../services/matchAnnouncementService';
+import SimpleCreateAnnouncementForm from '../../components/forms/SimpleCreateAnnouncementForm';
+// import EditMatchAnnouncementModal from '../../components/forms/EditMatchAnnouncementModal'; // TEMPORANEO  
+// import ViewAnnouncementModal from '../../components/ui/ViewAnnouncementModal'; // TEMPORANEO
 
 // Definizione del tipo per un annuncio, basato sulla risposta API
 interface Announcement {
@@ -60,8 +60,8 @@ const CalendarioPartite = () => {
     console.log('🔄 Starting fetchAnnouncements...');
     
     try {
-      console.log('📞 Calling matchAnnouncementService.getVenueAnnouncements...');
-      const result = await matchAnnouncementService.getVenueAnnouncements({ includeArchived: true });
+          console.log('📞 Calling getVenueAnnouncements...');
+    const result = await getVenueAnnouncements({ includeArchived: true });
       
       console.log('📊 Raw API Result:', result);
       console.log('📊 Result success:', result.success);
@@ -102,12 +102,17 @@ const CalendarioPartite = () => {
   };
 
   // Gestisce la creazione di un annuncio e aggiorna la lista
-  const handleAnnouncementCreated = (creationResult: { success: boolean, data?: Announcement }) => {
+  const handleAnnouncementCreated = (creationResult: any) => {
     console.log('📢 Nuovo annuncio creato, analizzo il risultato:', creationResult);
     
-    if (creationResult.success && creationResult.data) {
+    // Se il risultato ha un ID, significa che è stato creato con successo
+    if (creationResult && (creationResult._id || creationResult.id)) {
       showMessage('Annuncio partita pubblicato con successo!', 'success');
       // Ricarica la lista per mostrare il nuovo annuncio
+      fetchAnnouncements();
+    } else if (creationResult && creationResult.success && creationResult.data) {
+      // Fallback per struttura legacy
+      showMessage('Annuncio partita pubblicato con successo!', 'success');
       fetchAnnouncements();
     } else {
       showMessage('Errore: Annuncio creato ma dati di risposta non validi.', 'error');
@@ -123,7 +128,7 @@ const CalendarioPartite = () => {
     console.log('🗑️ Permanently deleting announcement', id);
     
     try {
-      const result = await matchAnnouncementService.deleteAnnouncement(id);
+      const result = await deleteAnnouncement(id);
       
       if (result.success) {
         showMessage('Annuncio eliminato definitivamente!', 'success');
@@ -145,7 +150,7 @@ const CalendarioPartite = () => {
     console.log('📦 Archiving announcement', id);
     
     try {
-      const result = await matchAnnouncementService.archiveAnnouncement(id);
+      const result = await archiveAnnouncement(id);
       
       if (result.success) {
         showMessage('Annuncio archiviato temporaneamente!', 'success');
@@ -167,7 +172,7 @@ const CalendarioPartite = () => {
     console.log('🔄 Restoring announcement', id);
     
     try {
-      const result = await matchAnnouncementService.updateAnnouncement(id, { 
+      const result = await updateAnnouncement(id, { 
         status: 'published',
         isActive: true 
       });
@@ -198,7 +203,7 @@ const CalendarioPartite = () => {
     console.log('👁️ Viewing announcement', id);
     
     try {
-      const result = await matchAnnouncementService.getAnnouncement(id);
+      const result = await getAnnouncement(id);
       
       if (result.success && result.data) {
         console.log('✅ Announcement retrieved successfully:', result.data);
@@ -324,30 +329,26 @@ const CalendarioPartite = () => {
       </Card>
 
       {/* Modale creazione annuncio */}
-      {showCreateMatchForm && (
-        <CreateMatchAnnouncementForm
-          isOpen={showCreateMatchForm}
-          onClose={() => setShowCreateMatchForm(false)}
-          onSubmit={handleAnnouncementCreated}
-        />
-      )}
+      <SimpleCreateAnnouncementForm
+        isOpen={showCreateMatchForm}
+        onClose={() => setShowCreateMatchForm(false)}
+        onSubmit={handleAnnouncementCreated}
+      />
 
-      {/* Modale modifica annuncio */}
-      {editingAnnouncementId && (
+      {/* {editingAnnouncementId && (
         <EditMatchAnnouncementModal
           isOpen={!!editingAnnouncementId}
           onClose={() => setEditingAnnouncementId(null)}
           announcementId={editingAnnouncementId}
           onSuccess={handleEditSuccess}
         />
-      )}
+      )} */}
 
-      {/* Modale visualizzazione dettagli annuncio */}
-      <ViewAnnouncementModal
+      {/* <ViewAnnouncementModal
         isOpen={!!viewingAnnouncement}
         onClose={() => setViewingAnnouncement(null)}
         announcement={viewingAnnouncement}
-      />
+      /> */}
     </div>
   );
 };

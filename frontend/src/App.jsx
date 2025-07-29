@@ -1,61 +1,75 @@
-import React, { Suspense, lazy, useEffect } from 'react'
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
-import { AuthProvider } from './contexts/AuthContext'
-import { ModalProvider } from './contexts/ModalContext'
-import { ModalRenderer } from './components/ui'
-import ProtectedRoute from './components/ProtectedRoute'
-import PublicRoute from './components/PublicRoute'
-import VenueProtectedRoute from './components/VenueProtectedRoute'
+import React, { Suspense, useEffect } from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate, useParams, useNavigate } from 'react-router-dom';
+import { AuthProvider } from './contexts/AuthContext.jsx';
+import { ModalProvider } from './contexts/ModalContext.jsx';
+import { ThemeProvider } from './contexts/ThemeContext.jsx';
+import ProtectedRoute from './components/ProtectedRoute.jsx';
+import PublicRoute from './components/PublicRoute.jsx';
+import VenueProtectedRoute from './components/VenueProtectedRoute.jsx';
+import OnboardingProtectedRoute from './components/OnboardingProtectedRoute.jsx';
 
 // Core components that should load immediately
-import { Loading } from './components/ui/Loading'
-import { performanceMonitor } from './utils/performance'
-
-// Lazy-loaded pages for better performance
-const Login = lazy(() => import('./pages/Login'))
-const Register = lazy(() => import('./pages/Register'))
-const ClientLogin = lazy(() => import('./pages/ClientLogin'))
-const ClientRegister = lazy(() => import('./pages/ClientRegister'))
-const SportsLogin = lazy(() => import('./pages/SportsLogin'))
-const SportsRegister = lazy(() => import('./pages/SportsRegister'))
-const ComponentDemo = lazy(() => import('./pages/ComponentDemo'))
-const UserProfile = lazy(() => import('./pages/UserProfile'))
-
-// BarMatch Pages Integration - Lazy loaded
-const Index = lazy(() => import('./pages/Index'))
-const Locali = lazy(() => import('./pages/Locali'))
-const VenueDetail = lazy(() => import('./pages/VenueDetail'))
-
-const NotFound = lazy(() => import('./pages/NotFound'))
-
-// BarMatch Admin Pages - Lazy loaded
-const AdminLayout = lazy(() => import('./pages/admin/AdminLayout'))
-const AdminDashboard = lazy(() => import('./pages/admin/AdminDashboard'))
-const CalendarioPartite = lazy(() => import('./pages/admin/CalendarioPartite'))
-const Statistiche = lazy(() => import('./pages/admin/Statistiche'))
-const ProfiloLocale = lazy(() => import('./pages/admin/ProfiloLocale'))
-const AccountSettings = lazy(() => import('./pages/admin/AccountSettings'))
-const BookingsManagement = lazy(() => import('./pages/admin/BookingsManagement'))
-const OffersManagement = lazy(() => import('./pages/admin/OffersManagement'))
-const VenueOnboarding = lazy(() => import('./pages/admin/VenueOnboarding'))
-
-// User Booking Pages - Lazy loaded
-const MyBookings = lazy(() => import('./pages/MyBookings'))
-const Teams = lazy(() => import('./pages/Teams'))
-const Favorites = lazy(() => import('./pages/Favorites'))
-
-import './App.css'
-import './styles/design-system.css'
+import { performanceMonitor } from './utils/performance.js';
 
 // Loading fallback component
 const PageLoader = () => (
-  <div className="min-h-screen bg-gradient-to-br from-orange-50 to-orange-200 flex items-center justify-center">
-    <div className="text-center">
-      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500 mx-auto mb-4"></div>
-      <p className="text-orange-700 font-medium">Caricamento...</p>
+  <div className="min-h-screen bg-gradient-to-br from-sports-white to-sports-medium flex items-center justify-center">
+    <div className="text-center max-w-md mx-auto p-6">
+      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-sports-primary mx-auto mb-4"></div>
+      <p className="text-sports-dark font-medium">Caricamento...</p>
     </div>
   </div>
-)
+);
+
+// Lazy-loaded pages for better performance
+const ClientLogin = React.lazy(() => import('./pages/ClientLogin'));
+const ClientRegister = React.lazy(() => import('./pages/ClientRegister'));
+const SportsLogin = React.lazy(() => import('./pages/SportsLogin'));
+const SportsRegister = React.lazy(() => import('./pages/SportsRegister'));
+const ComponentDemo = React.lazy(() => import('./pages/ComponentDemo'));
+const UserProfile = React.lazy(() => import('./pages/UserProfile'));
+
+// BarMatch Pages Integration - Lazy loaded
+const Index = React.lazy(() => import('./pages/Index'));
+const Locali = React.lazy(() => import('./pages/Locali'));
+const VenueDetail = React.lazy(() => import('./pages/VenueDetail'));
+
+const NotFound = React.lazy(() => import('./pages/NotFound'));
+
+// BarMatch Admin Pages - Lazy loaded
+const AdminLayout = React.lazy(() => import('./pages/admin/AdminLayout'));
+const AdminDashboard = React.lazy(() => import('./pages/admin/AdminDashboard'));
+const CalendarioPartite = React.lazy(() => import('./pages/admin/CalendarioPartite'));
+const Statistiche = React.lazy(() => import('./pages/admin/Statistiche'));
+const ProfiloLocale = React.lazy(() => import('./pages/admin/ProfiloLocale'));
+const AccountSettings = React.lazy(() => import('./pages/admin/AccountSettings'));
+const BookingsManagement = React.lazy(() => import('./pages/admin/BookingsManagement'));
+const OffersManagement = React.lazy(() => import('./pages/admin/OffersManagement'));
+const VenueOnboarding = React.lazy(() => import('./pages/admin/VenueOnboarding'));
+
+// User Booking Pages - Lazy loaded
+const MyBookings = React.lazy(() => import('./pages/MyBookings'));
+const Teams = React.lazy(() => import('./pages/Teams'));
+const Favorites = React.lazy(() => import('./pages/Favorites'));
+
+// RouteHandler per distinguere match vs venue ID
+const RouteHandler = () => {
+  const { id } = useParams();
+  const navigate = useNavigate();
+  
+  React.useEffect(() => {
+    // Se l'ID è un MongoDB ObjectId (24 caratteri hex), reindirizza a /locale/
+    if (id && id.length === 24 && /^[0-9a-fA-F]{24}$/.test(id)) {
+      navigate(`/locale/${id}`, { replace: true });
+    }
+  }, [id, navigate]);
+  
+  // Altrimenti è un match ID, mostra Locali
+  return <Locali />;
+};
+
+import './App.css'
+import './styles/design-system.css'
 
 // Error Boundary Component
 class ErrorBoundary extends React.Component {
@@ -127,181 +141,176 @@ function App() {
   // SPOrTS inline styles for guaranteed rendering
   const appContainerStyle = {
     minHeight: '100vh',
-    background: 'linear-gradient(135deg, #fff7ed 0%, #fed7aa 100%)',
+    background: 'linear-gradient(135deg, #f8fdf9 0%, #e5f3e7 100%)', // Light green gradient
     fontFamily: 'Kanit, sans-serif'
   }
 
   return (
     <ErrorBoundary>
-      <AuthProvider>
-        <ModalProvider>
-          <Router>
-            <div style={appContainerStyle} className="min-h-screen">
-              <Suspense fallback={<PageLoader />}>
-              <Routes>
-                {/* BarMatch Main Routes */}
-                <Route path="/" element={<Index />} />
-                <Route path="/locali" element={<Locali />} />
-                <Route path="/locali/:matchId" element={<Locali />} />
-                <Route path="/venue/:id" element={<VenueDetail />} />
-                
-                {/* User Booking Routes */}
-                <Route 
-                  path="/my-bookings" 
-                  element={
-                    <ProtectedRoute>
-                      <MyBookings />
-                    </ProtectedRoute>
-                  } 
-                />
-                
-                <Route 
-                  path="/bookings" 
-                  element={
-                    <ProtectedRoute>
-                      <MyBookings />
-                    </ProtectedRoute>
-                  } 
-                />
-                
-                <Route 
-                  path="/teams" 
-                  element={
-                    <ProtectedRoute>
-                      <Teams />
-                    </ProtectedRoute>
-                  } 
-                />
-                
-                <Route 
-                  path="/favorites" 
-                  element={
-                    <ProtectedRoute>
-                      <Favorites />
-                    </ProtectedRoute>
-                  } 
-                />
-                
-                {/* Public routes - accessible only when NOT authenticated */}
-                <Route 
-                  path="/login" 
-                  element={
-                    <PublicRoute>
-                      <Login />
-                    </PublicRoute>
-                  } 
-                />
-                
-                <Route 
-                  path="/register" 
-                  element={
-                    <PublicRoute>
-                      <Register />
-                    </PublicRoute>
-                  } 
-                />
+      <ThemeProvider>
+        <AuthProvider>
+          <ModalProvider>
+            <Router>
+              <div style={appContainerStyle} className="min-h-screen">
+                <Suspense fallback={<PageLoader />}>
+                <Routes>
+                  {/* BarMatch Main Routes */}
+                  <Route path="/" element={<Index />} />
+                  <Route path="/locali" element={<Locali />} />
+                  {/* Route strutturata: /locali/[date]/[teams-slug]/[fixtureId] */}
+                  <Route path="/locali/:date/:teamsSlug/:fixtureId" element={<Locali />} />
+                  {/* Route per venue detail */}
+                  <Route path="/locale/:id" element={<VenueDetail />} />
+                  {/* Route intelligente che decide se è match o venue */}
+                  <Route 
+                    path="/locali/:id" 
+                    element={
+                      <RouteHandler />
+                    } 
+                  />
+                  
+                  {/* User Booking Routes */}
+                  <Route 
+                    path="/my-bookings" 
+                    element={
+                      <ProtectedRoute>
+                        <MyBookings />
+                      </ProtectedRoute>
+                    } 
+                  />
+                  
+                  <Route 
+                    path="/bookings" 
+                    element={
+                      <ProtectedRoute>
+                        <MyBookings />
+                      </ProtectedRoute>
+                    } 
+                  />
+                  
+                  <Route 
+                    path="/teams" 
+                    element={
+                      <ProtectedRoute>
+                        <Teams />
+                      </ProtectedRoute>
+                    } 
+                  />
+                  
+                  <Route 
+                    path="/favorites" 
+                    element={
+                      <ProtectedRoute>
+                        <Favorites />
+                      </ProtectedRoute>
+                    } 
+                  />
+                  
+                  {/* REMOVED: Generic /login route - using specific client/sports login instead */}
 
-                {/* Client Routes */}
-                <Route 
-                  path="/client-login" 
-                  element={
-                    <PublicRoute>
-                      <ClientLogin />
-                    </PublicRoute>
-                  } 
-                />
-                
-                <Route 
-                  path="/client-register" 
-                  element={
-                    <PublicRoute>
-                      <ClientRegister />
-                    </PublicRoute>
-                  } 
-                />
+                  {/* Client Routes */}
+                  <Route 
+                    path="/client-login" 
+                    element={
+                      <PublicRoute>
+                        <ClientLogin />
+                      </PublicRoute>
+                    } 
+                  />
+                  
+                  <Route 
+                    path="/client-register" 
+                    element={
+                      <PublicRoute>
+                        <ClientRegister />
+                      </PublicRoute>
+                    } 
+                  />
 
-                {/* Sports/Venue Owner Routes */}
-                <Route 
-                  path="/sports-login" 
-                  element={
-                    <PublicRoute>
-                      <SportsLogin />
-                    </PublicRoute>
-                  } 
-                />
-                
-                <Route 
-                  path="/sports-register" 
-                  element={
-                    <PublicRoute>
-                      <SportsRegister />
-                    </PublicRoute>
-                  } 
-                />
-                
-                {/* Redirect for compatibility - singular form */}
-                <Route 
-                  path="/sport-register" 
-                  element={<Navigate to="/sports-register" replace />} 
-                />
+                  {/* Sports/Venue Owner Routes */}
+                  <Route 
+                    path="/sports-login" 
+                    element={
+                      <PublicRoute>
+                        <SportsLogin />
+                      </PublicRoute>
+                    } 
+                  />
+                  
+                  <Route 
+                    path="/sports-register" 
+                    element={
+                      <PublicRoute>
+                        <SportsRegister />
+                      </PublicRoute>
+                    } 
+                  />
+                  
+                  {/* Redirect for compatibility - singular form */}
+                  <Route 
+                    path="/sport-register" 
+                    element={<Navigate to="/sports-register" replace />} 
+                  />
 
-                {/* User Profile Routes */}
-                <Route 
-                  path="/profile" 
-                  element={
-                    <ProtectedRoute>
-                      <UserProfile />
-                    </ProtectedRoute>
-                  } 
-                />
-                
-                {/* Component Demo route */}
-                <Route 
-                  path="/components" 
-                  element={<ComponentDemo />} 
-                />
-                
-                {/* Venue Onboarding Route - Special case, accessible before completion */}
-                <Route 
-                  path="/admin/onboarding" 
-                  element={
-                    <ProtectedRoute>
-                      <VenueOnboarding />
-                    </ProtectedRoute>
-                  } 
-                />
+                  {/* User Profile Routes */}
+                  <Route 
+                    path="/profile" 
+                    element={
+                      <ProtectedRoute>
+                        <UserProfile />
+                      </ProtectedRoute>
+                    } 
+                  />
+                  
+                  {/* Component Demo route */}
+                  <Route 
+                    path="/components" 
+                    element={<ComponentDemo />} 
+                  />
+                  
+                  {/* Venue Onboarding Route - SOLO per venue owner NON completati */}
+                  <Route 
+                    path="/admin/onboarding" 
+                    element={
+                      <OnboardingProtectedRoute>
+                        <VenueOnboarding />
+                      </OnboardingProtectedRoute>
+                    } 
+                  />
 
-                {/* BarMatch Admin Routes - accessible only after onboarding completion */}
-                <Route 
-                  path="/admin" 
-                  element={
-                    <VenueProtectedRoute>
-                      <AdminLayout />
-                    </VenueProtectedRoute>
-                  } 
-                >
-                  <Route index element={<AdminDashboard />} />
-                  <Route path="calendario" element={<CalendarioPartite />} />
-                  <Route path="statistiche" element={<Statistiche />} />
-                  <Route path="profilo" element={<ProfiloLocale />} />
-                  <Route path="account" element={<AccountSettings />} />
-                  <Route path="bookings" element={<BookingsManagement />} />
-                  <Route path="offers" element={<OffersManagement />} />
-                </Route>
-                
-                {/* 404 - BarMatch style */}
-                <Route path="*" element={<NotFound />} />
-              </Routes>
-            </Suspense>
-            
-            {/* Modal Renderer */}
-            <ModalRenderer />
-          </div>
-        </Router>
-      </ModalProvider>
-    </AuthProvider>
-  </ErrorBoundary>
-)
+                  {/* BarMatch Admin Routes - accessible only after onboarding completion */}
+                  <Route 
+                    path="/admin" 
+                    element={
+                      <VenueProtectedRoute>
+                        <AdminLayout />
+                      </VenueProtectedRoute>
+                    } 
+                  >
+                    <Route index element={<AdminDashboard />} />
+                    <Route path="calendario" element={<CalendarioPartite />} />
+                    <Route path="statistiche" element={<Statistiche />} />
+                    <Route path="profilo" element={<ProfiloLocale />} />
+                    <Route path="account" element={<AccountSettings />} />
+                    <Route path="bookings" element={<BookingsManagement />} />
+                    <Route path="offers" element={<OffersManagement />} />
+                  </Route>
+                  
+                  {/* 404 - BarMatch style */}
+                  <Route path="*" element={<NotFound />} />
+                </Routes>
+              </Suspense>
+              
+              {/* Modal Renderer */}
+              {/* ModalRenderer is not defined in the provided code, assuming it's a placeholder or will be added later */}
+              {/* <ModalRenderer /> */}
+            </div>
+          </Router>
+        </ModalProvider>
+        </AuthProvider>
+      </ThemeProvider>
+    </ErrorBoundary>
+  )
 }
 
 export default App

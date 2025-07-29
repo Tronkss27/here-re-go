@@ -103,8 +103,12 @@ const BookingList: React.FC<BookingListProps> = ({
         return
       }
 
+      // ✅ FIX: Usa venueId invece di user.id per recuperare le prenotazioni del venue
+      const venueId = user.venueId || user.id; // Fallback a user.id se venueId non disponibile
+      console.log('🔍 DEBUG: Loading bookings for venueId:', venueId, 'user:', user);
+      
       // Usa il servizio tenant-based
-      const allBookings = await bookingsService.getBookings(user.id)
+      const allBookings = await bookingsService.getBookings(venueId)
       
       // Applica filtri lato client
       let filteredBookings = allBookings

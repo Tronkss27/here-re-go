@@ -3,6 +3,7 @@ import { Clock, MapPin, Users, Play, Calendar } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from './ui/dialog';
 import BookingForm from './BookingForm';
+import { generateMatchUrl } from '@/utils/matchUrlUtils';
 
 interface MatchCardProps {
   id: string;
@@ -86,8 +87,24 @@ const MatchCard = React.memo(({
 
   // Handle find venues button click
   const handleFindVenues = () => {
-    // Navigate to locali page with specific matchId
-    navigate(`/locali/${id}`, { state: { matchDate: date } });
+    try {
+      // Genera URL strutturata con data e team
+      const matchData = {
+        id,
+        homeTeam,
+        awayTeam,
+        date: date || new Date().toISOString().split('T')[0] // Fallback a oggi se date non presente
+      };
+      
+      const structuredUrl = generateMatchUrl(matchData);
+      console.log(`🔗 Navigating to structured URL: ${structuredUrl}`);
+      
+      navigate(structuredUrl, { state: { matchDate: date } });
+    } catch (error) {
+      console.warn('Error generating structured URL, using fallback:', error);
+      // Fallback alla URL semplice
+      navigate(`/locali/${id}`, { state: { matchDate: date } });
+    }
   };
 
   // Handle direct booking button click

@@ -1,0 +1,139 @@
+[
+  {
+    "id": 18362706,
+    "sport_id": 1,
+    "league_id": 384,
+    "season_id": 21644,
+    "stage_id": 77453488,
+    "group_id": null,
+    "aggregate_id": null,
+    "round_id": 343336,
+    "state_id": 2,
+    "venue_id": 214,
+    "name": "Juventus vs. Milan",
+    "starting_at": "2025-09-14T18:45:00.000000Z",
+    "result_info": "Match finished",
+    "leg": "1/1",
+    "details": null,
+    "length": 90,
+    "placeholder": false,
+    "has_odds": true,
+    "starting_at_timestamp": 1726339500,
+    "participants": [
+      {
+        "id": 11,
+        "sport_id": 1,
+        "country_id": 27,
+        "venue_id": 214,
+        "gender": "male",
+        "name": "Juventus",
+        "short_code": "JUV",
+        "image_path": "https://cdn.sportmonks.com/images/soccer/teams/11/11.png",
+        "founded": 1897,
+        "type": "club",
+        "placeholder": false,
+        "last_played_at": "2024-05-25T16:00:00.000000Z",
+        "meta": { "location": "home" }
+      },
+      {
+        "id": 13,
+        "sport_id": 1,
+        "country_id": 27,
+        "venue_id": 269,
+        "gender": "male",
+        "name": "Milan",
+        "short_code": "ACM",
+        "image_path": "https://cdn.sportmonks.com/images/soccer/teams/13/13.png",
+        "founded": 1899,
+        "type": "club",
+        "placeholder": false,
+        "last_played_at": "2024-05-25T18:45:00.000000Z",
+        "meta": { "location": "away" }
+      }
+    ],
+    "scores": [
+      {
+        "id": 1,
+        "fixture_id": 18362706,
+        "type_id": 7,
+        "participant_id": 11,
+        "score": { "goals": 2, "participant": "home" },
+        "description": "CURRENT"
+      },
+      {
+        "id": 2,
+        "fixture_id": 18362706,
+        "type_id": 7,
+        "participant_id": 13,
+        "score": { "goals": 1, "participant": "away" },
+        "description": "CURRENT"
+      }
+    ],
+    "league": {
+        "id": 384,
+        "name": "Serie A",
+        "image_path": "https://cdn.sportmonks.com/images/soccer/leagues/384.png"
+    },
+    "state": { "name": "Finished" }
+  },
+  {
+    "id": 18362707,
+    "sport_id": 1,
+    "league_id": 8,
+    "season_id": 21646,
+    "stage_id": 77453489,
+    "group_id": null,
+    "aggregate_id": null,
+    "round_id": 343337,
+    "state_id": 1,
+    "venue_id": 14,
+    "name": "Manchester United vs. Liverpool",
+    "starting_at": "2025-09-15T19:00:00.000000Z",
+    "result_info": null,
+    "leg": "1/1",
+    "details": null,
+    "length": 90,
+    "placeholder": false,
+    "has_odds": true,
+    "starting_at_timestamp": 1726426800,
+    "participants": [
+      {
+        "id": 14,
+        "sport_id": 1,
+        "country_id": 462,
+        "venue_id": 211,
+        "gender": "male",
+        "name": "Manchester United",
+        "short_code": "MUN",
+        "image_path": "https://cdn.sportmonks.com/images/soccer/teams/14/14.png",
+        "founded": 1878,
+        "type": "club",
+        "placeholder": false,
+        "last_played_at": "2024-05-25T14:00:00.000000Z",
+        "meta": { "location": "home" }
+      },
+      {
+        "id": 8,
+        "sport_id": 1,
+        "country_id": 462,
+        "venue_id": 236,
+        "gender": "male",
+        "name": "Liverpool",
+        "short_code": "LIV",
+        "image_path": "https://cdn.sportmonks.com/images/soccer/teams/8/8.png",
+        "founded": 1892,
+        "type": "club",
+        "placeholder": false,
+        "last_played_at": "2024-05-19T15:00:00.000000Z",
+        "meta": { "location": "away" }
+      }
+    ],
+    "scores": [],
+    "league": {
+        "id": 8,
+        "name": "Premier League",
+        "image_path": "https://cdn.sportmonks.com/images/soccer/leagues/8.png"
+    },
+    "state": { "name": "Not Started" }
+  }
+] 

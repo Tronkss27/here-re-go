@@ -57,18 +57,34 @@ class TenantMiddleware {
         }
       }
       
-      // Se non abbiamo trovato il tenant, cerchiamo di caricarlo dal DB
+      // Se abbiamo tenantId ma non abbiamo ancora caricato il tenant, proviamo a caricarlo dal DB
       if (tenantId && !tenant) {
-        console.log('🔍 DEBUG: Loading tenant from DB, tenantId:', tenantId);
-        
-        // Prima prova per slug, poi per ObjectId
+        console.log('🔍 DEBUG: Loading tenant from DB, tenantId:', tenantId)
         if (mongoose.Types.ObjectId.isValid(tenantId)) {
-          tenant = await Tenant.findById(tenantId);
-          console.log('🔍 DEBUG: Searched by ObjectId, found:', tenant ? tenant.slug : 'null');
+          tenant = await Tenant.findById(tenantId)
+          console.log('🔍 DEBUG: Searched by ObjectId, found:', tenant ? tenant.slug : 'null')
         } else {
-          // Cerca per slug
-          tenant = await Tenant.findOne({ slug: tenantId });
-          console.log('🔍 DEBUG: Searched by slug, found:', tenant ? tenant._id : 'null');
+          tenant = await Tenant.findOne({ slug: tenantId })
+          console.log('🔍 DEBUG: Searched by slug, found:', tenant ? tenant._id : 'null')
+        }
+      }
+      
+      // Se non abbiamo trovato il tenant, gestiamo i casi di fallback/errore
+      if (!tenant) {
+        if (tenantId) {
+          // Tenant specificato ma non trovato => errore
+          console.error(`❌ Invalid tenantId ricevuto: ${tenantId}`)
+          return res.status(400).json({
+            success: false,
+            error: 'Invalid tenant',
+            message: 'Il tenant specificato non esiste o non è attivo'
+          })
+        }
+        // Nessun tenantId specificato: in ambiente localhost usiamo default per comodità sviluppo
+        if ((req.get('host') || '').includes('localhost')) {
+          console.log('🔍 DEBUG: No tenant specified, using default (localhost)')
+          tenant = await TenantMiddleware.getOrCreateDefaultTenant()
+          tenantId = tenant._id.toString()
         }
       }
       

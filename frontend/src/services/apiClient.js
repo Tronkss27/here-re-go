@@ -14,23 +14,22 @@ class ApiClient {
       // Handle different error statuses
       switch (response.status) {
         case HTTP_STATUS.UNAUTHORIZED:
-          // Solo reindirizza al login se la richiesta includeva autenticazione
-          if (includeAuth) {
-            // Token expired or invalid - logout user
-            localStorage.removeItem('token')
-            localStorage.removeItem('user')
-            window.location.href = '/login'
-          } else {
-            // Per richieste senza auth, lancia solo un errore senza reindirizzare
-            throw new Error(data.message || 'Autenticazione richiesta')
-          }
-          break
+          // Lancia sempre solo un errore, NESSUN redirect automatico
+          throw new Error(data.message || 'Autenticazione richiesta')
         case HTTP_STATUS.FORBIDDEN:
           throw new Error(data.message || 'Accesso negato')
         case HTTP_STATUS.NOT_FOUND:
           throw new Error(data.message || 'Risorsa non trovata')
         case HTTP_STATUS.BAD_REQUEST:
-          throw new Error(data.message || 'Richiesta non valida')
+          // Per errori 400, proviamo a mostrare il messaggio specifico del backend
+          if (data.message) {
+            throw new Error(data.message)
+          } else if (data.errors && Array.isArray(data.errors) && data.errors.length > 0) {
+            // Se ci sono errori di validazione, mostra il primo
+            throw new Error(data.errors[0].msg || data.errors[0].message || 'Errore di validazione')
+          } else {
+            throw new Error('Richiesta non valida')
+          }
         default:
           throw new Error(data.message || 'Errore del server')
       }
@@ -41,11 +40,11 @@ class ApiClient {
 
   // Generic request method
   async request(endpoint, options = {}) {
-    const url = buildUrl(endpoint)
-    const includeAuth = options.includeAuth !== false
+    const { params, includeAuth = true, ...restOptions } = options
+    const url = buildUrl(endpoint, params)
     const config = {
       headers: getHeaders(includeAuth),
-      ...options
+      ...restOptions
     }
     
     try {
@@ -85,10 +84,20 @@ class ApiClient {
 
   // DELETE request
   async delete(endpoint, options = {}) {
-    return this.request(endpoint, {
+    // Consente di passare `data` come payload JSON nella richiesta DELETE
+    const { data, ...rest } = options || {}
+
+    const config = {
       method: 'DELETE',
-      ...options
-    })
+      ...rest
+    }
+
+    // Se è presente `data`, serializziamolo nel body
+    if (data && Object.keys(data).length > 0) {
+      config.body = JSON.stringify(data)
+    }
+
+    return this.request(endpoint, config)
   }
 
   // PATCH request

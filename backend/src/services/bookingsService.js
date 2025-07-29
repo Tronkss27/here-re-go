@@ -116,6 +116,15 @@ class BookingsService {
       
       console.log('✅ DEBUG: Venue found:', venueDoc.name, 'Type:', typeof venue);
 
+      // ✅ FIX DEFINITIVO: La prenotazione deve SEMPRE appartenere al tenant del locale.
+      const finalTenantId = venueDoc.tenantId;
+      if (!finalTenantId) {
+        // Questo non dovrebbe accadere per locali reali, ma è una sicurezza.
+        console.error(`❌ CRITICAL: Venue ${venueDoc._id} does not have a tenantId!`);
+        throw new Error(`Configuration error for venue ${venueDoc.name}.`);
+      }
+      console.log(`🔒 DEBUG: Booking will be assigned to tenant: ${finalTenantId} (from venue)`);
+
       // Validazione capacità venue
       if (partySize > venueDoc.capacity.total) {
         throw new Error(`Party size exceeds venue capacity (max: ${venueDoc.capacity.total})`)
@@ -123,7 +132,7 @@ class BookingsService {
 
       // Validazione fixture (se specificato) - solo per venue reali (tenant-aware)
       if (fixture && mongoose.Types.ObjectId.isValid(venue)) {
-        const fixtureDoc = await TenantQuery.findById(Fixture, tenantId, fixture)
+        const fixtureDoc = await TenantQuery.findById(Fixture, finalTenantId, fixture)
         if (!fixtureDoc) {
           throw new Error('Fixture not found')
         }
@@ -162,12 +171,12 @@ class BookingsService {
         console.log('🚀 DEBUG: STEP 2 - Booking data created');
 
         // Aggiungi tenantId se presente
-        if (tenantId) {
+        if (finalTenantId) {
           // Converte in ObjectId se è una stringa valida
-          if (typeof tenantId === 'string' && mongoose.Types.ObjectId.isValid(tenantId)) {
-            bookingCreateData.tenantId = new mongoose.Types.ObjectId(tenantId);
-          } else if (mongoose.Types.ObjectId.isValid(tenantId)) {
-            bookingCreateData.tenantId = tenantId;
+          if (typeof finalTenantId === 'string' && mongoose.Types.ObjectId.isValid(finalTenantId)) {
+            bookingCreateData.tenantId = new mongoose.Types.ObjectId(finalTenantId);
+          } else if (mongoose.Types.ObjectId.isValid(finalTenantId)) {
+            bookingCreateData.tenantId = finalTenantId;
           }
         }
         
@@ -252,7 +261,7 @@ class BookingsService {
       // Verifica conflitti di orario per venue reali 
       // Usa il tenantId del venue se esiste, altrimenti null per venue pubblici
       const venueTenantId = venueDoc.tenantId || null;
-      console.log('🔍 DEBUG: Venue tenantId:', venueTenantId, 'vs requested tenantId:', tenantId);
+      console.log('🔍 DEBUG: Venue tenantId:', venueTenantId, 'vs requested tenantId:', tenantId, 'vs finalTenantId:', finalTenantId);
       
       const conflicts = await this.checkTimeConflicts(venue, date, timeSlot, partySize, venueTenantId)
       if (conflicts.hasConflict) {
@@ -278,12 +287,12 @@ class BookingsService {
       };
 
       // Aggiungi tenantId se presente (utilizzando il tenantId del venue)
-      if (venueTenantId) {
+      if (finalTenantId) {
         // Converte in ObjectId se è una stringa valida
-        if (typeof venueTenantId === 'string' && mongoose.Types.ObjectId.isValid(venueTenantId)) {
-          bookingCreateData.tenantId = new mongoose.Types.ObjectId(venueTenantId);
-        } else if (mongoose.Types.ObjectId.isValid(venueTenantId)) {
-          bookingCreateData.tenantId = venueTenantId;
+        if (typeof finalTenantId === 'string' && mongoose.Types.ObjectId.isValid(finalTenantId)) {
+          bookingCreateData.tenantId = new mongoose.Types.ObjectId(finalTenantId);
+        } else if (mongoose.Types.ObjectId.isValid(finalTenantId)) {
+          bookingCreateData.tenantId = finalTenantId;
         }
       }
 

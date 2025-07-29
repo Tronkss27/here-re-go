@@ -3,6 +3,7 @@ const { body, param, query } = require('express-validator')
 const { auth, optionalAuth } = require('../middlewares/auth')
 const TenantMiddleware = require('../middlewares/tenantMiddleware')
 const venueController = require('../controllers/venueController')
+const { upload } = require('../config/multerConfig')
 
 const router = express.Router()
 
@@ -64,9 +65,17 @@ const updateVenueValidation = [
 // ================================
 
 // @route   GET /api/venues/public
-// @desc    Get public venues for booking (no auth required)
+// @desc    Get public venues  
 // @access  Public
 router.get('/public', venueController.getPublicVenues)
+
+// @route   GET /api/venues/test-debug
+// @desc    Test route to debug public venues
+// @access  Public
+router.get('/test-debug', (req, res) => {
+  console.log('🧪 TEST DEBUG ROUTE CALLED');
+  res.json({ success: true, message: 'Test route working', timestamp: new Date() });
+})
 
 // @route   GET /api/venues/search
 // @desc    Cerca venue per partita specifica (semplificato)
@@ -82,6 +91,11 @@ router.get('/public/:id', optionalAuth, venueController.getPublicVenue)
 // @desc    Ottieni venue pubblico per details page (NO AUTH)
 // @access  Public
 router.get('/details/:id', optionalAuth, venueController.getPublicVenue)
+
+// @route   GET /api/venues/with-announcements
+// @desc    Get venues that have active announcements
+// @access  Public
+router.get('/with-announcements', venueController.getVenuesWithAnnouncements)
 
 // @route   GET /api/venues/debug-tenant
 // @desc    Debug tenant info (TEMPORARY)
@@ -148,7 +162,7 @@ router.post(
   TenantMiddleware.extractTenant,
   TenantMiddleware.requireTenant,
   auth,
-  createVenueValidation,
+  createVenueValidation, // ✅ RIABILITATO - problema risolto
   venueController.createVenue
 )
 
@@ -197,6 +211,78 @@ router.delete(
     param('id').isMongoId().withMessage('Valid venue ID is required')
   ],
   venueController.deleteVenue
+)
+
+// @route   POST /api/venues/:id/images
+// @desc    Upload venue images
+// @access  Private (Owner/Admin)
+router.post(
+  '/:id/images',
+  (req, res, next) => {
+    console.log('🚀 ROUTE DEBUG: Upload images route hit');
+    console.log('🚀 ROUTE DEBUG: Params:', req.params);
+    console.log('🚀 ROUTE DEBUG: Headers:', req.headers);
+    next();
+  },
+  TenantMiddleware.extractTenant,
+  TenantMiddleware.requireTenant,
+  auth,
+  upload.array('image', 5), // Massimo 5 immagini
+  [
+    param('id').isMongoId().withMessage('Valid venue ID is required')
+  ],
+  venueController.uploadVenueImages
+)
+
+// @route   DELETE /api/venues/:id/images
+// @desc    Delete venue image by URL (alternative route)
+// @access  Private (Owner/Admin)
+router.delete(
+  '/:id/images',
+  TenantMiddleware.extractTenant,
+  TenantMiddleware.requireTenant,
+  auth,
+  [
+    param('id').isMongoId().withMessage('Valid venue ID is required'),
+    body('imageUrl').notEmpty().withMessage('Image URL is required')
+  ],
+  venueController.deleteVenueImageByUrl
+)
+
+// @route   DELETE /api/venues/:id/images/:imageId
+// @desc    Delete venue image by ID
+// @access  Private (Owner/Admin)
+router.delete(
+  '/:id/images/:imageId',
+  TenantMiddleware.extractTenant,
+  TenantMiddleware.requireTenant,
+  auth,
+  [
+    param('id').isMongoId().withMessage('Valid venue ID is required'),
+    param('imageId').isMongoId().withMessage('Valid image ID is required')
+  ],
+  venueController.deleteVenueImage
+)
+
+// @route   PATCH /api/venues/:id/booking-settings
+// @desc    Update venue booking settings (enable/disable bookings)
+// @access  Private (Venue Owner/Admin)
+router.patch(
+  '/:id/booking-settings',
+  TenantMiddleware.extractTenant,
+  TenantMiddleware.requireTenant,
+  auth,
+  [
+    param('id').isMongoId().withMessage('Valid venue ID is required'),
+    body('enabled').optional().isBoolean().withMessage('Enabled must be a boolean'),
+    body('requiresApproval').optional().isBoolean().withMessage('RequiresApproval must be a boolean'),
+    body('advanceBookingDays').optional().isInt({ min: 1, max: 365 }).withMessage('AdvanceBookingDays must be between 1 and 365'),
+    body('minimumPartySize').optional().isInt({ min: 1, max: 50 }).withMessage('MinimumPartySize must be between 1 and 50'),
+    body('maximumPartySize').optional().isInt({ min: 1, max: 100 }).withMessage('MaximumPartySize must be between 1 and 100'),
+    body('timeSlotDuration').optional().isInt({ min: 30, max: 480 }).withMessage('TimeSlotDuration must be between 30 and 480 minutes'),
+    body('cancellationPolicy').optional().isLength({ max: 500 }).withMessage('CancellationPolicy must be max 500 characters')
+  ],
+  venueController.updateBookingSettings
 )
 
 // ================================

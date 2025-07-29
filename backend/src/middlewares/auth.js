@@ -20,6 +20,11 @@ const auth = async (req, res, next) => {
       return res.status(401).json({ message: 'Token is not valid' })
     }
 
+    // Aggiungi tenantId alla richiesta se presente nel token
+    if (decoded.tenantId) {
+      req.tenantId = decoded.tenantId
+    }
+
     next()
   } catch (error) {
     console.error('Auth middleware error:', error)
@@ -97,7 +102,35 @@ const authenticateVenue = async (req, res, next) => {
 
     // Add user and venue info to request
     req.user = user
-    req.venue = { _id: user._id } // For now, assuming user ID is venue ID
+
+    // Find user's venue using tenantId
+    const Venue = require('../models/Venue')
+    const TenantQuery = require('../utils/tenantQuery')
+    
+    // Get tenantId from token or header
+    const tenantId = decoded.tenantId || req.headers['x-tenant-id']
+    
+    if (!tenantId) {
+      return res.status(400).json({ 
+        success: false,
+        message: 'Tenant context richiesto per operazioni sui venue' 
+      })
+    }
+    
+    // Find venue owned by this user in the tenant
+    const venue = await TenantQuery.findOne(Venue, tenantId, { owner: user._id })
+    
+    if (!venue) {
+      return res.status(404).json({ 
+        success: false,
+        message: 'Venue non trovato per questo utente. Completa prima l\'onboarding.' 
+      })
+    }
+    
+    req.venue = venue
+    req.tenantId = tenantId
+    
+    console.log(`✅ User ${user._id} authenticated for venue ${venue._id} (${venue.name}) in tenant ${tenantId}`)
 
     next()
   } catch (error) {

@@ -39,18 +39,13 @@ interface BookingFormProps {
 interface BookingFormData {
   date: Date | null
   timeSlot: BookingTimeSlot | null
-  duration: number // in hours
   partySize: number
   tablePreference: BookingTablePreference
   customerName: string
   customerEmail: string
   customerPhone: string
   specialRequests: string
-  // Recurring booking options
-  isRecurring: boolean
-  recurringFrequency: 'weekly' | 'monthly' | 'biweekly'
-  recurringEndDate: Date | null
-  recurringOccurrences: number
+  // 🚫 RIMOSSI: duration, isRecurring, recurringFrequency, recurringEndDate, recurringOccurrences
 }
 
 interface CreateBookingForm {
@@ -58,7 +53,6 @@ interface CreateBookingForm {
   fixture?: string
   date: string
   timeSlot: BookingTimeSlot
-  duration: number
   partySize: number
   tablePreference: BookingTablePreference
   customer: {
@@ -67,11 +61,7 @@ interface CreateBookingForm {
     phone: string
   }
   specialRequests?: string
-  // Recurring booking options
-  isRecurring?: boolean
-  recurringFrequency?: 'weekly' | 'monthly' | 'biweekly'
-  recurringEndDate?: string
-  recurringOccurrences?: number
+  // 🚫 RIMOSSI: duration, isRecurring, recurringFrequency, recurringEndDate, recurringOccurrences
 }
 
 const BookingForm: React.FC<BookingFormProps> = ({
@@ -99,18 +89,13 @@ const BookingForm: React.FC<BookingFormProps> = ({
   const [formData, setFormData] = useState<BookingFormData>({
     date: preselectedDate || null,
     timeSlot: preselectedTimeSlot || null,
-    duration: 2,
     partySize: 2,
     tablePreference: 'any',
     customerName: '',
     customerEmail: '',
     customerPhone: '',
-    specialRequests: '',
-    // Recurring booking options
-    isRecurring: false,
-    recurringFrequency: 'weekly',
-    recurringEndDate: null,
-    recurringOccurrences: 0
+    specialRequests: ''
+    // 🚫 RIMOSSI: duration, isRecurring, recurringFrequency, recurringEndDate, recurringOccurrences
   })
 
   // UI state
@@ -156,7 +141,7 @@ const BookingForm: React.FC<BookingFormProps> = ({
 
     // Calculate overlapping time period based on duration
     const startTime = formData.timeSlot.start
-    const endTime = new Date(new Date(`2000-01-01 ${startTime}`).getTime() + formData.duration * 60 * 60 * 1000)
+    const endTime = new Date(new Date(`2000-01-01 ${startTime}`).getTime() + 2 * 60 * 60 * 1000)
       .toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })
 
     // Simulate capacity check (in real implementation, this would check existing bookings)
@@ -175,7 +160,7 @@ const BookingForm: React.FC<BookingFormProps> = ({
   // Check capacity when relevant fields change
   useEffect(() => {
     checkVenueCapacity()
-  }, [formData.timeSlot, formData.partySize, formData.duration])
+  }, [formData.timeSlot, formData.partySize])
 
   // Check conflicts when booking details change
   useEffect(() => {
@@ -184,7 +169,7 @@ const BookingForm: React.FC<BookingFormProps> = ({
     }, 500) // Debounce di 500ms per evitare troppe chiamate API
 
     return () => clearTimeout(debounceTimer)
-  }, [formData.date, formData.timeSlot, formData.duration, formData.partySize])
+  }, [formData.date, formData.timeSlot, formData.partySize])
 
   // Load available time slots when date changes
   useEffect(() => {
@@ -313,7 +298,7 @@ const BookingForm: React.FC<BookingFormProps> = ({
       }
       
       // Check if booking end time would exceed venue closing
-      const endHour = timeSlotHour + formData.duration
+      const endHour = timeSlotHour + 2 // 🎯 DURATA FISSA 2 ORE
       if (endHour > 24) {
         newErrors.duration = 'La prenotazione non può oltrepassare la mezzanotte'
       }
@@ -347,9 +332,14 @@ const BookingForm: React.FC<BookingFormProps> = ({
       newErrors.customerPhone = 'Formato telefono non valido'
     }
 
-    // Duration validation
-    if (formData.duration < 1 || formData.duration > 4) {
-      newErrors.duration = 'Durata deve essere tra 1 e 4 ore'
+    // 🚫 RIMOSSO: Duration validation
+    // if (formData.duration < 1 || formData.duration > 4) {
+    //   newErrors.duration = 'Durata deve essere tra 1 e 4 ore'
+    // }
+
+    // Basic validation
+    if (!formData.date || !formData.timeSlot) { // 🎯 RIMOSSO: || !formData.duration
+      newErrors.general = 'Seleziona data e orario'
     }
 
     // Recurring booking validation with improved logic
@@ -464,7 +454,6 @@ const BookingForm: React.FC<BookingFormProps> = ({
         fixture: fixtureId,
         date: format(formData.date!, 'yyyy-MM-dd'),
         timeSlot: formData.timeSlot!,
-        duration: formData.duration,
         partySize: formData.partySize,
         tablePreference: formData.tablePreference,
         customer: {
@@ -473,13 +462,7 @@ const BookingForm: React.FC<BookingFormProps> = ({
           phone: formData.customerPhone.trim()
         },
         specialRequests: formData.specialRequests.trim() || undefined,
-        // Recurring booking options
-        isRecurring: formData.isRecurring,
-        recurringFrequency: formData.isRecurring ? formData.recurringFrequency : undefined,
-        recurringEndDate: formData.isRecurring && formData.recurringEndDate 
-          ? format(formData.recurringEndDate, 'yyyy-MM-dd') 
-          : undefined,
-        recurringOccurrences: formData.isRecurring ? formData.recurringOccurrences : undefined
+        // 🚫 RIMOSSI: duration, isRecurring, recurringFrequency, recurringEndDate, recurringOccurrences
       }
 
       console.log('🚀 Invio prenotazione per venue:', venueId, 'con dati:', bookingData)
@@ -568,7 +551,7 @@ const BookingForm: React.FC<BookingFormProps> = ({
 
   // Real-time conflict detection
   const checkBookingConflicts = async () => {
-    if (!formData.date || !formData.timeSlot || !formData.duration) {
+    if (!formData.date || !formData.timeSlot) {
       setConflictWarning(null)
       return
     }
@@ -646,7 +629,7 @@ const BookingForm: React.FC<BookingFormProps> = ({
   }
 
   // Check if booking summary should be shown
-  const shouldShowSummary = formData.date && formData.timeSlot && formData.partySize && formData.duration && formData.customerName && formData.customerEmail && formData.customerPhone
+  const shouldShowSummary = formData.date && formData.timeSlot && formData.partySize && formData.customerName && formData.customerEmail && formData.customerPhone // 🎯 RIMOSSO: && formData.duration
 
   // Modal Component separato usando Portal per evitare conflitti DOM
   const ConfirmationModal = () => {
@@ -708,20 +691,19 @@ const BookingForm: React.FC<BookingFormProps> = ({
                       <p className="text-gray-600">
                         {formData.date && format(formData.date, 'EEEE, dd MMMM yyyy', { locale: it })}
                       </p>
-                      <p className="text-lg font-medium text-gray-900">
-                        {formData.timeSlot?.start} - {formData.timeSlot?.start && new Date(new Date(`2000-01-01 ${formData.timeSlot.start}`).getTime() + formData.duration * 60 * 60 * 1000).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })}
-                      </p>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Orario inizio:</span>
+                        <p className="text-gray-900">{formData.timeSlot?.start}</p>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Orario fine:</span>
+                        <p className="text-gray-900">{getEndTime(formData.timeSlot.start)}</p>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Durata:</span>
+                        <p className="text-gray-900">2 ore</p> {/* 🎯 DURATA FISSA */}
+                      </div>
                     </div>
-                  </div>
-
-                  <div className="flex items-start gap-4">
-                    <div className="w-10 h-10 bg-orange-100 rounded-full flex items-center justify-center flex-shrink-0">
-                      <ClockIcon className="h-5 w-5 text-orange-600" />
-            </div>
-            <div>
-                      <p className="font-semibold text-gray-800">Durata</p>
-              <p className="text-gray-900">{formData.duration} {formData.duration === 1 ? 'ora' : 'ore'}</p>
-            </div>
                   </div>
 
                   <div className="flex items-start gap-4">
@@ -906,19 +888,18 @@ const BookingForm: React.FC<BookingFormProps> = ({
                       <p className="text-gray-600">
                         {formData.date && format(formData.date, 'EEEE, dd MMMM yyyy', { locale: it })}
                       </p>
-                      <p className="text-lg font-medium text-gray-900">
-                        {formData.timeSlot?.start} - {formData.timeSlot?.start && new Date(new Date(`2000-01-01 ${formData.timeSlot.start}`).getTime() + formData.duration * 60 * 60 * 1000).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-start gap-4">
-                    <div className="w-10 h-10 bg-orange-100 rounded-full flex items-center justify-center flex-shrink-0">
-                      <ClockIcon className="h-5 w-5 text-orange-600" />
-                    </div>
-                    <div>
-                      <p className="font-semibold text-gray-800">Durata</p>
-                      <p className="text-gray-900">{formData.duration} {formData.duration === 1 ? 'ora' : 'ore'}</p>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Orario inizio:</span>
+                        <p className="text-gray-900">{formData.timeSlot?.start}</p>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Orario fine:</span>
+                        <p className="text-gray-900">{getEndTime(formData.timeSlot.start)}</p>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Durata:</span>
+                        <p className="text-gray-900">2 ore</p>
+                      </div>
                     </div>
                   </div>
 
@@ -1096,6 +1077,12 @@ const BookingForm: React.FC<BookingFormProps> = ({
     return false
   }
 
+  const getEndTime = (startTime: string) => {
+    const start = new Date(`2000-01-01 ${startTime}`);
+    const end = new Date(start.getTime() + 2 * 60 * 60 * 1000); // Add 2 hours
+    return end.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' });
+  };
+
   return (
     <>
       <form onSubmit={handleSubmit} className="space-y-6">
@@ -1270,28 +1257,7 @@ const BookingForm: React.FC<BookingFormProps> = ({
           </div>
         )}
 
-        {/* Duration Selection */}
-        <div className="space-y-2">
-          <Label htmlFor="duration">Durata prenotazione</Label>
-          <div className="flex items-center gap-2">
-            <ClockIcon className="h-4 w-4 text-gray-500" />
-            <Select
-              value={formData.duration.toString()}
-              onValueChange={(value) => updateField('duration', parseInt(value))}
-            >
-              <SelectTrigger className={errors.duration ? "border-red-500" : ""}>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="1">1 ora</SelectItem>
-                <SelectItem value="2">2 ore</SelectItem>
-                <SelectItem value="3">3 ore</SelectItem>
-                <SelectItem value="4">4 ore</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          {renderErrorMessage('duration')}
-        </div>
+        {/* 🚫 RIMOSSO: Duration Selection - Non più necessario */}
 
         {/* Capacity Warning */}
         {capacityWarning && (
@@ -1345,10 +1311,10 @@ const BookingForm: React.FC<BookingFormProps> = ({
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="any">Qualsiasi</SelectItem>
-              <SelectItem value="near_screen">Vicino agli schermi</SelectItem>
-              <SelectItem value="quiet_area">Zona tranquilla</SelectItem>
+              <SelectItem value="window">Vicino alle finestre</SelectItem>
+              <SelectItem value="bar">Area bar</SelectItem>
+              <SelectItem value="booth">Tavolo riservato</SelectItem>
               <SelectItem value="outdoor">All'esterno</SelectItem>
-              <SelectItem value="bar_area">Area bar</SelectItem>
             </SelectContent>
           </Select>
         </div>

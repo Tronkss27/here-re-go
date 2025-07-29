@@ -17,9 +17,9 @@ const VenueProtectedRoute = ({ children }) => {
     )
   }
 
-  // Se non autenticato, redirect al login
+  // Se non autenticato, redirect al sports login
   if (!isAuthenticated) {
-    return <Navigate to="/login" state={{ from: location }} replace />
+    return <Navigate to="/sports-login" state={{ from: location }} replace />
   }
 
   // Se non è un venue owner, non può accedere all'admin

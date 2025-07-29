@@ -188,12 +188,8 @@ class FixturesService {
     try {
       const result = await this.getFixtures({ date: today })
       
-      // Se non ci sono partite per oggi, usa dati mock temporanei
-      if (!result?.data || result.data.length === 0) {
-        console.log('📝 No matches for today, using mock data temporaneamente')
-        return { data: this.getMockTodayFixtures(), success: true }
-      }
-      
+      // Restituisci sempre i dati reali, anche se vuoti
+      console.log(`📊 Final result: ${result?.data?.length || 0} real matches found`);
       return result
     } catch (error) {
       console.error('❌ Error fetching today fixtures:', error)

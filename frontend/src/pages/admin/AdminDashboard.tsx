@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { venueProfileService, statisticsService } from '@/services/venueService';
-import CreateMatchAnnouncementForm from '@/components/forms/CreateMatchAnnouncementForm';
+import SimpleCreateAnnouncementForm from '@/components/forms/SimpleCreateAnnouncementForm';
 
 interface DashboardStats {
   views: number;
@@ -306,7 +306,7 @@ const AdminDashboard = () => {
       )}
 
       {/* Create Match Announcement Form Modal */}
-      <CreateMatchAnnouncementForm
+      <SimpleCreateAnnouncementForm
         isOpen={showCreateMatchForm}
         onClose={() => setShowCreateMatchForm(false)}
         onSubmit={handleCreateMatchAnnouncement}

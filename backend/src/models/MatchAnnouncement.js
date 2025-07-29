@@ -109,6 +109,13 @@ const EventDetailsSchema = new mongoose.Schema({
 }, { _id: false });
 
 const MatchAnnouncementSchema = new mongoose.Schema({
+  // ✅ FIX: Aggiungi tenant isolation
+  tenantId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Tenant',
+    required: false // Temporaneamente opzionale per migrazione
+  },
+  
   venueId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Venue',
@@ -163,12 +170,14 @@ const MatchAnnouncementSchema = new mongoose.Schema({
 // Plugin per pagination
 MatchAnnouncementSchema.plugin(mongoosePaginate);
 
-// Indexes per performance multi-tenant
+// Indexes per performance e ricerca
+MatchAnnouncementSchema.index({ tenantId: 1 }); // ✅ FIX: Indice tenant per isolamento
 MatchAnnouncementSchema.index({ venueId: 1, status: 1 });
 MatchAnnouncementSchema.index({ venueId: 1, createdAt: -1 });
 MatchAnnouncementSchema.index({ 'match.date': 1, status: 1 });
 MatchAnnouncementSchema.index({ 'match.competition.id': 1 });
 MatchAnnouncementSchema.index({ searchTags: 1 });
+MatchAnnouncementSchema.index({ isActive: 1 });
 
 // Virtual per calcolare engagement rate
 MatchAnnouncementSchema.virtual('engagementRate').get(function() {

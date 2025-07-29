@@ -233,38 +233,30 @@ export const AuthProvider = ({ children }) => {
     try {
       dispatch({ type: authActions.SET_LOADING, payload: true })
 
-      // Estrai i dati dall'oggetto userData
-      const { name, email, password, isVenueOwner = false, businessInfo = null } = userData
+      const data = await apiClient.post(API_ENDPOINTS.AUTH.REGISTER, userData, { includeAuth: false })
 
-      // Prepara i dati da inviare al backend
-      const requestData = {
-        name,
-        email,
-        password,
-        isVenueOwner,
-        businessInfo
-      }
-
-      const data = await apiClient.post(API_ENDPOINTS.AUTH.REGISTER, requestData, { includeAuth: false })
-
-      // Se è un venue owner e abbiamo dati del venue, aggiungiamoli al user
+      // ✅ FIX: Se è un venue owner e abbiamo dati del venue, aggiungiamoli al user
       let userWithVenue = data.user
-      if (isVenueOwner && data.venue && businessInfo) {
+      if (data.user.isVenueOwner && data.venue) {
         userWithVenue = {
           ...data.user,
           venue: {
             id: data.venue._id,
-            name: businessInfo.businessName,
-            address: businessInfo.businessAddress,
-            city: businessInfo.businessCity,
-            phone: businessInfo.businessPhone,
-            type: businessInfo.businessType
+            name: data.venue.name,
+            address: data.venue.location?.address?.street || '',
+            city: data.venue.location?.address?.city || '',
+            postalCode: data.venue.location?.address?.postalCode || '',
+            phone: data.venue.contact?.phone || '',
+            type: data.venue.type || 'sport_bar'
           }
         }
       }
 
-      // Normalize user before saving and dispatching
+      // L'oggetto 'user' restituito dal backend è già completo.
+      // Lo normalizziamo per coerenza (es. _id -> id)
       const normalizedUser = normalizeUserObject(userWithVenue);
+      
+      console.log("✅ [AuthContext] Dati utente ricevuti e normalizzati dopo la registrazione:", normalizedUser);
 
       // Salva token e user nel localStorage
       localStorage.setItem('token', data.token)
@@ -277,7 +269,7 @@ export const AuthProvider = ({ children }) => {
 
       return { success: true, data: { ...data, user: normalizedUser } }
     } catch (error) {
-      const errorMessage = error.message || 'Network error. Please try again.'
+      const errorMessage = error.message || 'Errore di rete. Riprova.'
       dispatch({
         type: authActions.LOGIN_ERROR,
         payload: errorMessage

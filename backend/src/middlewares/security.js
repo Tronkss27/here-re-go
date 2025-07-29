@@ -15,6 +15,10 @@ class SecurityMiddleware {
         // Rimuovi caratteri potenzialmente pericolosi
         return validator.escape(value.trim())
       }
+      // ✅ FIX: Gestisci gli array correttamente
+      if (Array.isArray(value)) {
+        return value.map(item => sanitizeValue(item))
+      }
       if (typeof value === 'object' && value !== null) {
         const sanitized = {}
         for (const [key, val] of Object.entries(value)) {
@@ -207,6 +211,11 @@ class SecurityMiddleware {
     res.setHeader('X-XSS-Protection', '1; mode=block')
     res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin')
     res.setHeader('Permissions-Policy', 'geolocation=(), microphone=(), camera=()')
+    
+    // ✅ Permetti caricamento immagini cross-origin per uploads
+    if (req.path && req.path.startsWith('/uploads/')) {
+      res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin')
+    }
     
     // HSTS per HTTPS
     if (req.secure || req.headers['x-forwarded-proto'] === 'https') {

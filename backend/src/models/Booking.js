@@ -12,7 +12,16 @@ const bookingSchema = new mongoose.Schema({
   venue: {
     type: mongoose.Schema.Types.Mixed, // Accetta sia ObjectId che String per venue mock
     ref: 'Venue',
-    required: true
+    required: true,
+    // ✅ FIX: Aggiungi validazione e normalizzazione
+    validate: {
+      validator: function(v) {
+        // Accetta ObjectId validi o stringhe che rappresentano ObjectId o venue mock
+        return mongoose.Types.ObjectId.isValid(v) || 
+               (typeof v === 'string' && (v.startsWith('venue_') || mongoose.Types.ObjectId.isValid(v)));
+      },
+      message: 'Venue must be a valid ObjectId or venue mock string'
+    }
   },
   user: {
     type: mongoose.Schema.Types.ObjectId,
@@ -350,4 +359,61 @@ bookingSchema.methods.updateStatus = function(newStatus, updatedBy, reason) {
   return this.save();
 };
 
-module.exports = mongoose.model('Booking', bookingSchema); 
+// ✅ FIX: Metodi statici per gestire query venue consistenti
+bookingSchema.statics.normalizeVenueQuery = function(venueFilter) {
+  if (!venueFilter) return {};
+  
+  // Se è un singolo venue
+  if (typeof venueFilter === 'string' || mongoose.Types.ObjectId.isValid(venueFilter)) {
+    return {
+      venue: {
+        $in: [
+          venueFilter, // Formato originale
+          mongoose.Types.ObjectId.isValid(venueFilter) ? venueFilter.toString() : venueFilter, // String format
+          typeof venueFilter === 'string' && mongoose.Types.ObjectId.isValid(venueFilter) 
+            ? new mongoose.Types.ObjectId(venueFilter) 
+            : null // ObjectId format
+        ].filter(Boolean)
+      }
+    };
+  }
+  
+  // Se è un array o oggetto $in
+  if (venueFilter.$in && Array.isArray(venueFilter.$in)) {
+    const normalizedVenues = [];
+    venueFilter.$in.forEach(v => {
+      normalizedVenues.push(v); // Formato originale
+      if (mongoose.Types.ObjectId.isValid(v)) {
+        normalizedVenues.push(v.toString()); // String format
+        if (typeof v === 'string') {
+          normalizedVenues.push(new mongoose.Types.ObjectId(v)); // ObjectId format
+        }
+      }
+    });
+    
+    return {
+      venue: {
+        $in: [...new Set(normalizedVenues)] // Rimuovi duplicati
+      }
+    };
+  }
+  
+  return { venue: venueFilter };
+};
+
+// ✅ FIX: Metodo per query tenant-aware con venue normalizzato
+bookingSchema.statics.findWithNormalizedVenue = function(tenantId, filter = {}) {
+  const TenantQuery = require('../utils/tenantQuery');
+  
+  // Normalizza il filtro venue se presente
+  if (filter.venue) {
+    const normalizedVenueFilter = this.normalizeVenueQuery(filter.venue);
+    filter = { ...filter, ...normalizedVenueFilter };
+  }
+  
+  return TenantQuery.find(this, tenantId, filter);
+};
+
+const Booking = mongoose.model('Booking', bookingSchema);
+
+module.exports = Booking; 

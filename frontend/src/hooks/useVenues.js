@@ -36,12 +36,13 @@ export const useVenue = (id) => {
 
   // ✅ FIX PER REACT STRICT MODE: Controllo idempotenza per evitare doppi fetch
   const [hasFetched, setHasFetched] = useState(false)
+  const [permanentError, setPermanentError] = useState(false) // ✅ NUOVO: Traccia errori permanenti
 
   const fetchVenue = useCallback(async () => {
     if (!id) return
 
     // ✅ CONTROLLO IDEMPOTENZA: Se abbiamo già fatto fetch per questo ID, non rifarlo
-    if (hasFetched) {
+    if (hasFetched || permanentError) {
       console.log(`🔄 Skipping duplicate fetch for venue ${id} (React Strict Mode)`)
       return
     }
@@ -49,6 +50,7 @@ export const useVenue = (id) => {
     try {
       console.log(`🔍 Fetching venue ${id} (first time)`)
       setHasFetched(true)
+      setPermanentError(false)
       
       const venueData = await withLoading(
         () => venuesService.getFormattedVenueById(id),
@@ -58,15 +60,26 @@ export const useVenue = (id) => {
       setVenue(venueData)
     } catch (err) {
       console.error('Error loading venue:', err)
-      setError(handleApiError(err))
-      setHasFetched(false) // Reset su errore per consentire retry
+      const errorMessage = handleApiError(err)
+      setError(errorMessage)
+      
+      // ✅ FIX LOOP: Se è un errore 404 o "non trovato", non ritentare
+      if (err.message?.includes('non trovato') || err.message?.includes('404') || err.message?.includes('Not Found')) {
+        console.log(`❌ Permanent error for venue ${id}, stopping retries:`, err.message)
+        setPermanentError(true)
+        setHasFetched(true) // Mantieni come fetched per evitare retry
+      } else {
+        // Solo per errori temporanei (500, network, etc.) consenti retry
+        setHasFetched(false)
+      }
     }
-  }, [id, hasFetched])
+  }, [id, hasFetched, permanentError])
 
   useEffect(() => {
     // Reset quando cambia l'ID
     if (id) {
       setHasFetched(false)
+      setPermanentError(false) // ✅ Reset anche errore permanente
       setVenue(null)
       setLoading(true)
       setError(null)

@@ -31,7 +31,15 @@ const ClientLogin = () => {
       
       if (result.success) {
         showSuccessModal('Benvenuto su SPOrTS!')
-        navigate('/')
+        
+        // Se è un venue owner, rimanda al sports login
+        if (result.user?.isVenueOwner) {
+          showErrorModal('Sei un proprietario di locale. Usa l\'accesso SPOrTS Admin.')
+          navigate('/sports-login')
+        } else {
+          // Utente normale, vai al profilo o alla homepage
+          navigate('/profile')
+        }
       } else {
         showErrorModal(result.error)
       }
