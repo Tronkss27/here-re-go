@@ -62,3 +62,19 @@ __pycache__/
 
 # Keep Docker files
 !docker-compose*.yml 
+
+# Backup env e file sensibili
+backend/.env.backup*
+*.backup.*
+
+# Cursor log files
+cursor_leggi_log_di_backend_per_errore.md
+
+# Logs e dump pesanti
+*.log
+*.dump
+*.sql
+
+# Ignore archive files
+*.tar.gz
+*.zip 
