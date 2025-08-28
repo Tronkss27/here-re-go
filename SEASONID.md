@@ -1,4 +1,4 @@
-Premiere League: id = 8, currentSeasonId = 25583, Regular Season (ID: 77476879):
+Premier League: id = 8, currentSeasonId = 25583, Regular Season (ID: 77476879):
 
 372195
 Round 1
