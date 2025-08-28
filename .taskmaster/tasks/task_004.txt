@@ -1,0 +1,11 @@
+# Task ID: 4
+# Title: Core UI Components & Design System
+# Status: done
+# Dependencies: 1, 2
+# Priority: medium
+# Description: Sviluppare componenti UI base con design system Tailwind secondo specifiche PRD
+# Details:
+Components: Button, Card, Modal, Form inputs, Loading states. Color palette Orange (#F97316), typography Racing Sans One + Kanit. Responsive mobile-first, accessibility WCAG 2.1 AA
+
+# Test Strategy:
+Test responsivity, accessibility audit, visual regression testing, performance componenti

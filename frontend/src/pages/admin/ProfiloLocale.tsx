@@ -7,9 +7,10 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useAuth } from '@/contexts/AuthContext';
-import { venueProfileService } from '@/services/venueService';
+import adminVenueService from '@/services/adminVenueService.js';
 import { venuesService } from '@/services/index.js';
 import BookingToggle from '@/components/BookingToggle';
+import AddressAutocomplete from '@/components/AddressAutocomplete';
 
 interface VenueProfile {
   name: string;
@@ -19,12 +20,17 @@ interface VenueProfile {
   description: string;
   website: string;
   phone: string;
+  userEmail?: string; // 🎯 NUOVO: Email utente per backend
   openingHours: Array<{
     day: string;
     status: 'open' | 'closed';
     openTime: string;
     closeTime: string;
   }>;
+  capacity?: {
+    total: number;
+    maxReservations: number;
+  };
   facilities: {
     screens: number;
     services: Array<{
@@ -69,7 +75,7 @@ const ProfiloLocale = () => {
   useEffect(() => {
     const loadVenueProfile = async () => {
       if (user) {
-        const profile = venueProfileService.getProfile(user.id);
+        const profile = await adminVenueService.getVenueProfile();
         if (profile) {
           console.log('✅ Venue profile loaded:', profile);
           
@@ -112,6 +118,10 @@ const ProfiloLocale = () => {
             website: profile.website || '',
             phone: profile.phone || '',
             openingHours: Array.isArray(profile.openingHours) ? profile.openingHours : [],
+            capacity: {
+              total: profile.capacity?.total || 50,
+              maxReservations: profile.capacity?.maxReservations || 15
+            },
             facilities: {
               screens: profile.facilities?.screens || 0,
               services: Array.isArray(profile.facilities?.services) ? profile.facilities.services : []
@@ -149,6 +159,18 @@ const ProfiloLocale = () => {
     setFormData({
       ...formData,
       [field]: value
+    });
+  };
+
+  // Gestisce selezione indirizzo da autocomplete
+  const handleAddressSelect = (address: string, placeDetails?: any) => {
+    if (!formData) return;
+    
+    setFormData({
+      ...formData,
+      address: address,
+      city: placeDetails?.city || formData.city,
+      postalCode: placeDetails?.postalCode || formData.postalCode
     });
   };
 
@@ -231,50 +253,12 @@ const ProfiloLocale = () => {
       const profileData = {
         ...formData,
         userId: user.id,
+        userEmail: user.email, // 🎯 NUOVO: Passa email utente per backend
         updatedAt: new Date().toISOString()
       };
       
-      // Salva utilizzando il servizio
-      venueProfileService.saveProfile(user.id, profileData);
-      
-      // ✨ RIPRISTINO: Salvataggio backend per persistenza completa
-      if (formData.backendId) {
-        const backendPayload = {
-          name: formData.name,
-          description: formData.description,
-          location: {
-            address: {
-              street: formData.address,
-              city: formData.city,
-              postalCode: formData.postalCode,
-              country: 'Italy'
-            }
-          },
-          contact: {
-            email: user.email, // ✅ Email richiesto dal backend
-            phone: formData.phone,
-            website: formData.website
-          },
-          capacity: {
-            total: formData.facilities.screens || 50
-          },
-          images: formData.photos
-            .filter(p => p && p.preview) // Filtra foto con preview valido
-            .map((p, idx) => ({ url: p.preview, isMain: idx === 0 })),
-          // ✨ NUOVO: Aggiungi orari di apertura al backend
-          hours: formData.openingHours,
-          // ✨ NUOVO: Aggiungi facilities al backend
-          facilities: formData.facilities.services.map(s => s.id || s),
-          bookingSettings: formData.bookingSettings // Aggiungi bookingSettings al backend
-        };
-
-        try {
-          await venuesService.updateVenueProfile(formData.backendId, backendPayload);
-          console.log('✅ Backend venue updated successfully');
-        } catch (err) {
-          console.error('❌ Errore aggiornamento backend venue:', err);
-        }
-      }
+      // 🎯 NUOVO: Salva direttamente sul backend (NO LOCALSTORAGE)
+      await adminVenueService.saveVenueProfile(profileData);
       
       setVenueProfile(formData);
       setEditMode(false);
@@ -317,41 +301,28 @@ const ProfiloLocale = () => {
     const currentPhotos = [...formData.photos];
     const newPhotos = [...currentPhotos];
 
-    // ✨ RIPRISTINO: Upload backend per persistenza
+    // 🎯 NUOVO: Upload tramite adminVenueService
     if (formData.backendId) {
-      for (const file of Array.from(files)) {
-        if (newPhotos.length >= 4) break;
-        try {
-          const res = await venuesService.uploadVenuePhoto(file, formData.backendId);
-          console.log('📸 Upload response:', res);
+      try {
+        const uploadedImages = await adminVenueService.uploadVenuePhotos(formData.backendId, files);
+        
+        for (const uploadedImage of uploadedImages) {
+          if (newPhotos.length >= 4) break;
           
-          if (res && res.uploadedImages && res.uploadedImages[0]) {
-            const uploadedImage = res.uploadedImages[0];
-            // Assicuriamoci che l'URL sia valido e completo
-            let imageUrl = uploadedImage.url;
-            
-            if (imageUrl && imageUrl !== 'undefined') {
-              // ✅ FIX: Converti URL relativo in assoluto per anteprime corrette
-              if (imageUrl.startsWith('/uploads/')) {
-                const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
-                const baseUrl = API_BASE_URL.replace('/api', ''); // Rimuovi /api se presente
-                imageUrl = `${baseUrl}${imageUrl}`;
-              }
-              
-              newPhotos.push({ 
-                id: imageUrl, // Uso l'URL completo come ID 
-                preview: imageUrl // E anche come preview per l'anteprima
-              });
-              console.log('✅ Foto caricata:', imageUrl);
-            } else {
-              console.error('❌ URL foto non valido:', uploadedImage);
-            }
-          } else {
-            console.error('❌ Risposta upload non valida:', res);
+          if (uploadedImage.url) {
+            newPhotos.push({
+              id: uploadedImage.url,
+              preview: uploadedImage.url
+            });
+            console.log('📸 Added photo:', uploadedImage.url);
           }
-        } catch (err) {
-          console.error('❌ Errore upload foto:', err);
         }
+      } catch (uploadError) {
+        console.error('❌ Error uploading photos:', uploadError);
+        setMessage({
+          text: 'Errore durante l\'upload delle foto.',
+          type: 'error'
+        });
       }
     } else {
       // Fallback locale se non c'è backendId
@@ -376,6 +347,9 @@ const ProfiloLocale = () => {
       ...formData,
       photos: newPhotos
     });
+    
+    // 🎯 NUOVO: Notifica dell'upload per invalidare cache pubblica
+    console.log('📸 Photos updated, triggering venue cache invalidation...');
   };
 
   // Rimuove una foto
@@ -507,14 +481,24 @@ const ProfiloLocale = () => {
                 />
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
+                              <div>
                 <Label className="font-kanit font-semibold">Indirizzo</Label>
-                <Input 
+                {editMode ? (
+                  <AddressAutocomplete
+                    value={formData?.address || ''}
+                    onChange={(address) => handleFieldChange('address', address)}
+                    onAddressSelect={handleAddressSelect}
+                    placeholder="Inserisci indirizzo..."
+                    className="border-gray-300"
+                    showValidation
+                  />
+                ) : (
+                  <Input 
                     value={formData?.address || ''} 
-                    onChange={(e) => handleFieldChange('address', e.target.value)}
-                    disabled={!editMode}
+                    disabled
                     className="border-gray-300"
                   />
+                )}
                 </div>
                 <div>
                   <Label className="font-kanit font-semibold">Città</Label>
@@ -524,6 +508,21 @@ const ProfiloLocale = () => {
                   disabled={!editMode}
                   className="border-gray-300"
                 />
+                </div>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label className="font-kanit font-semibold">CAP</Label>
+                  <Input 
+                    value={formData?.postalCode || ''} 
+                    onChange={(e) => handleFieldChange('postalCode', e.target.value)}
+                    disabled={!editMode}
+                    className="border-gray-300"
+                    placeholder="20121"
+                  />
+                </div>
+                <div>
+                  {/* Spazio per bilanciare la griglia */}
                 </div>
               </div>
               <div>
@@ -616,7 +615,7 @@ const ProfiloLocale = () => {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                 {services.map((service) => {
                   const isSelected = isServiceSelected(service.id);
                   const Icon = service.icon;
@@ -625,39 +624,62 @@ const ProfiloLocale = () => {
                       key={service.id}
                       onClick={() => editMode && toggleService(service.id)}
                       disabled={!editMode}
-                      className={`p-3 rounded-lg border-2 flex items-center space-x-2 transition-colors ${
-                        isSelected
-                          ? 'bg-fanzo-yellow border-fanzo-teal text-fanzo-dark'
-                          : 'bg-white border-gray-300 text-gray-600 hover:border-fanzo-teal'
-                      } ${!editMode ? 'cursor-default' : 'cursor-pointer'}`}
+                      className={`
+                        p-4 rounded-xl border-2 flex items-center space-x-3 transition-all duration-300 transform hover:scale-105
+                        ${isSelected
+                          ? 'bg-green-100 border-green-500 text-green-800 shadow-lg'
+                          : 'bg-white border-gray-300 text-gray-600 hover:border-green-400 hover:bg-green-50 hover:shadow-md'
+                        } 
+                        ${!editMode ? 'cursor-default opacity-70' : 'cursor-pointer'}
+                      `}
                     >
-                      <Icon className="h-5 w-5" />
-                      <span className="font-kanit font-semibold text-sm">{service.label}</span>
+                      <div className={`
+                        flex items-center justify-center w-10 h-10 rounded-full transition-all duration-300
+                        ${isSelected ? 'bg-green-500 text-white' : 'bg-gray-100 text-gray-500'}
+                      `}>
+                        {isSelected ? (
+                          <span className="text-lg font-bold">✓</span>
+                        ) : (
+                          <Icon className="h-5 w-5" />
+                        )}
+                      </div>
+                      <span className={`font-semibold text-sm transition-colors duration-300 ${
+                        isSelected ? 'text-green-800' : 'text-gray-700'
+                      }`}>
+                        {service.label}
+                      </span>
                     </button>
                   );
                 })}
               </div>
-              <div className="mt-4">
-                <Label className="font-kanit font-semibold">Numero Schermi</Label>
-                <div className="flex items-center space-x-3 mt-2">
+              <div className="mt-6 p-4 bg-white rounded-xl border-2 border-gray-200">
+                <Label className="font-racing text-lg text-gray-800 mb-3 block">
+                  NUMERO SCHERMI
+                </Label>
+                <div className="flex items-center justify-center space-x-6">
                   <Button
                     onClick={() => handleScreenCountChange(-1)}
-                    disabled={!editMode || (formData?.facilities.screens || 0) <= 0}
+                    disabled={!editMode || (formData?.facilities.screens || 1) <= 1}
                     variant="outline"
-                    size="sm"
-                    className="border-fanzo-teal text-fanzo-teal"
+                    size="lg"
+                    className="w-12 h-12 rounded-full border-2 border-gray-300 text-gray-600 hover:bg-gray-100 text-xl font-bold"
                   >
                     -
                   </Button>
-                  <span className="font-kanit font-bold text-lg w-8 text-center">
-                    {formData?.facilities.screens || 0}
-                  </span>
+                  <div className="flex flex-col items-center">
+                    <div className="w-20 h-20 bg-gray-600 text-white rounded-full flex items-center justify-center text-3xl font-bold shadow-lg">
+                      {formData?.facilities.screens || 1}
+                    </div>
+                    <span className="text-gray-600 font-semibold mt-2 text-sm">
+                      {(formData?.facilities.screens || 1) === 1 ? 'Schermo' : 'Schermi'}
+                    </span>
+                  </div>
                   <Button
                     onClick={() => handleScreenCountChange(1)}
-                    disabled={!editMode || (formData?.facilities.screens || 0) >= 10}
+                    disabled={!editMode || (formData?.facilities.screens || 1) >= 10}
                     variant="outline"
-                    size="sm"
-                    className="border-fanzo-teal text-fanzo-teal"
+                    size="lg"
+                    className="w-12 h-12 rounded-full border-2 border-gray-300 text-gray-600 hover:bg-gray-100 text-xl font-bold"
                   >
                     +
                   </Button>
@@ -666,6 +688,8 @@ const ProfiloLocale = () => {
             </CardContent>
           </Card>
         </div>
+
+
 
         {/* Photos Section */}
         <div className="space-y-6">
@@ -767,8 +791,119 @@ const ProfiloLocale = () => {
             onToggleChange={(enabled) => {
               // Aggiorna lo stato locale se necessario
               console.log('Booking toggle changed:', enabled);
+              // Aggiorna formData con bookingSettings
+              if (formData) {
+                setFormData({
+                  ...formData,
+                  bookingSettings: { enabled }
+                });
+              }
             }}
           />
+
+          {/* Capacità Locale - Solo se prenotazioni abilitate */}
+          {(formData?.bookingSettings?.enabled ?? true) && (
+            <Card className="bg-white mt-6">
+              <CardHeader>
+                <CardTitle className="font-kanit text-lg text-gray-800 flex items-center space-x-2">
+                  <span>⚙️ GESTIONE CAPACITÀ</span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* Posti a sedere */}
+                   <div className="space-y-3">
+                    <Label className="text-sm font-semibold text-gray-700">Posti a sedere</Label>
+                    <div className="flex items-center space-x-3">
+                      <Button
+                        onClick={() => {
+                          if (!editMode || !formData) return;
+                          const newTotal = Math.max(1, (formData.capacity?.total || 50) - 5);
+                          setFormData({
+                            ...formData,
+                            capacity: { ...formData.capacity, total: newTotal }
+                          });
+                        }}
+                        disabled={!editMode}
+                        variant="outline"
+                        size="sm"
+                        className="w-8 h-8 rounded-full"
+                      >
+                        -
+                      </Button>
+                      <div className="w-16 h-12 bg-white border border-gray-300 text-gray-900 rounded-lg flex items-center justify-center text-lg font-bold">
+                        {formData?.capacity?.total ?? 0}
+                      </div>
+                      <Button
+                        onClick={() => {
+                          if (!editMode || !formData) return;
+                          const newTotal = Math.min(500, (formData.capacity?.total || 50) + 5);
+                          setFormData({
+                            ...formData,
+                            capacity: { ...formData.capacity, total: newTotal }
+                          });
+                        }}
+                        disabled={!editMode}
+                        variant="outline"
+                        size="sm"
+                        className="w-8 h-8 rounded-full"
+                      >
+                        +
+                      </Button>
+                    </div>
+                  </div>
+
+                  {/* Max prenotazioni */}
+                   <div className="space-y-3">
+                    <Label className="text-sm font-semibold text-gray-700">Max prenotazioni simultanee</Label>
+                    <div className="flex items-center space-x-3">
+                      <Button
+                        onClick={() => {
+                          if (!editMode || !formData) return;
+                          const newMax = Math.max(1, (formData.capacity?.maxReservations || 15) - 1);
+                          setFormData({
+                            ...formData,
+                            capacity: { ...formData.capacity, maxReservations: newMax }
+                          });
+                        }}
+                        disabled={!editMode}
+                        variant="outline"
+                        size="sm"
+                        className="w-8 h-8 rounded-full"
+                      >
+                        -
+                      </Button>
+                      <div className="w-16 h-12 bg-white border border-gray-300 text-gray-900 rounded-lg flex items-center justify-center text-lg font-bold">
+                        {formData?.capacity?.maxReservations ?? 0}
+                      </div>
+                      <Button
+                        onClick={() => {
+                          if (!editMode || !formData) return;
+                          const newMax = Math.min(50, (formData.capacity?.maxReservations || 15) + 1);
+                          setFormData({
+                            ...formData,
+                            capacity: { ...formData.capacity, maxReservations: newMax }
+                          });
+                        }}
+                        disabled={!editMode}
+                        variant="outline"
+                        size="sm"
+                        className="w-8 h-8 rounded-full"
+                      >
+                        +
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                  <p className="text-blue-700 text-xs">
+                    💡 Questi valori controllano la gestione delle prenotazioni del tuo locale
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          )}
         </div>
       </div>
     </div>

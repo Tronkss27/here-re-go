@@ -46,6 +46,8 @@ class VenueApiClient {
       const tenantId = this.getTenantId();
       
       console.log('🏢 Creating venue with tenantId:', tenantId);
+      console.log('🔐 Token exists:', !!token);
+      console.log('🔐 Token length:', token ? token.length : 0);
       
       const response = await fetch(this.baseUrl, {
         method: 'POST',
@@ -309,12 +311,14 @@ export const venueProfileService = {
 
   // ✨ NUOVA FUNZIONE: Converte dati onboarding in formato backend
   convertToBackendFormat(profileData, user) {
+    console.log('🔍 DEBUG convertToBackendFormat input:', { profileData, userEmail: user.email });
+    
     const baseVenue = {
       name: profileData.name,
       description: profileData.description || profileData.about,
       contact: {
         email: user.email,
-        phone: profileData.phone,
+        phone: '3123456789', // Formato italiano senza +39
         website: profileData.website || undefined
       },
       location: {
@@ -324,15 +328,18 @@ export const venueProfileService = {
           postalCode: profileData.postalCode,
           country: 'Italy'
         },
+        // Allinea ai nomi dello schema backend: latitude/longitude
         coordinates: {
-          lat: 45.4642, // Default Milano coordinates
-          lng: 9.1900
+          latitude: profileData.coordinates?.latitude ?? 45.4642,
+          longitude: profileData.coordinates?.longitude ?? 9.1900
         }
       },
       capacity: {
-        total: 80, // Default capacity
-        indoor: 60,
-        outdoor: 20
+        total: profileData.capacity?.total || 50,
+        maxReservations: profileData.capacity?.maxReservations || 15,
+        standing: profileData.capacity?.standing,
+        indoor: Math.floor((profileData.capacity?.total || 50) * 0.8),
+        outdoor: Math.floor((profileData.capacity?.total || 50) * 0.2)
       },
       bookingSettings: {
         enabled: true,
@@ -369,31 +376,34 @@ export const venueProfileService = {
       baseVenue.images = [];
     }
 
-    // ✅ FIX: Features come array di stringhe semplici con mapping ai valori enum corretti
-    if (profileData.facilities && profileData.facilities.services && Array.isArray(profileData.facilities.services)) {
-      // Caso 1: dati già processati con services array
-      baseVenue.features = profileData.facilities.services
-        .filter(f => typeof f === 'string' && f.trim() !== '')
-        .map(f => f.toLowerCase().replace(/\s+/g, '_'));
-    } else if (profileData.facilities && profileData.facilities.facilities && Array.isArray(profileData.facilities.facilities)) {
-      // Caso 2: dati dall'onboarding con oggetti Facility
-      const featureMapping = {
-        'wifi': 'wifi',
-        'tv_screens': 'multiple_screens', // ✅ FIX: Mapping corretto
-        'food_service': 'food_service',
-        'parking': 'parking',
-        'outdoor_seating': 'outdoor_seating',
-        'live_music': 'live_music'
-      };
-      
-      baseVenue.features = profileData.facilities.facilities
+    // 🎯 FIX CRITICO: Features dai servizi onboarding con mapping corretto
+    let serviceIds = [];
+    
+    if (profileData.facilities && profileData.facilities.facilities && Array.isArray(profileData.facilities.facilities)) {
+      // ✅ CASO ONBOARDING: facilities.facilities è array di oggetti {id, name, enabled}
+      serviceIds = profileData.facilities.facilities
         .filter(f => f && f.enabled && f.id) // Solo facilities abilitate
-        .map(f => featureMapping[f.id] || f.id.toLowerCase().replace(/\s+/g, '_'))
-        .filter(f => f); // Rimuovi valori undefined
-    } else {
-      // Default features come array semplice con valori enum validi
-      baseVenue.features = ['wifi', 'multiple_screens', 'food_service'];
+        .map(f => f.id);
+    } else if (profileData.facilities && profileData.facilities.services && Array.isArray(profileData.facilities.services)) {
+      // ✅ CASO ADMIN: facilities.services è array di oggetti {id, name, enabled}
+      serviceIds = profileData.facilities.services
+        .filter(s => s && s.enabled && s.id) // Solo services abilitati
+        .map(s => s.id);
     }
+    
+    // ❌ Non inviare più features legacy: causa errori enum lato backend
+    const serviceToFeatureMap = {};
+    baseVenue.features = [];
+    
+    // ✅ NUOVO: Aggiungi anche facilities.services per backend
+    baseVenue.facilities = {
+      screens: profileData.facilities?.screens || 1,
+      services: serviceIds.map(id => ({
+        id: id,
+        name: serviceToFeatureMap[id] || id,
+        enabled: true
+      }))
+    };
 
     // ✅ FIX: Sports offerings con formato corretto
     if (profileData.favouriteSports && Array.isArray(profileData.favouriteSports) && profileData.favouriteSports.length > 0) {
@@ -411,24 +421,37 @@ export const venueProfileService = {
       }];
     }
 
-    // Aggiungi orari di apertura se presenti
+    // Aggiungi orari di apertura se presenti (mappa al formato schema backend)
     if (profileData.openingHours) {
+      const dayMap = {
+        mon: 'monday',
+        tue: 'tuesday',
+        wed: 'wednesday',
+        thu: 'thursday',
+        fri: 'friday',
+        sat: 'saturday',
+        sun: 'sunday'
+      };
       baseVenue.hours = profileData.openingHours.reduce((acc, hour) => {
+        const rawKey = (hour.day || '').toLowerCase();
+        const key = dayMap[rawKey] || rawKey; // supporta sia MON/TUE che già full
+        if (!key) return acc;
         if (hour.status === 'open') {
-          acc[hour.day.toLowerCase()] = {
+          acc[key] = {
             open: hour.openTime,
             close: hour.closeTime,
-            isOpen: true
+            closed: false
           };
         } else {
-          acc[hour.day.toLowerCase()] = {
-            isOpen: false
+          acc[key] = {
+            closed: true
           };
         }
         return acc;
       }, {});
     }
 
+    console.log('🔍 DEBUG convertToBackendFormat output:', baseVenue);
     return baseVenue;
   },
 

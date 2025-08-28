@@ -3,6 +3,7 @@ import { Input } from '../ui/input';
 import { Textarea } from '../ui/textarea';
 import { Label } from '../ui/label';
 import { Edit3 } from 'lucide-react';
+import AddressAutocomplete from '../AddressAutocomplete';
 
 interface StepKeyInfoProps {
   data: {
@@ -22,12 +23,22 @@ const StepKeyInfo: React.FC<StepKeyInfoProps> = ({ data, onUpdate }) => {
     onUpdate({ ...data, [field]: value });
   };
 
+  // Gestisce selezione indirizzo da autocomplete
+  const handleAddressSelect = (address: string, placeDetails?: any) => {
+    onUpdate({
+      ...data,
+      address: address,
+      city: placeDetails?.city || data.city,
+      postalCode: placeDetails?.postalCode || data.postalCode
+    });
+  };
+
   return (
     <div className="space-y-8">
       {/* Header */}
       <div className="text-center">
         <div className="text-sm text-gray-500 mb-2">1 / 6</div>
-        <h1 className="text-4xl font-black uppercase tracking-tight">KEY INFO</h1>
+        <h1 className="text-4xl font-black uppercase tracking-tight">INFORMAZIONI PRINCIPALI</h1>
       </div>
 
       {/* Name and Address Section */}
@@ -40,19 +51,25 @@ const StepKeyInfo: React.FC<StepKeyInfoProps> = ({ data, onUpdate }) => {
           </button>
         </div>
         
-        <div className="bg-gray-50 p-4 rounded-lg">
+        <div className="bg-gray-50 p-4 rounded-lg space-y-3">
           <Input
             value={data.name}
             onChange={(e) => handleChange('name', e.target.value)}
             placeholder="Venue name"
             className="border-0 bg-transparent text-lg font-medium p-0 focus:ring-0"
           />
-          <Input
-            value={data.address}
-            onChange={(e) => handleChange('address', e.target.value)}
-            placeholder="Street address"
-            className="border-0 bg-transparent text-gray-600 p-0 focus:ring-0 mt-1"
-          />
+          
+          <div className="mt-2">
+            <AddressAutocomplete
+              value={data.address}
+              onChange={(address) => handleChange('address', address)}
+              onAddressSelect={handleAddressSelect}
+              placeholder="Street address"
+              className="border-0 bg-transparent text-gray-600 p-0 focus:ring-0"
+              showValidation={false}
+            />
+          </div>
+          
           <div className="flex gap-2 mt-1">
             <Input
               value={data.city}

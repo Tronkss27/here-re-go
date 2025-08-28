@@ -15,13 +15,13 @@
   font-weight: 400;
 }
 
-/* Custom Orange Gradient Backgrounds */
-.bg-gradient-orange {
-  background: linear-gradient(135deg, #f97316 0%, #ea580c 100%) !important;
+/* Custom Primary Gradient Backgrounds */
+.bg-gradient-primary {
+  background: linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--primary-dark)) 100%) !important;
 }
 
-.bg-gradient-orange-soft {
-  background: linear-gradient(135deg, #fff7ed 0%, #fed7aa 100%) !important;
+.bg-gradient-primary-soft {
+  background: linear-gradient(135deg, hsl(var(--secondary)) 0%, hsl(var(--muted)) 100%) !important;
 }
 
 /* Sports-themed animations */
@@ -36,11 +36,11 @@
 
 /* Custom shadows */
 .shadow-sports {
-  box-shadow: 0 4px 25px 0 rgba(249, 115, 22, 0.15) !important;
+  box-shadow: 0 4px 25px 0 rgba(var(--primary-rgb) / 0.15) !important;
 }
 
-.shadow-soft-orange {
-  box-shadow: 0 2px 15px 0 rgba(249, 115, 22, 0.08) !important;
+.shadow-soft-primary {
+  box-shadow: 0 2px 15px 0 rgba(var(--primary-rgb) / 0.08) !important;
 }
 
 /* Interactive elements */
@@ -54,14 +54,14 @@
 }
 
 /* Custom focus styles */
-.focus-orange:focus {
+.focus-primary:focus {
   outline: none !important;
-  box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.2) !important;
+  box-shadow: 0 0 0 3px rgba(var(--primary-rgb) / 0.2) !important;
 }
 
 /* Text gradients */
-.text-gradient-orange {
-  background: linear-gradient(135deg, #f97316 0%, #ea580c 100%) !important;
+.text-gradient-primary {
+  background: linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--primary-dark)) 100%) !important;
   -webkit-background-clip: text !important;
   -webkit-text-fill-color: transparent !important;
   background-clip: text !important;
@@ -76,7 +76,7 @@
 .score-display {
   font-family: 'Racing Sans One', cursive !important;
   font-size: 2rem !important;
-  color: #f97316 !important;
+  color: hsl(var(--primary)) !important;
   text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1) !important;
 }
 
@@ -92,19 +92,19 @@
 }
 
 /* Custom scrollbar */
-.scrollbar-orange::-webkit-scrollbar {
+.scrollbar-primary::-webkit-scrollbar {
   width: 6px;
 }
 
-.scrollbar-orange::-webkit-scrollbar-track {
-  background: #f3f4f6;
+.scrollbar-primary::-webkit-scrollbar-track {
+  background: hsl(var(--muted));
 }
 
-.scrollbar-orange::-webkit-scrollbar-thumb {
-  background: #f97316;
+.scrollbar-primary::-webkit-scrollbar-thumb {
+  background: hsl(var(--primary));
   border-radius: 3px;
 }
 
-.scrollbar-orange::-webkit-scrollbar-thumb:hover {
-  background: #ea580c;
+.scrollbar-primary::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--primary-dark));
 } 

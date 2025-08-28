@@ -1,0 +1,63 @@
+# Task ID: 21
+# Title: Create Event Creation Form with API-Football Integration
+# Status: done
+# Dependencies: 5
+# Priority: high
+# Description: Develop a comprehensive form for creating match announcements, integrating local database and API-Football data, with features for event details configuration, validation, preview, and publication.
+# Details:
+1. Set up a new React component for the event creation form.
+2. Integrate with the FixturesService to fetch match data from both local database and API-Football.
+3. Implement form fields for:
+   - Match selection (dropdown with search, showing both local and API data)
+   - Event details (date, time, venue)
+   - Pricing configuration (regular price, discounts, promotions)
+   - Additional event information (description, rules, etc.)
+4. Add form validation using a library like Formik or react-hook-form:
+   - Ensure all required fields are filled
+   - Validate date and time formats
+   - Check for logical consistency (e.g., end time after start time)
+5. Implement a live preview section showing how the announcement will appear
+6. Create an API endpoint in the backend for saving the event announcement
+7. Add error handling and success feedback for form submission
+8. Implement responsive design using Tailwind CSS classes
+9. Add accessibility features (ARIA labels, keyboard navigation)
+10. Optimize component performance, especially for the match selection dropdown
+11. Implement caching strategy for API-Football data to reduce API calls
+12. Add unit tests for form validation and submission logic
+13. Create integration tests for the entire form workflow
+
+# Test Strategy:
+1. Unit Testing:
+   - Test individual form field validations
+   - Verify correct handling of API responses
+   - Check preview generation logic
+
+2. Integration Testing:
+   - Test the entire form submission process
+   - Verify correct data flow between frontend and backend
+   - Check error handling and success scenarios
+
+3. End-to-End Testing:
+   - Use a tool like Cypress to simulate user interactions
+   - Test the complete workflow from match selection to announcement publication
+   - Verify form behavior with both local and API-Football data
+
+4. Performance Testing:
+   - Measure and optimize load times for the form, especially with large datasets
+   - Test caching mechanisms for API data
+
+5. Accessibility Testing:
+   - Use tools like axe-core to check WCAG 2.1 AA compliance
+   - Perform keyboard navigation tests
+
+6. Cross-browser Testing:
+   - Ensure consistent functionality across Chrome, Firefox, Safari, and Edge
+
+7. Mobile Responsiveness:
+   - Test the form on various device sizes and orientations
+
+8. Error Handling:
+   - Simulate various error conditions (API failures, validation errors) and verify proper handling
+
+9. User Acceptance Testing:
+   - Conduct sessions with stakeholders to ensure the form meets all requirements

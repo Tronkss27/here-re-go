@@ -4,11 +4,13 @@ import { useAuth } from '@/contexts/AuthContext';
 import WizardNavigation from '../../components/wizard-steps/WizardNavigation';
 import StepKeyInfo from '../../components/wizard-steps/StepKeyInfo';
 import StepOpeningHours from '../../components/wizard-steps/StepOpeningHours';
+import StepCapacity from '../../components/wizard-steps/StepCapacity';
 import StepScreens from '../../components/wizard-steps/StepScreens';
 import StepFavourites from '../../components/wizard-steps/StepFavourites';
 import StepFacilities from '../../components/wizard-steps/StepFacilities';
 import StepPhotos from '../../components/wizard-steps/StepPhotos';
 import { venueProfileService, accountService } from '@/services/venueService';
+import adminVenueService from '@/services/adminVenueService.js';
 
 // Type definitions for all step data
 interface KeyInfoData {
@@ -50,6 +52,7 @@ interface PhotoFile {
 interface OnboardingData {
   keyInfo: KeyInfoData;
   openingHours: OpeningHour[];
+  capacity: { totalCapacity: number; maxReservations: number };
   screens: { screenCount: number };
   favourites: { selectedCompetitions: Competition[] };
   facilities: { facilities: Facility[] };
@@ -83,6 +86,7 @@ const VenueOnboarding = () => {
       { day: 'SAT', status: 'open', openTime: '11:00', closeTime: '23:00' },
       { day: 'SUN', status: 'open', openTime: '11:00', closeTime: '23:00' },
     ],
+    capacity: { totalCapacity: 50, maxReservations: 15 },
     screens: { screenCount: 1 },
     favourites: { selectedCompetitions: [] },
     facilities: { facilities: [] },
@@ -153,12 +157,19 @@ const VenueOnboarding = () => {
         address: data.keyInfo.address,
         city: data.keyInfo.city,
         postalCode: data.keyInfo.postalCode,
-        description: data.keyInfo.about,
+        description: data.keyInfo.about, // about dal form → description nel backend
         website: data.keyInfo.website,
         phone: data.keyInfo.phone,
         
         // Orari di apertura
         openingHours: data.openingHours,
+        
+        // Capacità locale
+        capacity: {
+          total: data.capacity.totalCapacity,
+          maxReservations: data.capacity.maxReservations,
+          standing: data.capacity.totalCapacity * 1.5 // Default standing capacity
+        },
         
         // Facilities e servizi
         facilities: {
@@ -185,11 +196,31 @@ const VenueOnboarding = () => {
       
       // ✨ SINCRONIZZA CON BACKEND - CREA VENUE REALE
       console.log('🔄 Syncing venue to backend database...');
+      console.log('🔍 SERVICES DEBUG pre-sync:', venueProfileData.facilities);
       const syncResult = await venueProfileService.syncToBackend(user.id, venueProfileData, user);
       
       if (!syncResult.success) {
         console.error('❌ Warning: Failed to sync venue to backend:', syncResult.error);
-        // Continua comunque l'onboarding, l'admin può ritentare la sync più tardi
+        // 🎯 FALLBACK: Salva direttamente via adminVenueService come backup
+        try {
+          await adminVenueService.saveVenueProfile({
+            name: venueProfileData.name,
+            address: venueProfileData.address,
+            city: venueProfileData.city,
+            postalCode: venueProfileData.postalCode,
+            description: venueProfileData.description,
+            website: venueProfileData.website,
+            phone: venueProfileData.phone,
+            openingHours: venueProfileData.openingHours,
+            capacity: venueProfileData.capacity,
+            facilities: venueProfileData.facilities,
+            photos: venueProfileData.photos || [],
+                          // Nessun backendId temporaneo - lascia che il backend crei l'ID
+          });
+          console.log('✅ Fallback save via adminVenueService successful');
+        } catch (fallbackError) {
+          console.error('❌ Fallback save failed:', fallbackError);
+        }
       } else {
         console.log('✅ Venue successfully synced to backend!', syncResult.venue);
         // ✨ IMPORTANTE: Aggiorna i dati locali con backendId per future operazioni
@@ -199,6 +230,51 @@ const VenueOnboarding = () => {
         
         // Risalva con i dati di sync aggiornati
         venueProfileService.saveProfile(user.id, venueProfileData);
+        
+        // 🎯 NUOVO: Salva anche tramite adminVenueService per compatibility
+        try {
+          console.log('🔍 ONBOARDING DEBUG - facilities structure:', {
+            'venueProfileData.facilities': venueProfileData.facilities,
+            'venueProfileData.facilities?.facilities': venueProfileData.facilities?.facilities,
+            'venueProfileData.facilities?.services': venueProfileData.facilities?.services
+          });
+          
+          const adminProfileData = {
+            name: venueProfileData.name,
+            address: venueProfileData.address,
+            city: venueProfileData.city,
+            postalCode: venueProfileData.postalCode,
+            description: venueProfileData.description || '', // description field
+            website: venueProfileData.website,
+            phone: venueProfileData.phone,
+            userEmail: user.email,
+            openingHours: venueProfileData.openingHours,
+            capacity: venueProfileData.capacity,
+            facilities: {
+              screens: venueProfileData.facilities?.screens || 1,
+              // Usa i servizi confermati dal backend se presenti, altrimenti quelli selezionati in onboarding
+              services: (syncResult.venue?.facilities?.services && syncResult.venue.facilities.services.length > 0)
+                ? syncResult.venue.facilities.services
+                : (venueProfileData.facilities?.facilities || [])
+            },
+            photos: venueProfileData.photos || [],
+            backendId: syncResult.venue._id,
+            bookingSettings: venueProfileData.bookingSettings || {
+              enabled: true,
+              requiresApproval: false,
+              advanceBookingDays: 30,
+              minimumPartySize: 1,
+              maximumPartySize: 10,
+              timeSlotDuration: 120
+            }
+          };
+          
+          await adminVenueService.saveVenueProfile(adminProfileData);
+          console.log('✅ Profile also saved via adminVenueService');
+        } catch (adminError) {
+          console.error('⚠️ AdminVenueService save failed:', adminError);
+          // Non bloccare il flusso, l'importante è che il venue sia creato
+        }
       }
       
       // Prepara i dati account iniziali
@@ -271,10 +347,10 @@ const VenueOnboarding = () => {
         return !!(data.keyInfo.name && data.keyInfo.address && data.keyInfo.city);
       case 2: // Opening Hours
         return true; // Opening hours always valid (can be skipped)
-      case 3: // Screens
+      case 3: // Capacity
+        return data.capacity.totalCapacity > 0;
+      case 4: // Screens
         return data.screens.screenCount >= 0;
-      case 4: // Favourites
-        return true; // Favourites optional
       case 5: // Facilities
         return true; // Facilities optional
       case 6: // Photos
@@ -302,16 +378,16 @@ const VenueOnboarding = () => {
         );
       case 3:
         return (
-          <StepScreens
-            data={data.screens}
-            onUpdate={(screens) => updateStepData('screens', screens)}
+          <StepCapacity
+            data={data.capacity}
+            onUpdate={(capacity) => updateStepData('capacity', capacity)}
           />
         );
       case 4:
         return (
-          <StepFavourites
-            data={data.favourites}
-            onUpdate={(favourites) => updateStepData('favourites', favourites)}
+          <StepScreens
+            data={data.screens}
+            onUpdate={(screens) => updateStepData('screens', screens)}
           />
         );
       case 5:
@@ -352,4 +428,4 @@ const VenueOnboarding = () => {
   );
 };
 
-export default VenueOnboarding; 
+export default VenueOnboarding;

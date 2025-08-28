@@ -38,11 +38,11 @@ export const useVenue = (id) => {
   const [hasFetched, setHasFetched] = useState(false)
   const [permanentError, setPermanentError] = useState(false) // ✅ NUOVO: Traccia errori permanenti
 
-  const fetchVenue = useCallback(async () => {
+  const fetchVenue = useCallback(async (forceRefresh = false) => {
     if (!id) return
 
-    // ✅ CONTROLLO IDEMPOTENZA: Se abbiamo già fatto fetch per questo ID, non rifarlo
-    if (hasFetched || permanentError) {
+    // 🎯 FIX: Se forceRefresh, bypassa controlli idempotenza
+    if (!forceRefresh && (hasFetched || permanentError)) {
       console.log(`🔄 Skipping duplicate fetch for venue ${id} (React Strict Mode)`)
       return
     }

@@ -82,7 +82,7 @@ const MatchSchema = new mongoose.Schema({
   },
   source: {
     type: String,
-    enum: ['manual', 'api-football', 'football-data'],
+    enum: ['manual', 'api-football', 'football-data', 'sync-api'],
     default: 'manual'
   },
   externalId: String // ID dalla API esterna

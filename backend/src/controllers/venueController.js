@@ -3,6 +3,7 @@ const PopularMatch = require('../models/PopularMatch');
 const Venue = require('../models/Venue');
 const TenantQuery = require('../utils/tenantQuery');
 const { processVenueWithImages } = require('../utils/imageUtils');
+const { geocodeVenuesBatch, validateItalianCoordinates } = require('../utils/geocodingUtils');
 const sportsApiService = require('../services/sportsApiService');
 const { validationResult } = require('express-validator');
 const mongoose = require('mongoose');
@@ -121,6 +122,8 @@ class VenueController {
       console.log('Tenant:', req.tenant ? req.tenant.name : 'NO TENANT');
       console.log('User:', req.user ? req.user._id : 'NO USER');
       console.log('🔍 DEBUG: Images in request body:', req.body.images ? req.body.images.length : 'NO IMAGES');
+      console.log('🔍 DEBUG: Facilities in req.body:', req.body.facilities);
+      console.log('🔍 DEBUG: Features in req.body:', req.body.features);
       
       const errors = validationResult(req);
       if (!errors.isEmpty()) {
@@ -139,6 +142,7 @@ class VenueController {
         hours,
         capacity,
         features,
+        facilities, // ✅ AGGIUNTO: facilities dal payload
         sportsOfferings,
         bookingSettings,
         pricing,
@@ -150,10 +154,49 @@ class VenueController {
       console.log('- multiVenue enabled:', req.tenant.settings.features.multiVenue);
       console.log('- currentVenues:', req.tenant.usage.currentVenues);
       console.log('- maxVenues:', req.tenant.settings.limits.maxVenues);
-      
-      // BYPASS TEMPORANEO PER TEST - RIMUOVERE IN PRODUZIONE
-      console.log('⚠️ BYPASS: Skipping venue limits for testing');
-      console.log('✅ Venue limits check passed (bypassed)');
+
+      // Enforce single-venue policy when multiVenue è disabilitato
+      if (!req.tenant.settings.features.multiVenue) {
+        // Cerca per tenant, indipendentemente dall'owner: evita duplicati quando cambia l'utente
+        const existingVenue = await Venue.findOne({ tenantId: req.tenant._id });
+        if (existingVenue) {
+          console.log('♻️ Existing venue found for tenant/owner. Updating instead of creating:', existingVenue._id.toString());
+          // Non sovrascrivere campi critici
+          const updatable = {
+            name,
+            description,
+            contact,
+            location,
+            hours,
+            capacity,
+            facilities: facilities || existingVenue.facilities || { screens: 1, services: [] },
+            sportsOfferings: sportsOfferings || existingVenue.sportsOfferings,
+            bookingSettings: {
+              enabled: true,
+              requiresApproval: false,
+              advanceBookingDays: 30,
+              minimumPartySize: 1,
+              maximumPartySize: 10,
+              timeSlotDuration: 120,
+              ...bookingSettings
+            },
+            pricing: {
+              basePrice: 0,
+              pricePerPerson: 0,
+              minimumSpend: 0,
+              currency: 'EUR',
+              ...pricing
+            }
+          };
+          Object.assign(existingVenue, updatable);
+          // Merge immagini se presenti
+          if (Array.isArray(images) && images.length > 0) {
+            existingVenue.images = images;
+          }
+          await existingVenue.save();
+          return res.status(200).json({ success: true, data: existingVenue, message: 'Venue updated instead of created' });
+        }
+      }
 
       // Crea venue con tenant context
       const venueData = {
@@ -165,7 +208,9 @@ class VenueController {
         location,
         hours,
         capacity,
-        features: features || [],
+        // ❌ Evita i legacy features che causano errori di enum (usiamo facilities.services)
+        features: [],
+        facilities: facilities || { screens: 1, services: [] },
         sportsOfferings: sportsOfferings || [],
         bookingSettings: {
           enabled: true,
@@ -189,7 +234,31 @@ class VenueController {
         isActive: true
       };
 
+      // If location provided but coordinates missing, attempt server-side geocoding
+      try {
+        const geocodingUtils = require('../utils/geocodingUtils');
+        const loc = venueData.location;
+        const hasCoords = loc && loc.coordinates && (loc.coordinates.latitude || loc.coordinates.longitude);
+        if (loc && !hasCoords && loc.address && (loc.address.street || loc.address.city)) {
+          console.log('🌍 Geocoding address for new venue:', loc.address.street, loc.address.city);
+          const geocoded = await geocodingUtils.geocodeAddress(loc.address.street, loc.address.city).catch(e => null);
+          if (geocoded && geocoded.coordinates) {
+            venueData.location.coordinates = {
+              latitude: geocoded.coordinates.latitude,
+              longitude: geocoded.coordinates.longitude
+            };
+            console.log('✅ Geocoding success, coordinates set on venueData');
+          } else {
+            console.log('⚠️ Geocoding not available or failed for this address');
+          }
+        }
+      } catch (err) {
+        console.warn('⚠️ Geocoding attempt failed (non-fatal):', err.message || err);
+      }
+
       console.log('🔍 DEBUG: Creating venue with images:', venueData.images.length);
+      console.log('🔍 DEBUG: Final venueData.facilities:', venueData.facilities);
+      console.log('🔍 DEBUG: Final venueData.features:', venueData.features);
       if (venueData.images.length > 0) {
         console.log('📸 DEBUG: Images being saved:');
         venueData.images.forEach((img, idx) => {
@@ -410,6 +479,30 @@ class VenueController {
       delete updates._id;
 
       console.log('🔍 DEBUG: Updating venue with:', Object.keys(updates));
+      // If location is being updated and coordinates missing, attempt server-side geocoding
+      try {
+        if (updates.location) {
+          const geocodingUtils = require('../utils/geocodingUtils');
+          const loc = updates.location;
+          const hasCoords = loc && loc.coordinates && (loc.coordinates.latitude || loc.coordinates.longitude);
+          if (loc && !hasCoords && loc.address && (loc.address.street || loc.address.city)) {
+            console.log('🌍 Geocoding address for updated venue:', loc.address.street, loc.address.city);
+            const geocoded = await geocodingUtils.geocodeAddress(loc.address.street, loc.address.city).catch(e => null);
+            if (geocoded && geocoded.coordinates) {
+              updates.location.coordinates = {
+                latitude: geocoded.coordinates.latitude,
+                longitude: geocoded.coordinates.longitude
+              };
+              console.log('✅ Geocoding success, coordinates added to updates');
+            } else {
+              console.log('⚠️ Geocoding not available or failed for this address (update)');
+            }
+          }
+        }
+      } catch (err) {
+        console.warn('⚠️ Geocoding attempt failed during update (non-fatal):', err.message || err);
+      }
+
       Object.assign(venue, updates);
       await venue.save();
       
@@ -554,7 +647,7 @@ class VenueController {
       }
 
       const venues = await Venue.find(query)
-        .select('name slug location contact amenities capacity rating totalReviews description images')
+        .select('name slug location contact amenities capacity rating totalReviews description images coordinates')
         .sort({ rating: -1, totalReviews: -1 })
         .limit(parseInt(limit, 10))
         .lean();
@@ -603,44 +696,35 @@ class VenueController {
         console.log(`🔧 Removed venue_ prefix, using: ${id}`);
       }
 
-      // Validazione ObjectId prima di procedere
-      const mongoose = require('mongoose');
-      if (!mongoose.Types.ObjectId.isValid(id)) {
-        console.log(`❌ Invalid ObjectId format: ${id}`);
-        return res.status(400).json({
-          success: false,
-          message: 'ID locale non valido'
-        });
-      }
-
       let venue = null;
-
-      // Strategia di ricerca multipla per compatibilità
-      console.log(`🔍 Searching by ObjectId: ${id}`);
+      const mongoose = require('mongoose');
       
-      // RICERCA PUBBLICA - NO TENANT FILTERING per permettere accesso pubblico
-      // Prima cerca per _id
-      venue = await Venue.findOne({ 
-        _id: id, 
-        status: 'approved', 
-        isActive: true 
-      }).select('-owner -createdAt -updatedAt -__v').lean();
-
-      // Se non trovato per _id, cerca per owner (per compatibilità)
-      if (!venue) {
-        console.log(`🔍 Searching by owner: ${id}`);
+      // 🎯 NUOVA LOGICA: Gestisce sia ObjectId che slug
+      const isValidObjectId = mongoose.Types.ObjectId.isValid(id);
+      
+      if (isValidObjectId) {
+        console.log(`🔍 Searching by ObjectId: ${id}`);
+        // RICERCA PUBBLICA - NO TENANT FILTERING per permettere accesso pubblico
         venue = await Venue.findOne({ 
-          owner: id, 
+          _id: id, 
+          status: 'approved', 
+          isActive: true 
+        }).select('-owner -createdAt -updatedAt -__v').lean();
+      } else {
+        console.log(`🔍 Searching by slug: ${id}`);
+        // Cerca per slug se non è un ObjectId
+        venue = await Venue.findOne({ 
+          slug: id, 
           status: 'approved', 
           isActive: true 
         }).select('-owner -createdAt -updatedAt -__v').lean();
       }
 
-      // Se non trovato per owner, cerca per slug
-      if (!venue) {
-        console.log(`🔍 Searching by slug: ${id}`);
+      // Se non trovato e era ObjectId, prova fallback per owner (solo per compatibilità legacy)
+      if (!venue && isValidObjectId) {
+        console.log(`🔍 Fallback: Searching by owner: ${id}`);
         venue = await Venue.findOne({ 
-          slug: id, 
+          owner: id, 
           status: 'approved', 
           isActive: true 
         }).select('-owner -createdAt -updatedAt -__v').lean();
@@ -654,16 +738,34 @@ class VenueController {
         });
       }
 
-      console.log(`✅ Found venue: ${venue.name} (${venue._id})`);
+      // Canonicalizzazione: se esistono più venue per stesso owner/tenant, scegli quello più aggiornato/con dati completi
+      // Cerca tutti i venue del TENANT (non per owner) per gestire i duplicati cross-owner
+      const siblings = await Venue.find({ tenantId: venue.tenantId, isActive: true }).sort({ updatedAt: -1 }).lean();
+      let canonical = venue;
+      if (siblings && siblings.length > 1) {
+        const byCompleteness = siblings.find(v => (v.facilities?.services?.length || 0) > 0 || (v.facilities?.screens || 0) > 1) || siblings[0];
+        if (byCompleteness && byCompleteness._id.toString() !== venue._id.toString()) {
+          console.log(`🔁 Canonicalized venue from ${venue._id} to ${byCompleteness._id}`);
+          canonical = byCompleteness;
+        }
+      }
+
+      console.log(`✅ Found venue: ${canonical.name} (${canonical._id})`);
       console.log(`🖼️ Venue images:`, venue.images);
       console.log(`📊 Images count:`, venue.images ? venue.images.length : 0);
 
       // Ottieni gli annunci attivi per questo venue
+      const todayIso = new Date().toISOString().split('T')[0];
+      // Recupera annunci per tutti i sibling IDs, così i vecchi link mostrano ancora gli annunci
+      const siblingIds = (siblings && siblings.length > 0 ? siblings.map(v => v._id) : [canonical._id]);
       const announcements = await MatchAnnouncement.find({
-        venueId: venue._id,
+        venueId: { $in: siblingIds },
         status: 'published',
         isActive: true,
-        'match.date': { $gte: new Date().toISOString().split('T')[0] } // Solo partite future
+        $or: [
+          { 'match.date': { $gte: todayIso } },
+          { 'eventDetails.startDate': { $gte: todayIso } }
+        ]
       })
       .select('match eventDetails views clicks')
       .sort({ 'match.date': 1 })
@@ -672,16 +774,145 @@ class VenueController {
 
       console.log(`✅ Found venue "${venue.name}" with ${announcements.length} active announcements`);
 
-      // Process venue with fixed image URLs
-      const processedVenue = processVenueWithImages(venue, req);
+      // Process venue with fixed image URLs e aggiungi fields pubblici utili
+      const processedVenue = processVenueWithImages(canonical, req);
+
+      // 🎯 FIX: Normalizza orari in formato coerente { open, close, closed }
+      const normalizeHours = (rawHours = {}) => {
+        const days = ['monday','tuesday','wednesday','thursday','friday','saturday','sunday'];
+        const out = {};
+        for (const d of days) {
+          const h = rawHours?.[d] || {};
+          
+          // 🔥 FIX CRITICO: Se h.closed è false MA non ha orari, usa default
+          if (h.closed === false && !h.open && !h.close) {
+            out[d] = {
+              open: '11:00',
+              close: '23:00', 
+              closed: false
+            };
+          } else if (h.closed === true || (!h.open && !h.close && h.closed !== false)) {
+            out[d] = {
+              open: '',
+              close: '',
+              closed: true
+            };
+          } else {
+            out[d] = {
+              open: h.open || '11:00',
+              close: h.close || '23:00',
+              closed: false
+            };
+          }
+        }
+        return out;
+      };
+
+      // 🎯 DEBUG ORARI PRIMA DI NORMALIZZAZIONE
+      console.log('🕒 HOURS RAW DEBUG:', {
+        'processedVenue.hours': processedVenue.hours,
+        'venue.hours': venue.hours,
+        'input to normalizeHours': processedVenue.hours || venue.hours || {}
+      });
+
+      const normalizedHours = normalizeHours(processedVenue.hours || venue.hours || {});
+      
+      console.log('🕒 NORMALIZED HOURS:', normalizedHours);
+
+      // 🎯 DEBUG PROFONDO: Vediamo cosa abbiamo nel venue
+      console.log('🔍 VENUE RAW DATA:');
+      console.log('- facilities:', canonical.facilities);
+      console.log('- features:', canonical.features);
+      console.log('- capacity:', canonical.capacity);
+      
+      // 🎯 SERVIZI: Mappa da facilities.services a formato frontend (usa CANONICAL!)
+      const publicServices = Array.isArray(canonical.facilities?.services)
+        ? canonical.facilities.services.filter(s => s && (s.enabled !== false)).map(s => {
+            const rawId = (s.id || s.name || '').toLowerCase();
+            const idMap = {
+              'food': 'cibo',
+              'projector': 'grandi-schermi',
+              'outdoor-screen': 'grandi-schermi',
+              'garden': 'giardino'
+            };
+            const id = idMap[rawId] || rawId;
+            const labelMap = {
+              'wifi': 'Wi‑Fi',
+              'cibo': 'Cibo',
+              'grandi-schermi': 'Grandi Schermi',
+              'prenotabile': 'Prenotabile',
+              'pet-friendly': 'Pet Friendly',
+              'giardino': 'Giardino',
+              'parcheggio': 'Parcheggio',
+              'aria-condizionata': 'Aria Condizionata'
+            };
+            return { id, name: labelMap[id] || id, enabled: true };
+          })
+        : [];
+      
+      // 🎯 SCHERMI: Prendi SOLO da facilities.screens (niente fallback sulla capacità)
+      const publicScreens = canonical.facilities?.screens || 1;
+      
+      console.log('🎯 MAPPED DATA:');
+      console.log('- publicServices:', publicServices);
+      console.log('- publicScreens:', publicScreens);
+      
+      // 🎯 CRITICAL FIX: processedVenue SOVRASCRIVE i nostri dati!
+      // Dobbiamo costruire publicData in modo che le nostre modifiche abbiano PRIORITÀ
+      const publicData = {
+        // Base venue data (SENZA nostri campi critici)
+        ...processedVenue,
+        
+        // 🎯 OVERRIDE PRIORITARI (applicati DOPO processedVenue)
+        
+        // Descrizione completa
+        description: canonical.description || '',
+        
+        // Location COMPLETA con città prominente  
+        location: {
+          ...processedVenue.location,
+          city: canonical.location?.address?.city || '',
+          fullAddress: `${canonical.location?.address?.street || ''}, ${canonical.location?.address?.city || ''}`.trim().replace(/^,\s*/, '')
+        },
+        
+        // Contatti COMPLETI
+        contact: {
+          ...processedVenue.contact,
+          website: canonical.contact?.website || '',
+          phone: canonical.contact?.phone || ''
+        },
+        
+        // 🔥 ORARI: Forza il nostro normalizedHours 
+        hours: normalizedHours,
+        
+        // 🔥 SERVIZI: Forza i nostri services mappati 
+        services: publicServices,
+        
+        // 🔥 SCHERMI: Forza i nostri screens mappati
+        screens: publicScreens,
+        
+        // Features legacy per compatibilità
+        features: publicServices.map(s => s.id || s),
+        
+        // 🎯 FACILITIES: Mantieni per debug ma con i nostri dati
+        facilities: {
+          screens: publicScreens,
+          services: publicServices
+        },
+        
+        // Annunci futuri
+        announcements
+      };
+
+      console.log('🚀 SENDING TO FRONTEND:');
+      console.log('- publicData.services:', publicData.services);
+      console.log('- publicData.screens:', publicData.screens);
+      console.log('- publicData.hours keys:', Object.keys(publicData.hours || {}));
 
       res.json({
         success: true,
-        venue: processedVenue, // ✅ Aggiungi venue come campo separato per compatibilità frontend
-        data: {
-          ...processedVenue,
-          announcements
-        }
+        venue: publicData,
+        data: publicData
       });
 
     } catch (error) {
@@ -1303,6 +1534,216 @@ class VenueController {
         success: false,
         message: 'Errore nel caricamento dei locali con annunci',
         error: error.message
+      });
+    }
+  }
+
+  /**
+   * @desc    Get all announcements for a specific public venue
+   * @route   GET /api/venues/:id/announcements
+   * @access  Public
+   */
+  async getPublicVenueAnnouncements(req, res) {
+    try {
+      const { id } = req.params;
+      const { limit = 10, page = 1 } = req.query;
+
+      // Estendi la ricerca agli eventuali duplicati del tenant
+      const baseVenue = await Venue.findById(id).lean();
+      const siblings = baseVenue
+        ? await Venue.find({ tenantId: baseVenue.tenantId, isActive: true }).lean()
+        : [];
+      const siblingIds = baseVenue
+        ? (siblings && siblings.length > 0 ? siblings.map(v => v._id) : [baseVenue._id])
+        : [id];
+
+      const announcements = await MatchAnnouncement.find({
+        venueId: { $in: siblingIds },
+        status: 'published',
+        isActive: true,
+        'match.date': { $gte: new Date().toISOString().split('T')[0] }
+      })
+      .sort({ 'match.date': 1 })
+      .limit(parseInt(limit))
+      .skip((page - 1) * limit)
+      .lean();
+
+      const total = await MatchAnnouncement.countDocuments({
+        venueId: { $in: siblingIds },
+        status: 'published',
+        isActive: true,
+        'match.date': { $gte: new Date().toISOString().split('T')[0] }
+      });
+
+      res.json({
+        success: true,
+        data: announcements,
+        pagination: {
+          total,
+          limit: parseInt(limit),
+          page: parseInt(page),
+          pages: Math.ceil(total / limit)
+        }
+      });
+    } catch (error) {
+      console.error('Error getting public venue announcements:', error);
+      res.status(500).json({ success: false, message: 'Server error' });
+    }
+  }
+
+  /**
+   * @desc    Migrate canonical venue for current tenant: relink announcements and deactivate legacy duplicates
+   * @route   POST /api/venues/admin/migrate-canonical
+   * @access  Private (Admin or Venue Owner)
+   */
+  async migrateCanonicalForTenant(req, res) {
+    try {
+      const tenantId = req.tenantId;
+      if (!tenantId) {
+        return res.status(400).json({ success: false, message: 'Tenant non trovato' });
+      }
+
+      const venues = await Venue.find({ tenantId, isActive: true }).sort({ updatedAt: -1 });
+      if (!venues || venues.length === 0) {
+        return res.json({ success: true, message: 'Nessun venue da migrare', migrated: false });
+      }
+
+      // Scegli canonico per completezza
+      const canonical = venues.find(v => (v.facilities?.services?.length || 0) > 0 || (v.facilities?.screens || 0) > 1) || venues[0];
+
+      // Assicura slug
+      if (!canonical.slug) {
+        canonical.generateSlug();
+        await canonical.save();
+      }
+
+      const legacy = venues.filter(v => v._id.toString() !== canonical._id.toString());
+      let relinked = 0;
+      for (const v of legacy) {
+        const result = await MatchAnnouncement.updateMany({ venueId: v._id }, { $set: { venueId: canonical._id } });
+        relinked += result.modifiedCount || 0;
+        v.isActive = false;
+        await v.save();
+      }
+
+      return res.json({
+        success: true,
+        migrated: true,
+        tenantId,
+        canonicalId: canonical._id,
+        legacyDeactivated: legacy.map(v => v._id),
+        announcementsRelinked: relinked
+      });
+    } catch (error) {
+      console.error('❌ Migration error:', error);
+      res.status(500).json({ success: false, message: 'Errore migrazione', error: error.message });
+    }
+  }
+
+  /**
+   * Geocoding automatico per venue senza coordinate
+   * POST /api/venues/admin/geocode-batch
+   */
+  async geocodeBatchVenues(req, res) {
+    try {
+      const tenantId = req.tenantId;
+      
+      // Trova venue del tenant senza coordinate valide
+      const venuesWithoutCoords = await Venue.find({
+        tenantId,
+        isActive: true,
+        $or: [
+          { 'coordinates.latitude': { $exists: false } },
+          { 'coordinates.longitude': { $exists: false } },
+          { 'coordinates.latitude': null },
+          { 'coordinates.longitude': null },
+          { 'coordinates.latitude': 0 },
+          { 'coordinates.longitude': 0 }
+        ],
+        // Deve avere almeno un indirizzo per tentare geocoding
+        'location.address.street': { $exists: true, $ne: '' }
+      }).select('_id name location.address');
+      
+      if (venuesWithoutCoords.length === 0) {
+        return res.json({
+          success: true,
+          message: 'Tutti i venue hanno già coordinate valide',
+          processed: 0,
+          skipped: 0
+        });
+      }
+      
+      console.log(`🌍 Avvio geocoding per ${venuesWithoutCoords.length} venue senza coordinate`);
+      
+      // Prepara dati per geocoding
+      const addressesToGeocode = venuesWithoutCoords.map(venue => ({
+        _id: venue._id,
+        address: venue.location?.address?.street || '',
+        city: venue.location?.address?.city || ''
+      }));
+      
+      // Esegui geocoding batch
+      const geocodingResults = await geocodeVenuesBatch(addressesToGeocode);
+      
+      let updated = 0;
+      let failed = 0;
+      const errors = [];
+      
+      // Applica risultati al database
+      for (const result of geocodingResults) {
+        try {
+          if (result.success) {
+            const { latitude, longitude } = result.data.coordinates;
+            
+            // Valida coordinate per Italia
+            if (validateItalianCoordinates(latitude, longitude)) {
+              await Venue.findByIdAndUpdate(result.venueId, {
+                $set: {
+                  'coordinates.latitude': latitude,
+                  'coordinates.longitude': longitude,
+                  'location.geoData': {
+                    formattedAddress: result.data.formattedAddress,
+                    accuracy: result.data.accuracy,
+                    geocodedAt: new Date()
+                  }
+                }
+              });
+              
+              updated++;
+              console.log(`✅ Aggiornato venue ${result.venueId} con coordinate (${latitude}, ${longitude})`);
+            } else {
+              failed++;
+              errors.push(`Coordinate non valide per Italia: ${result.originalAddress}`);
+              console.log(`❌ Coordinate invalide per ${result.venueId}: (${latitude}, ${longitude})`);
+            }
+          } else {
+            failed++;
+            errors.push(`${result.originalAddress}: ${result.error}`);
+            console.log(`❌ Geocoding fallito per ${result.venueId}: ${result.error}`);
+          }
+        } catch (updateError) {
+          failed++;
+          errors.push(`Errore aggiornamento venue ${result.venueId}: ${updateError.message}`);
+          console.error(`❌ Errore aggiornamento venue ${result.venueId}:`, updateError);
+        }
+      }
+      
+      console.log(`🏁 Geocoding completato: ${updated} aggiornati, ${failed} falliti`);
+      
+      res.json({
+        success: true,
+        message: `Geocoding completato: ${updated} venue aggiornati, ${failed} falliti`,
+        processed: updated,
+        failed: failed,
+        errors: errors.length > 0 ? errors : undefined
+      });
+      
+    } catch (error) {
+      console.error('❌ Errore geocoding batch:', error);
+      res.status(500).json({ 
+        success: false, 
+        message: 'Errore durante geocoding batch', 
+        error: error.message 
       });
     }
   }

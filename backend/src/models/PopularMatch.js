@@ -16,15 +16,37 @@ const PopularMatchSchema = new mongoose.Schema({
     required: true
   },
   
+  homeTeamLogo: {
+    type: String
+  },
+  
   awayTeam: {
     type: String,
     required: true
+  },
+  
+  awayTeamLogo: {
+    type: String
   },
   
   competition: {
     id: String,
     name: String,
     logo: String
+  },
+  
+  league: {
+    type: String,
+    default: 'Serie A'
+  },
+  
+  leagueLogo: {
+    type: String
+  },
+  
+  status: {
+    type: String,
+    default: 'NS' // Not Started
   },
   
   date: {
@@ -35,7 +57,7 @@ const PopularMatchSchema = new mongoose.Schema({
   
   time: {
     type: String,
-    required: true
+    required: false // ✅ FIX: Permetti time null per fixtures TBD
   },
   
   // Analytics e popolarità
@@ -168,6 +190,28 @@ PopularMatchSchema.statics.getHotMatches = function(limit = 10) {
     .limit(limit);
 };
 
+PopularMatchSchema.statics.getTodayMatches = function(limit = 20) {
+  const today = new Date().toISOString().split('T')[0];
+  return this.find({ date: { $gte: today } })
+    .sort({ popularityScore: -1, date: 1 })
+    .limit(limit);
+};
+
+PopularMatchSchema.statics.getUpcomingMatches = function(days = 7, limit = 30) {
+  const today = new Date();
+  const endDate = new Date(today.getTime() + (days * 24 * 60 * 60 * 1000));
+  
+  return this.find({ 
+    date: { 
+      $gte: today.toISOString().split('T')[0],
+      $lte: endDate.toISOString().split('T')[0]
+    }
+  })
+    .sort({ date: 1, popularityScore: -1 })
+    .limit(limit);
+};
+
+module.exports = mongoose.model('PopularMatch', PopularMatchSchema); 
 PopularMatchSchema.statics.getTodayMatches = function(limit = 20) {
   const today = new Date().toISOString().split('T')[0];
   return this.find({ date: { $gte: today } })

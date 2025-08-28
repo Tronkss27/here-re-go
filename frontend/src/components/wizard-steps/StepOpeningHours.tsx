@@ -46,7 +46,7 @@ const StepOpeningHours: React.FC<StepOpeningHoursProps> = ({ data, onUpdate }) =
       </div>
 
       {/* Opening Hours Grid */}
-      <div className="space-y-4">
+      <div className="space-y-4 max-w-lg mx-auto">
         {days.map((day, index) => {
           const dayData = data[index] || { day, status: 'open', openTime: '11:00', closeTime: '23:00' };
           

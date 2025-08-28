@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useReducer, useEffect } from 'react'
-import { apiClient, API_ENDPOINTS } from '../services/index.js'
+import { apiClient, apiConfig } from '../services/index.js'
 
 // Stato iniziale dell'autenticazione
 const initialState = {
@@ -94,7 +94,7 @@ export const AuthProvider = ({ children }) => {
         if (token && user) {
           // Verifica se il token è ancora valido
           try {
-            const response = await apiClient.get(API_ENDPOINTS.AUTH.VERIFY)
+            const response = await apiClient.get(apiConfig.API_ENDPOINTS.AUTH.VERIFY)
             
             dispatch({
               type: authActions.LOGIN_SUCCESS,

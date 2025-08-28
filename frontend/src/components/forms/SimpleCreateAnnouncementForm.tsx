@@ -37,17 +37,201 @@ const SimpleCreateAnnouncementForm: React.FC<SimpleCreateAnnouncementFormProps> 
     }
   });
 
-  // Lista campionati popolari
-  const popularLeagues = [
-    { id: 'serie-a', name: 'Serie A', flag: '🇮🇹' },
-    { id: 'champions-league', name: 'Champions League', flag: '🏆' },
-    { id: 'europa-league', name: 'Europa League', flag: '🥈' },
-    { id: 'premier-league', name: 'Premier League', flag: '🏴󠁧󠁢󠁥󠁮󠁧󠁿' },
-    { id: 'la-liga', name: 'La Liga', flag: '🇪🇸' },
-    { id: 'bundesliga', name: 'Bundesliga', flag: '🇩🇪' },
+  // Stato per leghe dinamiche
+  const [availableLeagues, setAvailableLeagues] = useState([]);
+  const [loadingLeagues, setLoadingLeagues] = useState(false);
+  
+  // Stato per la sincronizzazione asincrona - DEVE essere PRIMA del return null!
+  const [syncStatus, setSyncStatus] = useState({
+    isRunning: false,
+    jobId: null,
+    progress: 0,
+    statusText: '',
+    dateRange: { startDate: '', endDate: '' }
+  });
+  
+  // Stato per selezione periodo di sincronizzazione  
+  const [selectedPeriod, setSelectedPeriod] = useState(3); // Default: prossime 3 giornate
+  
+  // 🎯 CONFIGURAZIONE PERIODS - SOLO GIORNATE (come richiesto)
+  const syncPeriods = [
+    { value: 1, label: 'Prossima giornata', type: 'rounds', icon: '⚽' },
+    { value: 2, label: 'Prossime 2 giornate', type: 'rounds', icon: '⚽' },
+    { value: 3, label: 'Prossime 3 giornate', type: 'rounds', icon: '⚽' },
+    { value: 4, label: 'Prossime 4 giornate', type: 'rounds', icon: '⚽' }
   ];
+  
+  // Carica leghe disponibili al mount del componente
+  useEffect(() => {
+    const fetchLeagues = async () => {
+      setLoadingLeagues(true);
+      try {
+        const response = await apiClient.get('/global-matches/leagues');
+        if (response.success) {
+          console.log('🏆 Loaded leagues from API:', response.data);
+          setAvailableLeagues(response.data);
+        } else {
+          console.warn('⚠️ Failed to load leagues, using fallback');
+          // Fallback a leghe Piano European se API fallisce
+          setAvailableLeagues([
+            { id: 'serie-a', name: 'Serie A', flag: '🇮🇹', available: true },
+            { id: 'premier-league', name: 'Premier League', flag: '🏴󠁧󠁢󠁥󠁮󠁧󠁿', available: false },
+            { id: 'la-liga', name: 'La Liga', flag: '🇪🇸', available: false },
+            { id: 'bundesliga', name: 'Bundesliga', flag: '🇩🇪', available: false },
+            { id: 'ligue-1', name: 'Ligue 1', flag: '🇫🇷', available: false },
+            { id: 'eredivisie', name: 'Eredivisie', flag: '🇳🇱', available: false },
+          ]);
+        }
+      } catch (error) {
+        console.error('❌ Error loading leagues:', error);
+        setAvailableLeagues([]);
+      } finally {
+        setLoadingLeagues(false);
+      }
+    };
+    
+    fetchLeagues();
+  }, []);
 
   if (!isOpen) return null;
+
+  // Funzione per creare un job di sincronizzazione
+  const handleSyncLeague = async (leagueId) => {
+    console.log('🔄 Creating sync job for league:', leagueId);
+    setLoadingMatches(true);
+    setSyncStatus(prev => ({ ...prev, isRunning: true, statusText: 'Avvio sincronizzazione...' }));
+    
+    try {
+      // Trova la configurazione del periodo selezionato
+      const selectedConfig = syncPeriods.find(p => p.value === selectedPeriod) || { value: 30, label: '30 giorni', type: 'days' };
+      
+      // Calcola range di date basato sul tipo
+      const startDate = new Date();
+      const endDate = new Date();
+      
+      let syncInfo;
+      
+      // 🎯 TUTTI sono ora approccio ROUNDS (giornate)
+      const estimatedDays = selectedPeriod * 7; // Stima giorni per giornate
+      endDate.setDate(endDate.getDate() + estimatedDays);
+      
+      syncInfo = {
+        type: 'rounds',
+        roundCount: selectedPeriod,
+        label: selectedConfig.label,
+        estimatedDays
+      };
+      
+      console.log(`⚽ Sincronizzazione ${selectedLeague.name} per ${selectedConfig.label} - NUOVO APPROCCIO ROUND-BASED`);
+      
+      const response = await fetch('/api/sync-jobs', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ 
+          league: leagueId,
+          dateRange: {
+            startDate: startDate.toISOString(),
+            endDate: endDate.toISOString()
+          },
+          syncInfo // Include informazioni sul tipo di sync
+        })
+      });
+      
+      const result = await response.json();
+      
+      if (result.success) {
+        console.log('✅ Sync job created:', result.data);
+        setSyncStatus({
+          isRunning: true,
+          jobId: result.data.jobId,
+          progress: 0,
+          statusText: `🚀 Avviata: ${selectedLeague.name} ${syncInfo.label} (${result.data.estimatedDurationText})`,
+          dateRange: result.data.dateRange
+        });
+        
+        // Avvia polling per monitorare il progresso
+        pollJobStatus(result.data.jobId);
+      } else {
+        console.error('❌ Sync job creation failed:', result.message);
+        alert('Errore durante l\'avvio sincronizzazione: ' + result.message);
+        setSyncStatus(prev => ({ ...prev, isRunning: false }));
+      }
+    } catch (error) {
+      console.error('❌ Sync job error:', error);
+      alert('Errore durante l\'avvio sincronizzazione');
+      setSyncStatus(prev => ({ ...prev, isRunning: false }));
+    } finally {
+      setLoadingMatches(false);
+    }
+  };
+
+  // Polling per monitorare lo stato del job
+  const pollJobStatus = async (jobId) => {
+    try {
+      const response = await fetch(`/api/sync-jobs/${jobId}`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+        }
+      });
+      
+      const result = await response.json();
+      
+      if (result.success) {
+        const jobData = result.data;
+        console.log('📊 Job status:', jobData);
+        
+        setSyncStatus(prev => ({
+          ...prev,
+          progress: jobData.progress.percentage,
+          statusText: `${jobData.statusText} - ${jobData.progressText} ${jobData.progress.currentChunk ? `(${jobData.progress.currentChunk})` : ''}`
+        }));
+        
+        if (jobData.isComplete) {
+          console.log('✅ Sync completed! Results:', jobData.results);
+          setSyncStatus(prev => ({ 
+            ...prev, 
+            isRunning: false, 
+            statusText: `✅ ${selectedLeague.name} sincronizzata: ${jobData.results.newMatches} nuove, ${jobData.results.cacheHits} cache`
+          }));
+          
+          // ✅ Ricarica immediatamente le partite per questa lega
+          try {
+            console.log(`🔄 Auto-refreshing matches for ${selectedLeague.name}...`);
+            const matchesData = await apiClient.get(`/global-matches?league=${selectedLeague.id}&limit=50`);
+            
+            if (matchesData && matchesData.data) {
+              setAvailableMatches(matchesData.data);
+              console.log(`✅ Auto-refresh successful: ${matchesData.data.length} matches loaded`);
+            }
+          } catch (refreshError) {
+            console.error('❌ Auto-refresh failed:', refreshError);
+            // Non bloccare il flusso, ma notifica il problema
+          }
+        } else if (jobData.isFailed) {
+          console.error('❌ Sync failed:', jobData);
+          setSyncStatus(prev => ({ 
+            ...prev, 
+            isRunning: false, 
+            statusText: 'Errore durante la sincronizzazione'
+          }));
+          alert('Sincronizzazione fallita. Controlla i log per dettagli.');
+        } else if (jobData.isRunning || jobData.status === 'pending') {
+          // ✅ Continua polling se il job è running O pending
+          setTimeout(() => pollJobStatus(jobId), 2000);
+        } else {
+          // Status sconosciuto - continua polling per essere sicuri
+          console.log(`⚠️ Unknown job status: ${jobData.status}, continuing polling...`);
+          setTimeout(() => pollJobStatus(jobId), 3000);
+        }
+      }
+    } catch (error) {
+      console.error('❌ Error polling job status:', error);
+      setSyncStatus(prev => ({ ...prev, isRunning: false, statusText: 'Errore monitoraggio stato' }));
+    }
+  };
 
   // Step 1: Selezione Campionato
   const handleLeagueSelect = async (league) => {
@@ -56,9 +240,9 @@ const SimpleCreateAnnouncementForm: React.FC<SimpleCreateAnnouncementFormProps> 
     setStep(2);
 
     try {
-      console.log(`🔍 Loading real matches from GlobalMatches API for league: ${league.id}`);
+      console.log(`🔍 Loading matches for league: ${league.id} (cache-first approach)`);
       
-      // Carica partite reali dalle GlobalMatches (simulate API call)
+      // 🎯 CACHE-FIRST: Prima controlla se ci sono partite già sincronizzate nel database
       const response = await apiClient.get('/global-matches', {
         params: {
           league: league.id,
@@ -67,15 +251,16 @@ const SimpleCreateAnnouncementForm: React.FC<SimpleCreateAnnouncementFormProps> 
         }
       });
       
-      if (response.success) {
-        console.log(`📋 Found ${response.data.length} real matches for ${league.name}`);
+      if (response.success && response.data.length > 0) {
+        console.log(`✅ Found ${response.data.length} cached matches for ${league.name}`);
         setAvailableMatches(response.data);
       } else {
-        throw new Error('API response not successful');
+        console.log(`📭 No cached matches found for ${league.name}. Use sync button to load.`);
+        setAvailableMatches([]); // Lista vuota - utente deve cliccare sync manualmente
       }
     } catch (error) {
-      console.error('❌ Errore caricamento partite da GlobalMatches:', error);
-      console.log('⚠️ No real matches available - admin should create announcements from real data only');
+      console.error('❌ Errore caricamento partite:', error);
+      console.log('⚠️ No matches available - try syncing manually');
       setAvailableMatches([]);
     } finally {
       setLoadingMatches(false);
@@ -193,15 +378,15 @@ const SimpleCreateAnnouncementForm: React.FC<SimpleCreateAnnouncementFormProps> 
               Crea Nuovo Annuncio Partita
             </h2>
             <div className="flex items-center gap-2 mt-2 text-sm text-gray-500">
-              <span className={`px-2 py-1 rounded ${step >= 1 ? 'bg-orange-100 text-orange-600' : 'bg-gray-100'}`}>
+              <span className={`px-2 py-1 rounded ${step >= 1 ? 'bg-orange-100 text-gray-700' : 'bg-gray-100'}`}>
                 1. Campionato
               </span>
               <ChevronRight size={14} />
-              <span className={`px-2 py-1 rounded ${step >= 2 ? 'bg-orange-100 text-orange-600' : 'bg-gray-100'}`}>
+              <span className={`px-2 py-1 rounded ${step >= 2 ? 'bg-orange-100 text-gray-700' : 'bg-gray-100'}`}>
                 2. Partita
               </span>
               <ChevronRight size={14} />
-              <span className={`px-2 py-1 rounded ${step >= 3 ? 'bg-orange-100 text-orange-600' : 'bg-gray-100'}`}>
+              <span className={`px-2 py-1 rounded ${step >= 3 ? 'bg-orange-100 text-gray-700' : 'bg-gray-100'}`}>
                 3. Dettagli
               </span>
             </div>
@@ -230,44 +415,182 @@ const SimpleCreateAnnouncementForm: React.FC<SimpleCreateAnnouncementFormProps> 
                 </p>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {popularLeagues.map((league) => (
-                  <button
-                    key={league.id}
-                    onClick={() => handleLeagueSelect(league)}
-                    className="p-4 border border-gray-200 rounded-lg hover:border-orange-300 hover:bg-orange-50 transition-colors text-left group"
-                  >
-                    <div className="flex items-center gap-3">
-                      <span className="text-2xl">{league.flag}</span>
-                      <div>
-                        <h4 className="font-medium text-gray-900 group-hover:text-orange-600">
-                          {league.name}
-                        </h4>
+              {loadingLeagues ? (
+                <div className="text-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500 mx-auto mb-4"></div>
+                  <p className="text-gray-600">Caricamento campionati...</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {availableLeagues.map((league) => (
+                    <button
+                      key={league.id}
+                      onClick={() => handleLeagueSelect(league)}
+                      className={`p-4 border rounded-lg transition-colors text-left group relative ${
+                        league.available 
+                          ? 'border-gray-200 hover:border-gray-300 hover:bg-gray-50 bg-white' 
+                          : 'border-gray-100 bg-gray-50'
+                      }`}
+                      disabled={!league.available}
+                    >
+                      <div className="flex items-center gap-3">
+                        {/* Solo logo reale della lega */}
+                        <img 
+                          src={league.logo}
+                          alt={league.name}
+                          className="w-8 h-8 object-contain"
+                          onError={(e) => {
+                            // Se fallisce, mostra placeholder neutro
+                            e.currentTarget.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzIiIGhlaWdodD0iMzIiIHZpZXdCb3g9IjAgMCAzMiAzMiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjMyIiBoZWlnaHQ9IjMyIiByeD0iNCIgZmlsbD0iIzk0QTNBRiIvPgo8L3N2Zz4K';
+                          }}
+                        />
+                        <div className="flex-1">
+                          <h4 className={`font-medium ${
+                            league.available 
+                              ? 'text-gray-900 group-hover:text-gray-700' 
+                              : 'text-gray-500'
+                          }`}>
+                            {league.name}
+                          </h4>
+                          {!league.available && (
+                            <p className="text-xs text-gray-400 mt-1">
+                              Nessuna partita disponibile
+                            </p>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  </button>
-                ))}
-              </div>
+                      
+                      {/* Badge per indicare disponibilità */}
+                      {league.available && (
+                        <div className="absolute top-2 right-2">
+                          <span className="w-2 h-2 bg-green-500 rounded-full"></span>
+                        </div>
+                      )}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
           )}
 
           {/* STEP 2: Selezione Partita */}
           {step === 2 && (
             <div className="space-y-6">
-              <div className="flex items-center gap-3">
-                <button
-                  onClick={() => setStep(1)}
-                  className="text-gray-500 hover:text-gray-700"
-                >
-                  <ChevronLeft size={20} />
-                </button>
-                <div>
-                  <h3 className="text-lg font-medium text-gray-900">
-                    Partite - {selectedLeague.name} {selectedLeague.flag}
-                  </h3>
-                  <p className="text-gray-600">
-                    Prossime partite della settimana
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={() => setStep(1)}
+                    className="text-gray-500 hover:text-gray-700"
+                  >
+                    <ChevronLeft size={20} />
+                  </button>
+                  <div className="flex items-center gap-3">
+                    {/* Logo lega sempre visibile */}
+                    <img 
+                      src={selectedLeague.logo}
+                      alt={selectedLeague.name}
+                      className="w-8 h-8 object-contain rounded"
+                      onError={(e) => {
+                        e.currentTarget.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzIiIGhlaWdodD0iMzIiIHZpZXdCb3g9IjAgMCAzMiAzMiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjMyIiBoZWlnaHQ9IjMyIiByeD0iNCIgZmlsbD0iIzk0QTNBRiIvPgo8L3N2Zz4K';
+                      }}
+                    />
+                    <div>
+                      <h3 className="text-lg font-medium text-gray-900">
+                        Partite - {selectedLeague.name}
+                      </h3>
+                      <p className="text-gray-600">
+                        Prossime partite della settimana
+                      </p>
+                    </div>
+                  </div>
+                </div>
+                
+                {/* Selector Giornate di Sincronizzazione */}
+                <div className="bg-green-50 p-3 rounded-md space-y-3 mb-4">
+                  <h4 className="text-sm font-medium text-green-700">⚽ Giornate di Calcio</h4>
+                  <p className="text-xs text-green-600">
+                    Sincronizza per <strong>giornate calcistiche</strong> precise. Ottieni TUTTE le partite delle giornate selezionate.
                   </p>
+                  <div className="grid grid-cols-4 gap-2">
+                    {syncPeriods.map((period) => (
+                      <button
+                        key={period.value}
+                        onClick={() => setSelectedPeriod(period.value)}
+                        disabled={syncStatus.isRunning}
+                        className={`px-3 py-3 text-xs rounded-md transition-colors font-medium ${
+                          selectedPeriod === period.value
+                            ? 'bg-green-600 text-white shadow-lg' 
+                            : 'bg-white text-green-600 border border-green-200 hover:bg-green-100'
+                        } ${syncStatus.isRunning ? 'opacity-50 cursor-not-allowed' : ''}`}
+                      >
+                        <div className="flex flex-col items-center">
+                          <span className="text-lg">{period.icon}</span>
+                          <span className="text-xs mt-1">{period.label}</span>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                  <div className="text-xs text-green-600">
+                    {(() => {
+                      const selectedConfig = syncPeriods.find(p => p.value === selectedPeriod);
+                      if (!selectedConfig) return null;
+                      
+                      return (
+                        <>
+                          <span className="font-medium">⚽ Selezionato:</span> {selectedConfig.label}
+                          <span className="ml-2 text-green-700">
+                            (Approccio preciso - tutte le partite delle giornate)
+                          </span>
+                        </>
+                      );
+                    })()}
+                  </div>
+                </div>
+
+                {/* Pulsante Sincronizza per la lega selezionata con progress tracking */}
+                <div className="space-y-3">
+                  <button
+                    onClick={() => handleSyncLeague(selectedLeague.id)}
+                    disabled={loadingMatches || syncStatus.isRunning}
+                    className="px-4 py-2 text-sm border border-gray-300 text-gray-600 hover:bg-gray-50 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                  >
+                    {(loadingMatches || syncStatus.isRunning) ? (
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-500"></div>
+                    ) : (
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                      </svg>
+                    )}
+                    {syncStatus.isRunning ? 'Sincronizzazione in corso...' : (() => {
+                      const selectedConfig = syncPeriods.find(p => p.value === selectedPeriod);
+                      const label = selectedConfig ? selectedConfig.label : `${selectedPeriod} giorni`;
+                      return `Sincronizza ${selectedLeague.name} (${label})`;
+                    })()}
+                  </button>
+                  
+                  {/* Progress bar e status quando sync è attivo */}
+                  {syncStatus.isRunning && (
+                    <div className="bg-gray-50 p-3 rounded-md space-y-2">
+                      <div className="flex justify-between text-sm">
+                        <span className="text-gray-600">Progresso</span>
+                        <span className="text-gray-900 font-medium">{syncStatus.progress}%</span>
+                      </div>
+                      <div className="w-full bg-gray-200 rounded-full h-2">
+                        <div 
+                          className="bg-blue-600 h-2 rounded-full transition-all duration-300 ease-out"
+                          style={{ width: `${syncStatus.progress}%` }}
+                        ></div>
+                      </div>
+                      <p className="text-xs text-gray-500">{syncStatus.statusText}</p>
+                    </div>
+                  )}
+                  
+                  {/* Status finale quando sync è completato */}
+                  {!syncStatus.isRunning && syncStatus.statusText && (
+                    <div className="bg-green-50 border border-green-200 p-3 rounded-md">
+                      <p className="text-sm text-green-700">{syncStatus.statusText}</p>
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -282,29 +605,59 @@ const SimpleCreateAnnouncementForm: React.FC<SimpleCreateAnnouncementFormProps> 
                     <button
                       key={match.id}
                       onClick={() => handleMatchSelect(match)}
-                      className="w-full p-4 border border-gray-200 rounded-lg hover:border-orange-300 hover:bg-orange-50 transition-colors text-left group"
+                      className="w-full p-4 border border-gray-200 rounded-lg hover:border-gray-300 hover:bg-gray-50 transition-colors text-left group !bg-white"
+                      style={{
+                        backgroundColor: 'white !important', 
+                        borderColor: '#e5e7eb !important',
+                        background: 'white !important',
+                        color: '#374151 !important'
+                      }}
                     >
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-4">
                           <div className="text-center">
                             <div className="text-sm text-gray-500">
-                              {new Date(match.date).toLocaleDateString('it-IT', { 
+                              {match.date ? new Date(match.date).toLocaleDateString('it-IT', { 
                                 weekday: 'short', 
                                 day: 'numeric', 
                                 month: 'short' 
-                              })}
+                              }) : 'Data da definire'}
                             </div>
-                            <div className="font-medium text-gray-900">{match.time}</div>
+                            <div className="font-medium text-gray-900">{match.time || 'Orario TBD'}</div>
                           </div>
                           
                           <div className="flex items-center gap-3">
-                            <span className="font-medium text-gray-900 group-hover:text-orange-600">
-                              {match.homeTeam}
-                            </span>
+                            <div className="flex items-center gap-2">
+                              {match.homeTeamLogo && (
+                                <img 
+                                  src={match.homeTeamLogo} 
+                                  alt={`${match.homeTeam} logo`}
+                                  className="w-6 h-6 object-contain"
+                                  onError={(e) => {
+                                    e.currentTarget.style.display = 'none';
+                                  }}
+                                />
+                              )}
+                              <span className="font-medium text-gray-900 group-hover:text-gray-700">
+                                {match.homeTeam}
+                              </span>
+                            </div>
                             <span className="text-gray-400">vs</span>
-                            <span className="font-medium text-gray-900 group-hover:text-orange-600">
-                              {match.awayTeam}
-                            </span>
+                            <div className="flex items-center gap-2">
+                              {match.awayTeamLogo && (
+                                <img 
+                                  src={match.awayTeamLogo} 
+                                  alt={`${match.awayTeam} logo`}
+                                  className="w-6 h-6 object-contain"
+                                  onError={(e) => {
+                                    e.currentTarget.style.display = 'none';
+                                  }}
+                                />
+                              )}
+                              <span className="font-medium text-gray-900 group-hover:text-gray-700">
+                                {match.awayTeam}
+                              </span>
+                            </div>
                           </div>
                         </div>
                         
@@ -363,7 +716,7 @@ const SimpleCreateAnnouncementForm: React.FC<SimpleCreateAnnouncementFormProps> 
                   <button
                     type="button"
                     onClick={addOffer}
-                    className="text-orange-600 hover:text-orange-700 text-sm font-medium"
+                    className="text-gray-700 hover:text-gray-800 text-sm font-medium"
                   >
                     + Aggiungi Offerta
                   </button>
@@ -424,7 +777,7 @@ const SimpleCreateAnnouncementForm: React.FC<SimpleCreateAnnouncementFormProps> 
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="px-6 py-2 bg-orange-500 text-white rounded-md hover:bg-orange-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                  className="px-6 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                 >
                   {isSubmitting ? (
                     <>

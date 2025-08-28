@@ -7,6 +7,22 @@ const sportsApiService = require('../services/sportsApiService');
 const { validationResult } = require('express-validator');
 const mongoose = require('mongoose');
 
+// 🎯 Helper function per ottenere loghi leghe fallback
+function getLeagueLogoUrl(leagueName) {
+  const leagueLogos = {
+    'Serie A': 'https://cdn.sportmonks.com/images/soccer/leagues/0/384.png',
+    'Premier League': 'https://cdn.sportmonks.com/images/soccer/leagues/1/609.png', 
+    'Champions League': 'https://cdn.sportmonks.com/images/soccer/leagues/1/2.png',
+    'UEFA Champions League': 'https://cdn.sportmonks.com/images/soccer/leagues/1/2.png',
+    'Europa League': 'https://cdn.sportmonks.com/images/soccer/leagues/1/3.png',
+    'UEFA Europa League': 'https://cdn.sportmonks.com/images/soccer/leagues/1/3.png',
+    'La Liga': 'https://cdn.sportmonks.com/images/soccer/leagues/20/564.png',
+    'LaLiga': 'https://cdn.sportmonks.com/images/soccer/leagues/20/564.png',
+    'Bundesliga': 'https://cdn.sportmonks.com/images/soccer/leagues/20/78.png'
+  };
+  return leagueLogos[leagueName] || null;
+}
+
 // 🎯 FUNZIONE STANDALONE PER POPULAR MATCH
 async function updateOrCreatePopularMatchStandalone(match, venueId, announcementId) {
   try {
@@ -810,7 +826,11 @@ class MatchAnnouncementController {
           return {
             matchId: match.matchId,
             homeTeam: match.homeTeam,
+            homeTeamLogo: match.homeTeamLogo,
             awayTeam: match.awayTeam,
+            awayTeamLogo: match.awayTeamLogo,
+            league: match.league,
+            leagueLogo: match.leagueLogo || getLeagueLogoUrl(match.league),
             competition: match.competition,
             date: match.date,
             time: match.time,

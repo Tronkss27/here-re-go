@@ -62,19 +62,19 @@ const StepFacilities: React.FC<StepFacilitiesProps> = ({ data, onUpdate }) => {
             key={facility.id}
             onClick={() => handleToggleFacility(facility.id)}
             className={`
-              p-6 rounded-lg border-2 transition-all duration-200 flex flex-col items-center gap-3
+              h-24 w-full rounded-lg border-2 transition-all duration-200 flex flex-col items-center justify-center gap-2
               ${facility.enabled
-                ? 'border-orange-400 bg-orange-50 text-orange-700'
-                : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300'
+                ? 'border-pink-400 bg-white text-gray-900 shadow-lg'
+                : 'border-pink-200 bg-white text-gray-600 hover:border-pink-300 hover:shadow-md'
               }
             `}
           >
             <div className={`
-              ${facility.enabled ? 'text-orange-600' : 'text-gray-400'}
+              ${facility.enabled ? 'text-pink-600' : 'text-gray-400'}
             `}>
               {facility.icon}
             </div>
-            <span className="text-sm font-medium">
+            <span className="text-xs font-medium">
               {facility.name}
             </span>
           </button>

@@ -1,40 +1,40 @@
 import apiClient from './apiClient.js'
-import { API_ENDPOINTS } from '../config/api.js'
+import apiConfig from '../config/api.js'
 
 // Bookings Service - Gestisce le prenotazioni
 class BookingsService {
   
   // Create new booking
   async createBooking(bookingData) {
-    return apiClient.post(API_ENDPOINTS.BOOKINGS.CREATE, bookingData, { includeAuth: false })
+    return apiClient.post(apiConfig.API_ENDPOINTS.BOOKINGS.CREATE, bookingData, { includeAuth: false })
   }
 
   // Get all bookings (with filters for venue owners/admin)
   async getBookings(params = {}) {
     const queryString = new URLSearchParams(params).toString()
-    const endpoint = queryString ? `${API_ENDPOINTS.BOOKINGS.LIST}?${queryString}` : API_ENDPOINTS.BOOKINGS.LIST
+    const endpoint = queryString ? `${apiConfig.API_ENDPOINTS.BOOKINGS.LIST}?${queryString}` : apiConfig.API_ENDPOINTS.BOOKINGS.LIST
     
     return apiClient.get(endpoint)
   }
 
   // Get booking by ID
   async getBookingById(id) {
-    return apiClient.get(API_ENDPOINTS.BOOKINGS.DETAILS(id))
+    return apiClient.get(apiConfig.API_ENDPOINTS.BOOKINGS.DETAILS(id))
   }
 
   // Update booking details
   async updateBooking(id, updateData) {
-    return apiClient.put(API_ENDPOINTS.BOOKINGS.UPDATE(id), updateData)
+    return apiClient.put(apiConfig.API_ENDPOINTS.BOOKINGS.UPDATE(id), updateData)
   }
 
   // Update booking status
   async updateBookingStatus(id, status) {
-    return apiClient.put(API_ENDPOINTS.BOOKINGS.UPDATE_STATUS(id), { status })
+    return apiClient.put(apiConfig.API_ENDPOINTS.BOOKINGS.UPDATE_STATUS(id), { status })
   }
 
   // Delete booking
   async deleteBooking(id) {
-    return apiClient.delete(API_ENDPOINTS.BOOKINGS.DELETE(id))
+    return apiClient.delete(apiConfig.API_ENDPOINTS.BOOKINGS.DELETE(id))
   }
 
   // Get available time slots for a venue
@@ -42,27 +42,27 @@ class BookingsService {
     const params = date ? { date } : {}
     const queryString = new URLSearchParams(params).toString()
     const endpoint = queryString 
-      ? `${API_ENDPOINTS.BOOKINGS.AVAILABLE_SLOTS(venueId)}?${queryString}`
-      : API_ENDPOINTS.BOOKINGS.AVAILABLE_SLOTS(venueId)
+      ? `${apiConfig.API_ENDPOINTS.BOOKINGS.AVAILABLE_SLOTS(venueId)}?${queryString}`
+      : apiConfig.API_ENDPOINTS.BOOKINGS.AVAILABLE_SLOTS(venueId)
     
     return apiClient.get(endpoint, { includeAuth: false })
   }
 
   // Check time conflicts for booking
   async checkTimeConflict(conflictData) {
-    return apiClient.post(API_ENDPOINTS.BOOKINGS.CHECK_CONFLICT, conflictData, { includeAuth: false })
+    return apiClient.post(apiConfig.API_ENDPOINTS.BOOKINGS.CHECK_CONFLICT, conflictData, { includeAuth: false })
   }
 
   // Get booking by confirmation code
   async getBookingByConfirmationCode(code) {
-    return apiClient.get(API_ENDPOINTS.BOOKINGS.CONFIRM(code), { includeAuth: false })
+    return apiClient.get(apiConfig.API_ENDPOINTS.BOOKINGS.CONFIRM(code), { includeAuth: false })
   }
 
   // Get all bookings for a specific venue (for calendar display)
   async getVenueBookings(venueId, params = {}) {
     const queryParams = { venue: venueId, ...params }
     const queryString = new URLSearchParams(queryParams).toString()
-    const endpoint = `${API_ENDPOINTS.BOOKINGS.LIST}?${queryString}`
+    const endpoint = `${apiConfig.API_ENDPOINTS.BOOKINGS.LIST}?${queryString}`
     
     return apiClient.get(endpoint, { includeAuth: false })
   }
@@ -73,7 +73,7 @@ class BookingsService {
       // Get all bookings for statistics calculation
       const queryParams = { ...params, limit: 1000 }
       const queryString = new URLSearchParams(queryParams).toString()
-      const endpoint = `${API_ENDPOINTS.BOOKINGS.LIST}?${queryString}`
+      const endpoint = `${apiConfig.API_ENDPOINTS.BOOKINGS.LIST}?${queryString}`
       const response = await apiClient.get(endpoint)
       
       if (response.success && response.data) {
@@ -151,8 +151,8 @@ class BookingsService {
   async getUpcomingBookings(venueId, params = {}) {
     const queryString = new URLSearchParams(params).toString()
     const endpoint = queryString 
-      ? `${API_ENDPOINTS.BOOKINGS.UPCOMING(venueId)}?${queryString}`
-      : API_ENDPOINTS.BOOKINGS.UPCOMING(venueId)
+      ? `${apiConfig.API_ENDPOINTS.BOOKINGS.UPCOMING(venueId)}?${queryString}`
+      : apiConfig.API_ENDPOINTS.BOOKINGS.UPCOMING(venueId)
     
     return apiClient.get(endpoint)
   }

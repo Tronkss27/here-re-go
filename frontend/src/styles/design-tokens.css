@@ -5,29 +5,52 @@
      DESIGN TOKENS - SEMANTIC NAMING
      ================================= */
   
-  /* Color Primitives */
-  --color-white: #ffffff;
-  --color-black: #000000;
-  --color-slate-50: #f8fafc;
-  --color-slate-100: #f1f5f9;
-  --color-slate-200: #e2e8f0;
-  --color-slate-300: #cbd5e1;
-  --color-slate-400: #94a3b8;
-  --color-slate-500: #64748b;
-  --color-slate-600: #475569;
-  --color-slate-700: #334155;
-  --color-slate-800: #1e293b;
-  --color-slate-900: #0f172a;
-  --color-emerald-50: #ecfdf5;
-  --color-emerald-100: #d1fae5;
-  --color-emerald-200: #a7f3d0;
-  --color-emerald-300: #6ee7b7;
-  --color-emerald-400: #34d399;
-  --color-emerald-500: #10b981;
-  --color-emerald-600: #059669;
-  --color-emerald-700: #047857;
-  --color-emerald-800: #065f46;
-  --color-emerald-900: #064e3b;
+  /* =================================
+     SEMANTIC COLOR TOKENS - HSL
+     Support for both light and dark themes
+     ================================= */
+  
+  /* Light Theme (Default) */
+  --background: 0 0% 100%;          /* Pure white */
+  --foreground: 222.2 84% 4.9%;     /* Very dark blue-gray */
+  --card: 0 0% 100%;                /* White cards */
+  --card-foreground: 222.2 84% 4.9%; /* Dark text on cards */
+  --popover: 0 0% 100%;             /* White popovers */
+  --popover-foreground: 222.2 84% 4.9%; /* Dark text on popovers */
+  
+  /* Primary - Green Brand Colors */
+  --primary: 142 76% 36%;           /* #2ba84a - Main brand green */
+  --primary-foreground: 210 40% 98%; /* Light text on primary */
+  --primary-dark: 142 69% 28%;      /* #248232 - Darker green */
+  --primary-light: 142 84% 44%;     /* #34c759 - Lighter green */
+  
+  /* Secondary - Neutral Grays */
+  --secondary: 210 40% 96%;         /* Very light gray */
+  --secondary-foreground: 222.2 84% 4.9%; /* Dark text on secondary */
+  
+  /* Muted - Subtle Backgrounds */
+  --muted: 210 40% 96%;             /* Light gray backgrounds */
+  --muted-foreground: 215.4 16.3% 46.9%; /* Medium gray text */
+  
+  /* Accent - Highlight Colors */
+  --accent: 210 40% 96%;            /* Light accent background */
+  --accent-foreground: 222.2 84% 4.9%; /* Dark text on accent */
+  
+  /* Destructive - Error States */
+  --destructive: 0 84% 60%;         /* Red for errors */
+  --destructive-foreground: 210 40% 98%; /* Light text on destructive */
+  
+  /* Border & Input Colors */
+  --border: 214.3 31.8% 91.4%;     /* Light gray borders */
+  --input: 214.3 31.8% 91.4%;      /* Input field borders */
+  --ring: 142 76% 36%;              /* Focus ring - primary green */
+  
+  /* Chart Colors - Sports Data Visualization */
+  --chart-1: 142 76% 36%;           /* Primary green */
+  --chart-2: 142 84% 44%;           /* Light green */
+  --chart-3: 142 69% 28%;           /* Dark green */
+  --chart-4: 210 40% 96%;           /* Light gray */
+  --chart-5: 215.4 16.3% 46.9%;    /* Medium gray */
   
   /* Spacing Scale - 8px Grid System */
   --space-0: 0;
@@ -96,4 +119,87 @@
   --z-popover: 50;
   --z-tooltip: 60;
   --z-max: 999;
+}
+
+/* =================================
+   DARK THEME TOKENS
+   ================================= */
+.dark {
+  /* Dark Theme Overrides */
+  --background: 222.2 84% 4.9%;     /* Very dark blue-gray */
+  --foreground: 210 40% 98%;        /* Very light text */
+  --card: 222.2 84% 4.9%;           /* Dark cards */
+  --card-foreground: 210 40% 98%;   /* Light text on dark cards */
+  --popover: 222.2 84% 4.9%;        /* Dark popovers */
+  --popover-foreground: 210 40% 98%; /* Light text on dark popovers */
+  
+  /* Primary remains the same but adjust foreground */
+  --primary: 142 76% 36%;           /* Keep green */
+  --primary-foreground: 210 40% 98%; /* Light text */
+  
+  /* Secondary - Dark Variants */
+  --secondary: 217.2 32.6% 17.5%;   /* Dark gray */
+  --secondary-foreground: 210 40% 98%; /* Light text on secondary */
+  
+  /* Muted - Dark Backgrounds */
+  --muted: 217.2 32.6% 17.5%;       /* Dark muted background */
+  --muted-foreground: 215 20.2% 65.1%; /* Medium light text */
+  
+  /* Accent - Dark Highlight */
+  --accent: 217.2 32.6% 17.5%;      /* Dark accent background */
+  --accent-foreground: 210 40% 98%; /* Light text on accent */
+  
+  /* Destructive remains similar */
+  --destructive: 0 62.8% 30.6%;     /* Darker red for dark theme */
+  --destructive-foreground: 210 40% 98%; /* Light text */
+  
+  /* Border & Input - Dark Variants */
+  --border: 217.2 32.6% 17.5%;      /* Dark borders */
+  --input: 217.2 32.6% 17.5%;       /* Dark input borders */
+  --ring: 142 76% 36%;              /* Keep green focus ring */
+  
+  /* Chart Colors - Maintain brand consistency */
+  --chart-1: 142 76% 36%;           /* Primary green */
+  --chart-2: 142 84% 44%;           /* Light green */
+  --chart-3: 142 69% 28%;           /* Dark green */
+  --chart-4: 217.2 32.6% 17.5%;     /* Dark gray */
+  --chart-5: 215 20.2% 65.1%;       /* Medium light gray */
+}
+
+/* =================================
+   RGB VARIABLES FOR TAILWIND OPACITY
+   Format: R G B (space-separated for use with alpha: rgb(var(--primary-rgb) / 0.5))
+   ================================= */
+:root {
+  /* Primary Colors - RGB Values */
+  --primary-rgb: 43 168 74;         /* #2ba84a converted to RGB */
+  --primary-dark-rgb: 36 130 50;    /* #248232 converted to RGB */
+  --primary-light-rgb: 52 199 89;   /* #34c759 converted to RGB */
+  
+  /* Background Colors - RGB Values */
+  --background-rgb: 255 255 255;    /* White background */
+  --foreground-rgb: 15 23 42;       /* Dark foreground */
+  --card-rgb: 255 255 255;          /* White cards */
+  
+  /* Semantic Colors - RGB Values */
+  --secondary-rgb: 241 245 249;     /* Light gray */
+  --muted-rgb: 241 245 249;         /* Muted background */
+  --accent-rgb: 241 245 249;        /* Accent background */
+  --destructive-rgb: 239 68 68;     /* Red error */
+  
+  /* Border Colors - RGB Values */
+  --border-rgb: 226 232 240;        /* Light border */
+  --input-rgb: 226 232 240;         /* Input border */
+}
+
+.dark {
+  /* Dark Theme RGB Overrides */
+  --background-rgb: 15 23 42;       /* Dark background */
+  --foreground-rgb: 248 250 252;    /* Light foreground */
+  --card-rgb: 15 23 42;             /* Dark cards */
+  --secondary-rgb: 51 65 85;        /* Dark secondary */
+  --muted-rgb: 51 65 85;            /* Dark muted */
+  --accent-rgb: 51 65 85;           /* Dark accent */
+  --border-rgb: 51 65 85;           /* Dark border */
+  --input-rgb: 51 65 85;            /* Dark input */
 }

@@ -1,0 +1,787 @@
+Premiere League: id = 8, currentSeasonId = 25583, Regular Season (ID: 77476879):
+
+372195
+Round 1
+372196
+Round 2
+372197
+Round 3
+372198
+Round 4
+372199
+Round 5
+372200
+Round 6
+372201
+Round 7
+372202
+Round 8
+372203
+Round 9
+372204
+Round 10
+372205
+Round 11
+372206
+Round 12
+372207
+Round 13
+372208
+Round 14
+372209
+Round 15
+372210
+Round 16
+372211
+Round 17
+372212
+Round 18
+372213
+Round 19
+372214
+Round 20
+372215
+Round 21
+372216
+Round 22
+372217
+Round 23
+372218
+Round 24
+372219
+Round 25
+372220
+Round 26
+372144
+Round 27
+372145
+Round 28
+372146
+Round 29
+372147
+Round 30
+372148
+Round 31
+372149
+Round 32
+372221
+Round 33
+372150
+Round 34
+372151
+Round 35
+372152
+Round 36
+372153
+Round 37
+372154
+Round 38
+
+Serie A: id = 384, currentSeasonId = 25533, Regular Season (ID: 77476851):
+
+371849
+Round 1
+371850
+Round 2
+371851
+Round 3
+371852
+Round 4
+371853
+Round 5
+371854
+Round 6
+371855
+Round 7
+371856
+Round 8
+371857
+Round 9
+371858
+Round 10
+371859
+Round 11
+371860
+Round 12
+371861
+Round 13
+371862
+Round 14
+371863
+Round 15
+371864
+Round 16
+371865
+Round 17
+371866
+Round 18
+371867
+Round 19
+371868
+Round 20
+371869
+Round 21
+371870
+Round 22
+371871
+Round 23
+371872
+Round 24
+371873
+Round 25
+371874
+Round 26
+371875
+Round 27
+371876
+Round 28
+371877
+Round 29
+371878
+Round 30
+371879
+Round 31
+371880
+Round 32
+371881
+Round 33
+371882
+Round 34
+371883
+Round 35
+371884
+Round 36
+371885
+Round 37
+371886
+Round 38
+
+Serie B: id = 387, currentSeasonId = 26164, Regular Season (ID: 77477501):
+
+381851
+Round 1
+381852
+Round 2
+381853
+Round 3
+381854
+Round 4
+381855
+Round 5
+381856
+Round 6
+381857
+Round 7
+381858
+Round 8
+381859
+Round 9
+381860
+Round 10
+381861
+Round 11
+381862
+Round 12
+381863
+Round 13
+381864
+Round 14
+381865
+Round 15
+381866
+Round 16
+381867
+Round 17
+381868
+Round 18
+381869
+Round 19
+381870
+Round 20
+381871
+Round 21
+381872
+Round 22
+381873
+Round 23
+381874
+Round 24
+381875
+Round 25
+381876
+Round 26
+381877
+Round 27
+381878
+Round 28
+381879
+Round 29
+381880
+Round 30
+381881
+Round 31
+381882
+Round 32
+381883
+Round 33
+381884
+Round 34
+381885
+Round 35
+381886
+Round 36
+381887
+Round 37
+381888
+Round 38
+
+
+Ligue 1: id = 301, currentSeasonId = 25651, Regular Season (ID: 77476920):
+
+372897
+Round 1
+372932
+Round 2
+372933
+Round 3
+372934
+Round 4
+372935
+Round 5
+372936
+Round 6
+376828
+Round 7
+376829
+Round 8
+376830
+Round 9
+372937
+Round 10
+376831
+Round 11
+372938
+Round 12
+372939
+Round 13
+372940
+Round 14
+372941
+Round 15
+372942
+Round 16
+372943
+Round 17
+372944
+Round 18
+372945
+Round 19
+372946
+Round 20
+372947
+Round 21
+372948
+Round 22
+372949
+Round 23
+376832
+Round 24
+376833
+Round 25
+376834
+Round 26
+376835
+Round 27
+376836
+Round 28
+376837
+Round 29
+376838
+Round 30
+376839
+Round 31
+376840
+Round 32
+372950
+Round 33
+372898
+Round 34
+
+Ligue 2: id = 302, currentSeasonId = 25658, Regular Season (ID: 77476929):
+
+373146
+Round 1
+373147
+Round 2
+373148
+Round 3
+373149
+Round 4
+373150
+Round 5
+373151
+Round 6
+373152
+Round 7
+373153
+Round 8
+373154
+Round 9
+373155
+Round 10
+373156
+Round 11
+373157
+Round 12
+373158
+Round 13
+373159
+Round 14
+373160
+Round 15
+373161
+Round 16
+373162
+Round 17
+373163
+Round 18
+373164
+Round 19
+373165
+Round 20
+373166
+Round 21
+373167
+Round 22
+373168
+Round 23
+373169
+Round 24
+373170
+Round 25
+373171
+Round 26
+373172
+Round 27
+373173
+Round 28
+373174
+Round 29
+373175
+Round 30
+373176
+Round 31
+373177
+Round 32
+373178
+Round 33
+373179
+Round 34
+
+La Liga: id = 564, currentSeasonId = 25659, Regular Season (ID: 77476930):
+
+373210
+Round 1
+373211
+Round 2
+373212
+Round 3
+373213
+Round 4
+373214
+Round 5
+373215
+Round 6
+373216
+Round 7
+373217
+Round 8
+373218
+Round 9
+373219
+Round 10
+373220
+Round 11
+373221
+Round 12
+373222
+Round 13
+373223
+Round 14
+373224
+Round 15
+373225
+Round 16
+373226
+Round 17
+373227
+Round 18
+373228
+Round 19
+373229
+Round 20
+373230
+Round 21
+373231
+Round 22
+373232
+Round 23
+373233
+Round 24
+373234
+Round 25
+373235
+Round 26
+373236
+Round 27
+373237
+Round 28
+373238
+Round 29
+373239
+Round 30
+373240
+Round 31
+373241
+Round 32
+373242
+Round 33
+373243
+Round 34
+373244
+Round 35
+373245
+Round 36
+373246
+Round 37
+373247
+Round 38
+
+Bundesliga: id = 82, currentSeasonId = 25646, Regular Season (ID: 77476914):
+
+
+372738
+Round 1
+372900
+Round 2
+372739
+Round 3
+372901
+Round 4
+372902
+Round 5
+372903
+Round 6
+372904
+Round 7
+372905
+Round 8
+372906
+Round 9
+372907
+Round 10
+372908
+Round 11
+372909
+Round 12
+372910
+Round 13
+372911
+Round 14
+372912
+Round 15
+372913
+Round 16
+372914
+Round 17
+372915
+Round 18
+372916
+Round 19
+372917
+Round 20
+372918
+Round 21
+372919
+Round 22
+372920
+Round 23
+372921
+Round 24
+372922
+Round 25
+372923
+Round 26
+372924
+Round 27
+372925
+Round 28
+372926
+Round 29
+372927
+Round 30
+372928
+Round 31
+372929
+Round 32
+372930
+Round 33
+372931
+Round 34
+
+Championship: id = 9, currentSeasonId = 25648, Regular Season (ID: 77476917):
+
+372755
+Round 1
+372756
+Round 2
+372757
+Round 3
+372758
+Round 4
+372759
+Round 5
+372760
+Round 6
+372761
+Round 7
+372762
+Round 8
+372763
+Round 9
+372764
+Round 10
+372765
+Round 11
+372766
+Round 12
+372767
+Round 13
+372768
+Round 14
+372769
+Round 15
+372770
+Round 16
+372771
+Round 17
+372772
+Round 18
+372773
+Round 19
+372774
+Round 20
+372775
+Round 21
+372776
+Round 22
+372777
+Round 23
+372778
+Round 24
+372779
+Round 25
+372780
+Round 26
+372781
+Round 27
+372782
+Round 28
+372783
+Round 29
+372784
+Round 30
+372785
+Round 31
+372786
+Round 32
+372787
+Round 33
+372788
+Round 34
+372789
+Round 35
+372790
+Round 36
+372791
+Round 37
+372792
+Round 38
+372793
+Round 39
+372794
+Round 40
+372795
+Round 41
+372796
+Round 42
+372797
+Round 43
+372798
+Round 44
+372799
+Round 45
+372800
+Round 46
+
+Eredivisie: id = 72, currentSeasonId = 25597, Regular Season (ID: 77476902):
+
+
+Round 1
+372421
+Round 2
+372422
+Round 3
+372423
+Round 4
+372424
+Round 5
+372425
+Round 6
+372426
+Round 7
+372427
+Round 8
+372428
+Round 9
+372429
+Round 10
+372430
+Round 11
+372431
+Round 12
+372432
+Round 13
+372433
+Round 14
+372434
+Round 15
+372435
+Round 16
+372436
+Round 17
+372437
+Round 18
+372438
+Round 19
+372439
+Round 20
+372440
+Round 21
+372441
+Round 22
+372442
+Round 23
+372443
+Round 24
+372444
+Round 25
+372445
+Round 26
+372446
+Round 27
+372447
+Round 28
+372448
+Round 29
+372449
+Round 30
+372450
+Round 31
+372451
+Round 32
+372452
+Round 33
+372453
+Round 34
+
+
+La Liga 2: id = 567, currentSeasonId = 25673, Regular Season (ID: 77476943):
+
+373478
+Round 1
+373479
+Round 2
+373480
+Round 3
+373481
+Round 4
+373482
+Round 5
+373483
+Round 6
+373484
+Round 7
+373485
+Round 8
+373486
+Round 9
+373487
+Round 10
+373488
+Round 11
+373489
+Round 12
+373490
+Round 13
+373491
+Round 14
+373492
+Round 15
+373493
+Round 16
+373494
+Round 17
+373495
+Round 18
+373496
+Round 19
+373497
+Round 20
+373498
+Round 21
+373499
+Round 22
+373500
+Round 23
+373501
+Round 24
+373502
+Round 25
+373503
+Round 26
+373504
+Round 27
+373505
+Round 28
+373506
+Round 29
+373507
+Round 30
+373508
+Round 31
+373509
+Round 32
+373510
+Round 33
+373511
+Round 34
+373512
+Round 35
+373513
+Round 36
+373514
+Round 37
+373515
+Round 38
+373516
+Round 39
+373517
+Round 40
+373518
+Round 41
+373519
+Round 42
+
+
+

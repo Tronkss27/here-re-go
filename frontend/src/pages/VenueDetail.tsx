@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useVenue } from '../hooks/useVenues.js';
 import Header from '../components/Header.tsx';
@@ -10,6 +10,9 @@ import { Star, MapPin, Phone, Clock, ChevronLeft, ChevronRight, ArrowLeft, Wifi,
 import matchVenueService from '../services/matchVenueService.js';
 import { getVenueAnnouncements } from '../services/matchAnnouncementService.js';
 import apiClient from '../services/apiClient'; // Import apiClient
+
+// Lazy load mappa per performance
+const VenueMap = React.lazy(() => import('../components/VenueMap'));
 
 const VenueDetail = () => {
   const { id } = useParams<{ id: string }>();
@@ -26,29 +29,17 @@ const VenueDetail = () => {
   // 🎯 CARICO LE PARTITE PUBBLICATE DAL LOCALE - ENDPOINT PUBBLICO
   useEffect(() => {
     const loadVenueAnnouncements = async () => {
-      if (!id || !venue) return;
+      if (!id) return;
       
       try {
         setAnnouncementsLoading(true);
+        const response = await apiClient.get(`/venues/${id}/announcements`);
         
-        // 🎯 USO ENDPOINT PUBBLICO INSTEAD OF PROTECTED ENDPOINT
-        const response = await apiClient.get('/match-announcements/search/public', {
-          limit: 10,
-          page: 1
-        });
-        
-        if (response && Array.isArray(response)) {
-          // Filtra solo gli annunci di questo venue
-          const venueAnnouncements = response.filter(announcement => 
-            announcement.venueId === id || 
-            announcement.venue?._id === id ||
-            announcement.venue?.id === id
-          );
-          
-          setVenueAnnouncements(venueAnnouncements);
-          console.log(`✅ Loaded ${venueAnnouncements.length} announcements for venue ${id} from ${response.length} total`);
+        if (response && response.success && Array.isArray(response.data)) {
+          setVenueAnnouncements(response.data);
+          console.log(`✅ Loaded ${response.data.length} announcements for venue ${id}`);
         } else {
-          console.error('❌ Unexpected response format:', response);
+          console.error('❌ Unexpected response format for announcements:', response);
           setVenueAnnouncements([]);
         }
       } catch (error) {
@@ -60,7 +51,7 @@ const VenueDetail = () => {
     };
 
     loadVenueAnnouncements();
-  }, [id, venue]); // Aggiungo venue come dependency
+  }, [id]); // Aggiungo venue come dependency
 
   if (loading) {
     return (
@@ -98,15 +89,18 @@ const VenueDetail = () => {
   // Cast venue to any to work with legacy structure
   const venueData = venue as any;
 
+  // 🎯 FIX FOTO: Usa array di immagini corretto
+  const allImages = venue?.images || venueData.images || [];
+  
   const nextImage = () => {
-    if (venueData.images && venueData.images.length > 1) {
-      setCurrentImageIndex((prev) => (prev + 1) % venueData.images.length);
+    if (allImages && allImages.length > 1) {
+      setCurrentImageIndex((prev) => (prev + 1) % allImages.length);
     }
   };
 
   const prevImage = () => {
-    if (venueData.images && venueData.images.length > 1) {
-      setCurrentImageIndex((prev) => (prev - 1 + venueData.images.length) % venueData.images.length);
+    if (allImages && allImages.length > 1) {
+      setCurrentImageIndex((prev) => (prev - 1 + allImages.length) % allImages.length);
     }
   };
 
@@ -130,22 +124,121 @@ const VenueDetail = () => {
     }
   };
 
+  // 🎯 NUOVO: Icone specifiche per servizi admin
+  const getServiceIcon = (serviceId: string) => {
+    switch (serviceId?.toLowerCase()) {
+      case 'wifi':
+        return <Wifi className="h-5 w-5 text-green-600" />;
+      case 'cibo':
+        return <span className="text-green-600 text-lg">🍽️</span>;
+      case 'grandi-schermi':
+        return <Monitor className="h-5 w-5 text-green-600" />;
+      case 'prenotabile':
+        return <Calendar className="h-5 w-5 text-green-600" />;
+      case 'pet-friendly':
+        return <span className="text-green-600 text-lg">🐕</span>;
+      case 'giardino':
+        return <span className="text-green-600 text-lg">🌳</span>;
+      case 'parcheggio':
+        return <Car className="h-5 w-5 text-green-600" />;
+      case 'aria-condizionata':
+        return <span className="text-green-600 text-lg">❄️</span>;
+      default:
+        return <Star className="h-5 w-5 text-green-600" />;
+    }
+  };
+
   const formatOpeningHours = (openingHours: any) => {
     if (!openingHours) return null;
-    
     const today = new Date().toLocaleDateString('it-IT', { weekday: 'long' });
     const todayKey = today.charAt(0).toUpperCase() + today.slice(1);
     const todayHours = openingHours[todayKey] || 'Non disponibile';
-    
-    return {
-      today: todayHours,
-      all: openingHours
-    };
+    return { today: todayHours, all: openingHours };
+  };
+
+  // Fallback: costruisce l'oggetto hours a partire dall'array legacy openingHours [MON..SUN]
+  const buildHoursFromOpeningArray = (openingArray: any[]) => {
+    const map: Record<string, string> = { mon: 'monday', tue: 'tuesday', wed: 'wednesday', thu: 'thursday', fri: 'friday', sat: 'saturday', sun: 'sunday' };
+    const out: any = {};
+    if (!Array.isArray(openingArray)) return out;
+    for (const h of openingArray) {
+      const key = map[(h.day || '').toLowerCase()] || (h.day || '').toLowerCase();
+      if (!key) continue;
+      const isOpen = (h.status || '').toLowerCase() === 'open';
+      out[key] = {
+        open: isOpen ? (h.openTime || '') : '',
+        close: isOpen ? (h.closeTime || '') : '',
+        closed: !isOpen
+      };
+    }
+    return out;
   };
 
   const openingInfo = venueData.openingHours ? formatOpeningHours(venueData.openingHours) : null;
 
-  const fullAddress = venueData?.location?.address 
+  // 🎯 FIX ORARI: Usa SEMPRE venue.data.hours che è normalizzato dal backend
+  const backendHours = venue?.data?.hours || {};
+  const venueHours = venueData?.hours || {};
+  const rawHoursObj = Object.keys(backendHours).length > 0 ? backendHours : venueHours;
+  
+  console.log('🕒 Hours debug:', {
+    backendHours: Object.keys(backendHours).length,
+    venueHours: Object.keys(venueHours).length,
+    finalChoice: Object.keys(rawHoursObj).length > 0 ? 'hours found' : 'no hours'
+  });
+  
+  // 🎯 DEBUG CRITICO: VENUE ID E DATI COMPLETI
+  console.log('🆔 VENUE ID DEBUG:', {
+    'URL ID': id,
+    'venue._id': venue?._id,
+    'venue.id': venue?.id,
+    'venueData._id': venueData._id,
+    'venueData.id': venueData.id
+  });
+  
+  console.log('🔧 Services & Screens debug:', {
+    'venue.services': venue?.services,
+    'venue.screens': venue?.screens,
+    'venue.data.services': venue?.data?.services,
+    'venue.data.screens': venue?.data?.screens,
+    'venueData.services': venueData.services,
+    'venueData.screens': venueData.screens,
+    'venueData.facilities': venueData.facilities,
+    '🎯 venueData.facilities.services': venueData.facilities?.services,
+    '🎯 venueData.facilities.screens': venueData.facilities?.screens
+  });
+  
+  console.log('📸 IMAGES DEBUG:', {
+    'venue.images count': venue?.images?.length || 0,
+    'venueData.images count': venueData.images?.length || 0,
+    'venue.images[0]': venue?.images?.[0],
+    'venueData.images[0]': venueData.images?.[0]
+  });
+  
+  // 🎯 FIX CRITICO: Leggi services e screens dalla risposta backend
+  const finalServices = venue?.services || venue?.data?.services || venueData.services || venueData.facilities?.services || [];
+  const finalScreens = venue?.screens || venue?.data?.screens || venueData.screens || venueData.facilities?.screens;
+  
+  console.log('🎯 FINAL VALUES:', {
+    finalServices,
+    finalScreens
+  });
+  
+  // 🎯 DEBUG DESCRIZIONE
+  console.log('📋 DESCRIPTION DEBUG:', {
+    'venue.description': venue?.description,
+    'venueData.description': venueData.description,
+    'venue.data.description': venue?.data?.description
+  });
+  
+  const allClosed = rawHoursObj && Object.values(rawHoursObj).every((h: any) => h?.closed || (!h?.open && !h?.close));
+  const hoursForView = !allClosed && Object.keys(rawHoursObj).length > 0
+    ? rawHoursObj
+    : buildHoursFromOpeningArray(venueData.openingHours || []);
+
+  const fullAddress = venueData?.address 
+    ? `${venueData.address}, ${venueData.city || ''}` 
+    : venueData?.location?.address?.street 
     ? `${venueData.location.address.street}, ${venueData.location.address.city}, ${venueData.location.address.postalCode}` 
     : 'Indirizzo non disponibile';
 
@@ -190,21 +283,40 @@ const VenueDetail = () => {
                     </div>
                   )}
                   
-                  {/* 🎯 INDIRIZZO */}
+                  {/* 🎯 LOCATION COMPLETA */}
                   <div className="flex items-center text-gray-600">
                     <MapPin className="h-4 w-4 mr-2" />
                     <span className="text-sm">{venueAddress}</span>
                   </div>
+                  
+                  {/* 🎯 NUOVO: CITTÀ PROMINENTE */}
+                  {venueData.location?.city && (
+                    <div className="flex items-center text-orange-600 bg-orange-50 px-3 py-1 rounded-full">
+                      <MapPin className="h-4 w-4 mr-2" />
+                      <span className="text-sm font-medium">{venueData.location.city}</span>
+                    </div>
+                  )}
+                  
+                  {/* 🎯 NUOVO: NUMERO SCHERMI */}
+                  {venueData.screens && venueData.screens > 0 && (
+                    <div className="flex items-center text-blue-600 bg-blue-50 px-3 py-1 rounded-full">
+                      <Monitor className="h-4 w-4 mr-2" />
+                      <span className="text-sm font-medium">
+                        {venueData.screens} Scherm{venueData.screens > 1 ? 'i' : 'o'}
+                      </span>
+                    </div>
+                  )}
                 </div>
               </div>
 
               {/* 🎯 CAROSELLO FOTO MIGLIORATO */}
-              {venueData.images && venueData.images.length > 0 && (
+              {/* 🎯 FIX FOTO: Leggi da venue.images per avere tutte */}
+              {allImages && allImages.length > 0 && (
                 <div className="mb-8">
                   <div className="relative">
                     <div className="aspect-video rounded-lg overflow-hidden bg-gray-200">
                       <img
-                        src={venueData.images[currentImageIndex] || '/placeholder.svg'}
+                        src={allImages[currentImageIndex]?.url || allImages[currentImageIndex] || '/placeholder.svg'}
                         alt={`${venueData.name} - Immagine ${currentImageIndex + 1}`}
                         className="w-full h-full object-cover"
                         onError={(e) => {
@@ -213,7 +325,7 @@ const VenueDetail = () => {
                         }}
                       />
                       
-                      {venueData.images.length > 1 && (
+                      {allImages.length > 1 && (
                         <>
                           <button
                             onClick={prevImage}
@@ -245,9 +357,9 @@ const VenueDetail = () => {
                     </div>
                     
                     {/* Thumbnails */}
-                    {venueData.images.length > 1 && (
+                    {allImages.length > 1 && (
                       <div className="flex space-x-2 mt-4 overflow-x-auto">
-                        {venueData.images.map((image: string, index: number) => (
+                        {allImages.map((image: any, index: number) => (
                           <button
                             key={index}
                             onClick={() => setCurrentImageIndex(index)}
@@ -256,7 +368,7 @@ const VenueDetail = () => {
                             }`}
                           >
                             <img
-                              src={image || '/placeholder.svg'}
+                              src={image?.url || image || '/placeholder.svg'}
                               alt={`Thumbnail ${index + 1}`}
                               className="w-full h-full object-cover"
                               onError={(e) => {
@@ -286,9 +398,10 @@ const VenueDetail = () => {
                     <h2 className="text-2xl font-bold text-gray-900 mb-4 uppercase tracking-tight">
                       Descrizione
                     </h2>
-                    {venueData.description ? (
+                    {/* 🎯 FIX DESCRIZIONE: Leggi da venue.description */}
+                    {(venue?.description || venueData.description) ? (
                       <p className="text-gray-700 leading-relaxed text-lg">
-                        {venueData.description}
+                        {venue?.description || venueData.description}
                       </p>
                     ) : (
                       <p className="text-gray-500 italic">
@@ -297,18 +410,40 @@ const VenueDetail = () => {
                     )}
                   </div>
 
-                  {venueData.amenities && venueData.amenities.length > 0 && (
+                  {/* 🎯 NUOVO: SERVIZI UNIFICATI */}
+                  {venueData.services && venueData.services.length > 0 ? (
                     <div>
-                      <h3 className="text-lg lg:text-xl font-bold text-gray-900 mb-3 lg:mb-4">Servizi</h3>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 lg:gap-4">
-                        {venueData.amenities.map((amenity: string, index: number) => (
-                          <div key={index} className="flex items-center space-x-3 bg-white p-3 lg:p-4 rounded-lg border border-gray-200">
-                            {getFeatureIcon(amenity)}
-                            <span className="font-medium text-gray-700 text-sm lg:text-base">{amenity}</span>
-                          </div>
-                        ))}
+                      <h3 className="text-lg lg:text-xl font-bold text-gray-900 mb-3 lg:mb-4">Servizi Disponibili</h3>
+                      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 lg:gap-4">
+                        {venueData.services.map((service: any, index: number) => {
+                          // Gestisci sia formato oggetto {id, name} che stringa semplice
+                          const serviceId = service.id || service;
+                          const serviceName = service.name || service;
+                          
+                          return (
+                            <div key={serviceId || index} className="flex items-center space-x-2 bg-green-50 p-3 rounded-lg border border-green-200">
+                              {getServiceIcon(serviceId)}
+                              <span className="font-medium text-green-800 text-sm lg:text-base">{serviceName}</span>
+                            </div>
+                          );
+                        })}
                       </div>
                     </div>
+                  ) : (
+                    // Fallback per features/amenities legacy
+                    (venueData.features && venueData.features.length > 0) || (venueData.amenities && venueData.amenities.length > 0) ? (
+                      <div>
+                        <h3 className="text-lg lg:text-xl font-bold text-gray-900 mb-3 lg:mb-4">Servizi</h3>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 lg:gap-4">
+                          {(venueData.features || venueData.amenities).map((amenity: string, index: number) => (
+                            <div key={index} className="flex items-center space-x-3 bg-white p-3 lg:p-4 rounded-lg border border-gray-200">
+                              {getFeatureIcon(amenity)}
+                              <span className="font-medium text-gray-700 text-sm lg:text-base">{amenity}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ) : null
                   )}
 
                   {/* Additional Venue Information */}
@@ -318,58 +453,102 @@ const VenueDetail = () => {
                       <h3 className="text-lg lg:text-xl font-bold text-gray-900 mb-3 lg:mb-4">Contatti e Informazioni</h3>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-3 lg:gap-4">
                         {venueData.phone && (
-                          <div className="flex items-center space-x-3 p-3 lg:p-4 bg-white rounded-lg border border-gray-200">
-                            <Phone className="h-4 lg:h-5 w-4 lg:w-5 text-orange-500 flex-shrink-0" />
-                            <div>
-                              <p className="font-medium text-gray-900 text-sm lg:text-base">Telefono</p>
-                              <a href={`tel:${venueData.phone}`} className="text-orange-600 hover:text-orange-700 text-sm lg:text-base">
+                          <div className="flex items-start space-x-4 p-4 bg-white rounded-xl border border-neutral-200 shadow-sm">
+                            <Phone className="h-5 w-5 text-neutral-600 mt-0.5 flex-shrink-0" />
+                            <div className="flex-1 min-w-0">
+                              <p className="font-semibold text-neutral-900 text-sm mb-1">Telefono</p>
+                              <a 
+                                href={`tel:${venueData.phone}`} 
+                                className="text-emerald-600 hover:text-emerald-700 text-sm block leading-relaxed"
+                                style={{background: 'transparent', backgroundColor: 'transparent'}}
+                              >
                                 {venueData.phone}
                               </a>
                             </div>
                           </div>
                         )}
-                        {venueData.website && (
-                          <div className="flex items-center space-x-3 p-3 lg:p-4 bg-white rounded-lg border border-gray-200">
-                            <svg className="h-4 lg:h-5 w-4 lg:w-5 text-orange-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        {/* Website */}
+                        {(venueData.website || venueData.contact?.website) && (
+                          <div className="flex items-start space-x-4 p-4 bg-white rounded-xl border border-neutral-200 shadow-sm">
+                            <svg className="h-5 w-5 text-neutral-600 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9v-9m0-9v9" />
                             </svg>
-                            <div>
-                              <p className="font-medium text-gray-900 text-sm lg:text-base">Sito Web</p>
-                              <a href={venueData.website} target="_blank" rel="noopener noreferrer" className="text-orange-600 hover:text-orange-700 text-sm lg:text-base">
+                            <div className="flex-1 min-w-0">
+                              <p className="font-semibold text-neutral-900 text-sm mb-1">Sito Web</p>
+                              <a 
+                                href={venueData.website || venueData.contact?.website} 
+                                target="_blank" 
+                                rel="noopener noreferrer" 
+                                className="text-emerald-600 hover:text-emerald-700 text-sm block leading-relaxed"
+                                style={{background: 'transparent', backgroundColor: 'transparent'}}
+                              >
                                 Visita il sito
                               </a>
                             </div>
                           </div>
                         )}
                         {fullAddress && (
-                          <div className="flex items-start space-x-3 p-3 lg:p-4 bg-white rounded-lg border border-gray-200">
-                            <MapPin className="h-4 lg:h-5 w-4 lg:w-5 text-orange-500 mt-0.5 flex-shrink-0" />
-                            <div>
-                              <p className="font-medium text-gray-900 text-sm lg:text-base">Indirizzo</p>
-                              <p className="text-gray-600 text-sm lg:text-base">{fullAddress}</p>
+                          <div className="flex items-start space-x-4 p-4 bg-white rounded-xl border border-neutral-200 shadow-sm">
+                            <MapPin className="h-5 w-5 text-neutral-600 mt-0.5 flex-shrink-0" />
+                            <div className="flex-1 min-w-0">
+                              <p className="font-semibold text-neutral-900 text-sm mb-1">Indirizzo</p>
+                              <p className="text-neutral-600 text-sm leading-relaxed mb-2" style={{background: 'transparent', backgroundColor: 'transparent'}}>{fullAddress}</p>
                               <button 
                                 onClick={() => window.open(`https://maps.google.com/?q=${encodeURIComponent(fullAddress)}`, '_blank')} 
-                                className="text-orange-600 hover:text-orange-700 text-xs lg:text-sm font-medium mt-1"
+                                className="text-emerald-600 hover:text-emerald-700 text-xs font-medium"
+                                style={{background: 'transparent', backgroundColor: 'transparent'}}
                               >
                                 Apri in Google Maps
                               </button>
                             </div>
                           </div>
                         )}
-                        {venueData.capacity && (
-                          <div className="flex items-center space-x-3 p-3 lg:p-4 bg-white rounded-lg border border-gray-200">
-                            <Users className="h-4 lg:h-5 w-4 lg:w-5 text-orange-500 flex-shrink-0" />
-                            <div>
-                              <p className="font-medium text-gray-900 text-sm lg:text-base">Capacità</p>
-                              <p className="text-gray-600 text-sm lg:text-base">{venueData.capacity} persone</p>
-                            </div>
-                          </div>
-                        )}
+
                       </div>
                     </div>
 
+                    {/* 🗺️ DOVE TROVARCI - MAPPA INTERATTIVA */}
+                    <Card className="bg-white border-gray-200 shadow-sm">
+                      <CardHeader className="pb-3">
+                        <div className="flex items-center justify-between">
+                          <CardTitle className="text-xl font-bold text-gray-900 uppercase tracking-tight">
+                            Dove Trovarci
+                          </CardTitle>
+                          <div className="flex items-center gap-1 text-xs text-gray-500">
+                            <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
+                            <span>Mappa interattiva</span>
+                          </div>
+                        </div>
+                      </CardHeader>
+                      <CardContent className="p-0">
+                        <Suspense fallback={
+                          <div className="h-80 bg-gray-50 rounded-lg mx-6 mb-6 flex items-center justify-center">
+                            <div className="text-center">
+                              <div className="animate-spin rounded-full h-8 w-8 border-2 border-orange-500 border-t-transparent mx-auto mb-2"></div>
+                              <p className="text-sm text-gray-500">Caricamento mappa...</p>
+                            </div>
+                          </div>
+                        }>
+                          <div className="relative rounded-lg overflow-hidden mx-6 mb-6">
+                            <VenueMap
+                              venue={{
+                                name: venueData.name,
+                                address: fullAddress,
+                                phone: venueData.phone,
+                                coordinates: venueData.coordinates
+                              }}
+                              height="340px"
+                              className="rounded-lg"
+                              showDirections={true}
+                              zoom={16}
+                            />
+                          </div>
+                        </Suspense>
+                      </CardContent>
+                    </Card>
+
                     {/* 🎯 ORARI DI APERTURA - STILE ADMIN */}
-                    {venueData.hours && (
+                    {hoursForView && Object.keys(hoursForView).length > 0 && (
                       <Card className="bg-white">
                         <CardHeader className="pb-4">
                           <CardTitle className="text-xl font-bold text-gray-900 uppercase tracking-tight">
@@ -378,70 +557,42 @@ const VenueDetail = () => {
                         </CardHeader>
                         <CardContent>
                           <div className="space-y-3">
-                            {Object.entries(venueData.hours).map(([day, hours]) => {
+                            {Object.entries(hoursForView).map(([day, hours]) => {
                               const dayLabels = {
-                                monday: 'Lunedì',
-                                tuesday: 'Martedì', 
-                                wednesday: 'Mercoledì',
-                                thursday: 'Giovedì',
-                                friday: 'Venerdì',
-                                saturday: 'Sabato',
-                                sunday: 'Domenica'
+                                monday: 'MON',
+                                tuesday: 'TUE', 
+                                wednesday: 'WED',
+                                thursday: 'THU',
+                                friday: 'FRI',
+                                saturday: 'SAT',
+                                sunday: 'SUN'
                               };
                               
-                              const isToday = new Date().toLocaleDateString('en-US', { weekday: 'lowercase' }) === day;
+                              // 🎯 FIX: Confronto corretto per "oggi"
+                              const today = new Date();
+                              const todayDayName = today.toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase();
+                              const isToday = day.toLowerCase() === todayDayName;
                               const isClosed = hours?.closed || (!hours?.open && !hours?.close);
                               
                               return (
-                                <div key={day} className="flex items-center justify-between py-3 px-4 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors">
-                                  <div className="flex items-center space-x-3">
-                                    <div className={`w-20 font-semibold ${
-                                      isToday ? 'text-orange-900' : 'text-gray-900'
-                                    }`}>
-                                      {dayLabels[day] || day}
-                                    </div>
-                                    {isToday && (
-                                      <span className="px-2 py-1 bg-orange-500 text-white text-xs rounded-full font-medium">
-                                        Oggi
-                                      </span>
-                                    )}
+                                <div key={day} className="flex items-center space-x-4">
+                                  <div className="w-20 font-semibold text-gray-900">
+                                    {dayLabels[day] || day.toUpperCase()}
                                   </div>
                                   <div className="flex items-center space-x-2">
                                     {isClosed ? (
-                                      <span className="px-3 py-1 bg-red-100 text-red-700 rounded-md font-medium text-sm">
+                                      <span className="text-neutral-500 text-sm">
                                         Chiuso
                                       </span>
                                     ) : (
-                                      <div className="flex items-center space-x-2">
-                                        <span className={`px-3 py-1 rounded-md font-medium text-sm ${
-                                          isToday ? 'bg-orange-100 text-orange-800' : 'bg-green-100 text-green-800'
-                                        }`}>
-                                          {hours.open}
-                                        </span>
-                                        <span className="text-gray-500">-</span>
-                                        <span className={`px-3 py-1 rounded-md font-medium text-sm ${
-                                          isToday ? 'bg-orange-100 text-orange-800' : 'bg-green-100 text-green-800'
-                                        }`}>
-                                          {hours.close}
-                                        </span>
-                                        {isToday && (
-                                          <span className={`ml-2 text-xs font-medium ${
-                                            (() => {
-                                              const now = new Date();
-                                              const currentTime = now.toTimeString().substring(0, 5);
-                                              const isOpen = currentTime >= hours.open && currentTime <= hours.close;
-                                              return isOpen ? 'text-green-600' : 'text-red-600';
-                                            })()
-                                          }`}>
-                                            {(() => {
-                                              const now = new Date();
-                                              const currentTime = now.toTimeString().substring(0, 5);
-                                              const isOpen = currentTime >= hours.open && currentTime <= hours.close;
-                                              return isOpen ? '🟢 Aperto' : '🔴 Chiuso';
-                                            })()}
-                                          </span>
-                                        )}
-                                      </div>
+                                      <span className="text-neutral-700 text-sm">
+                                        {hours.open} - {hours.close}
+                                      </span>
+                                    )}
+                                    {isToday && (
+                                      <span className="ml-2 px-2 py-1 bg-neutral-100 text-neutral-700 text-xs rounded border font-medium">
+                                        OGGI
+                                      </span>
                                     )}
                                   </div>
                                 </div>
@@ -509,6 +660,46 @@ const VenueDetail = () => {
                                 ))}
                               </div>
                               <p className="text-gray-600 mt-1 text-sm lg:text-base">su {venueData.totalReviews || 0} recensioni</p>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* 🎯 NUOVO: SERVIZI DISPONIBILI */}
+                    {finalServices && finalServices.length > 0 && (
+                      <div>
+                        <h3 className="text-lg lg:text-xl font-bold text-gray-900 mb-3 lg:mb-4">Servizi Disponibili</h3>
+                        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 lg:gap-4">
+                          {finalServices.map((service: any, index: number) => {
+                            const serviceId = service.id || service;
+                            const serviceName = service.name || service;
+                            
+                            return (
+                              <div key={serviceId || index} className="flex items-center space-x-2 bg-green-50 p-3 rounded-lg border border-green-200">
+                                {getServiceIcon(serviceId)}
+                                <span className="font-medium text-green-800 text-sm lg:text-base">{serviceName}</span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* 🎯 NUOVO: NUMERO SCHERMI */}
+                    {finalScreens && finalScreens > 0 && (
+                      <div>
+                        <h3 className="text-lg lg:text-xl font-bold text-gray-900 mb-3 lg:mb-4">Informazioni Struttura</h3>
+                        <div className="bg-white rounded-lg border border-gray-200 p-4 lg:p-6">
+                          <div className="flex items-center space-x-4">
+                            <div className="w-16 h-16 bg-vinaccia-500 text-white rounded-full flex items-center justify-center">
+                              <Monitor className="h-8 w-8" />
+                            </div>
+                            <div>
+                              <div className="text-2xl font-bold text-gray-900">{finalScreens}</div>
+                              <div className="text-gray-600">
+                                {finalScreens === 1 ? 'Schermo Disponibile' : 'Schermi Disponibili'}
+                              </div>
                             </div>
                           </div>
                         </div>

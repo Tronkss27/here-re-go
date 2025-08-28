@@ -1,0 +1,461 @@
+[
+  {
+    "id": "TC001",
+    "title": "User Authentication Success for All Roles",
+    "description": "Verify that users with client, venue_owner, and admin roles can successfully authenticate using valid credentials and receive appropriate JWT tokens granting access rights.",
+    "category": "functional",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to login endpoint"
+      },
+      {
+        "type": "action",
+        "description": "Submit valid credentials for client role"
+      },
+      {
+        "type": "assertion",
+        "description": "Receive valid JWT token with client role claims"
+      },
+      {
+        "type": "action",
+        "description": "Submit valid credentials for venue_owner role"
+      },
+      {
+        "type": "assertion",
+        "description": "Receive valid JWT token with venue_owner role claims"
+      },
+      {
+        "type": "action",
+        "description": "Submit valid credentials for admin role"
+      },
+      {
+        "type": "assertion",
+        "description": "Receive valid JWT token with admin role claims"
+      }
+    ]
+  },
+  {
+    "id": "TC002",
+    "title": "User Authentication Failure with Invalid Credentials",
+    "description": "Verify that submitting invalid credentials prevents authentication and returns appropriate error messages without issuing JWT tokens.",
+    "category": "error handling",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to login endpoint"
+      },
+      {
+        "type": "action",
+        "description": "Submit invalid username and password"
+      },
+      {
+        "type": "assertion",
+        "description": "Receive authentication failure response and no JWT token is issued"
+      }
+    ]
+  },
+  {
+    "id": "TC003",
+    "title": "Venue Owner Multi-step Registration with Valid Data",
+    "description": "Verify venue owner can complete multi-step registration with valid inputs including email verification, photo uploads, and facility selections resulting in successful onboarding.",
+    "category": "functional",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to venue owner registration page"
+      },
+      {
+        "type": "action",
+        "description": "Complete basic info form with valid business details"
+      },
+      {
+        "type": "assertion",
+        "description": "Proceed to next step without validation errors"
+      },
+      {
+        "type": "action",
+        "description": "Upload multiple valid photos for the venue"
+      },
+      {
+        "type": "assertion",
+        "description": "Photos are uploaded successfully with correct preview"
+      },
+      {
+        "type": "action",
+        "description": "Select multiple facilities from provided options"
+      },
+      {
+        "type": "assertion",
+        "description": "Facilities are recorded correctly"
+      },
+      {
+        "type": "action",
+        "description": "Submit completed registration form"
+      },
+      {
+        "type": "assertion",
+        "description": "Receive onboarding confirmation and email verification prompt"
+      },
+      {
+        "type": "action",
+        "description": "Complete email verification process"
+      },
+      {
+        "type": "assertion",
+        "description": "User status changes to onboarded venue_owner with access to venue management"
+      }
+    ]
+  },
+  {
+    "id": "TC004",
+    "title": "Venue Owner Registration Validation Errors Handling",
+    "description": "Verify form validation displays appropriate error messages for invalid or missing fields during venue owner multi-step registration.",
+    "category": "error handling",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Attempt to proceed without filling mandatory basic info fields"
+      },
+      {
+        "type": "assertion",
+        "description": "Display validation errors highlighting required fields"
+      },
+      {
+        "type": "action",
+        "description": "Upload invalid file types or unsupported image formats in photo upload step"
+      },
+      {
+        "type": "assertion",
+        "description": "Show error messages specifying allowed formats and rejections"
+      },
+      {
+        "type": "action",
+        "description": "Submit multi-step registration with incomplete facility selections when required"
+      },
+      {
+        "type": "assertion",
+        "description": "Display appropriate error prompt urging facility selection"
+      }
+    ]
+  },
+  {
+    "id": "TC005",
+    "title": "Client Simplified Registration and Login",
+    "description": "Validate that a new client can register via the simplified workflow and subsequently log in successfully with issued JWT token.",
+    "category": "functional",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to client registration page"
+      },
+      {
+        "type": "action",
+        "description": "Provide valid user details and submit registration form"
+      },
+      {
+        "type": "assertion",
+        "description": "Client account is created successfully"
+      },
+      {
+        "type": "action",
+        "description": "Login with newly created client credentials"
+      },
+      {
+        "type": "assertion",
+        "description": "Receive valid JWT token with client role claims"
+      }
+    ]
+  },
+  {
+    "id": "TC006",
+    "title": "Homepage Hot Matches Display and Day Navigation",
+    "description": "Check homepage displays current hot matches and allows user to navigate matches by day, updating venue recommendations accordingly.",
+    "category": "functional",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to homepage"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify hot matches are displayed prominently for current day"
+      },
+      {
+        "type": "action",
+        "description": "Use day navigation controls to browse different match days"
+      },
+      {
+        "type": "assertion",
+        "description": "Matches and venue listings update dynamically according to selected day"
+      }
+    ]
+  },
+  {
+    "id": "TC007",
+    "title": "Venue Search with Filters and Map Integration",
+    "description": "Verify venue listing page supports search by location, filtering by facilities or match hosting, and proper functioning of map integration showing venue locations.",
+    "category": "functional",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to venue listing page"
+      },
+      {
+        "type": "action",
+        "description": "Enter a location query and apply filters (e.g., facility types, match hosting status)"
+      },
+      {
+        "type": "assertion",
+        "description": "Venue list updates to match criteria"
+      },
+      {
+        "type": "assertion",
+        "description": "Map displays markers corresponding to filtered venues"
+      },
+      {
+        "type": "action",
+        "description": "Click venue markers on map"
+      },
+      {
+        "type": "assertion",
+        "description": "Venue details preview or navigation triggered appropriately"
+      }
+    ]
+  },
+  {
+    "id": "TC008",
+    "title": "Venue Detail Page Display and Photo Carousel",
+    "description": "Validate venue detail page shows venue info, photo carousel works including multi-photo uploads, and match announcements are displayed correctly.",
+    "category": "functional",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Open a venue detail page"
+      },
+      {
+        "type": "assertion",
+        "description": "Venue business info, address, and facilities are visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Photo carousel loads all uploaded images and is navigable with controls"
+      },
+      {
+        "type": "assertion",
+        "description": "Match announcements linked to this venue are displayed"
+      }
+    ]
+  },
+  {
+    "id": "TC009",
+    "title": "Booking System - Match-specific Table Reservations",
+    "description": "Verify clients can submit booking requests for tables specific to a sports match, and system validates inputs and reserves appropriately.",
+    "category": "functional",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to venue detail page containing booking form"
+      },
+      {
+        "type": "action",
+        "description": "Complete booking form selecting match, desired date/time, table count, and client info"
+      },
+      {
+        "type": "assertion",
+        "description": "Form validates all fields successfully"
+      },
+      {
+        "type": "action",
+        "description": "Submit booking request"
+      },
+      {
+        "type": "assertion",
+        "description": "Booking is confirmed and stored correctly with venue and match association"
+      }
+    ]
+  },
+  {
+    "id": "TC010",
+    "title": "Booking Form Validation and Error Handling",
+    "description": "Confirm that booking forms detect missing or invalid input fields and display appropriate error messages without submitting invalid data.",
+    "category": "error handling",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Open booking form without selecting mandatory match or date"
+      },
+      {
+        "type": "assertion",
+        "description": "Validation errors prevent submission and highlight missing fields"
+      },
+      {
+        "type": "action",
+        "description": "Enter invalid data (e.g., negative table count, past date) in booking form"
+      },
+      {
+        "type": "assertion",
+        "description": "Form displays detailed validation messages indicating correct input requirements"
+      }
+    ]
+  },
+  {
+    "id": "TC011",
+    "title": "Admin Dashboard User and Venue Management",
+    "description": "Verify that admin users can access dashboard features including viewing user lists, venue listings, managing bookings and matches with proper role-based authorization.",
+    "category": "functional",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Login as admin user"
+      },
+      {
+        "type": "action",
+        "description": "Navigate to admin dashboard"
+      },
+      {
+        "type": "assertion",
+        "description": "Dashboard displays sections for users, venues, bookings and matches"
+      },
+      {
+        "type": "action",
+        "description": "Attempt to edit user, venue, booking, and match records"
+      },
+      {
+        "type": "assertion",
+        "description": "Records update successfully and changes reflect in listings"
+      }
+    ]
+  },
+  {
+    "id": "TC012",
+    "title": "Multi-Tenant Data Isolation Enforcement",
+    "description": "Ensure that venue-specific data is isolated per tenant, such that users and venue owners can access only their own data, verified on backend and API layers.",
+    "category": "security",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Login as venue owner for tenant A"
+      },
+      {
+        "type": "action",
+        "description": "Attempt to access venue data belonging to tenant B"
+      },
+      {
+        "type": "assertion",
+        "description": "Access is denied or data is not returned confirming tenant data isolation"
+      },
+      {
+        "type": "action",
+        "description": "Verify API responses contain data only associated with authenticated tenant"
+      },
+      {
+        "type": "assertion",
+        "description": "Data segregation enforcement confirmed"
+      }
+    ]
+  },
+  {
+    "id": "TC013",
+    "title": "UI Color Palette Compliance and Accessibility",
+    "description": "Verify that UI adheres to Gazzetta dello Sport color palette and meets WCAG 2.1 AA standards for color contrast, keyboard navigation, and screen reader accessibility.",
+    "category": "ui",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Run automated color palette audit on key screens and components"
+      },
+      {
+        "type": "assertion",
+        "description": "UI uses specified CSS variables and color codes matching brand guidelines"
+      },
+      {
+        "type": "action",
+        "description": "Test keyboard navigation across forms, menus, and interactive controls"
+      },
+      {
+        "type": "assertion",
+        "description": "All interactive elements are reachable and operable via keyboard"
+      },
+      {
+        "type": "action",
+        "description": "Use screen reader to navigate major UI screens"
+      },
+      {
+        "type": "assertion",
+        "description": "All important content and controls are announced clearly and logically"
+      }
+    ]
+  },
+  {
+    "id": "TC014",
+    "title": "Performance Benchmarks Verification",
+    "description": "Confirm that key pages meet loading time and interactivity performance requirements: LCP <2.5s, FID <100ms, CLS <0.1 across supported browsers.",
+    "category": "performance",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Measure Largest Contentful Paint (LCP) on homepage, venue listing, and detail pages"
+      },
+      {
+        "type": "assertion",
+        "description": "LCP is below 2.5 seconds for each tested page"
+      },
+      {
+        "type": "action",
+        "description": "Measure First Input Delay (FID) responding to user interactions in booking forms"
+      },
+      {
+        "type": "assertion",
+        "description": "FID is below 100ms"
+      },
+      {
+        "type": "action",
+        "description": "Analyze Cumulative Layout Shift (CLS) during page load and dynamic content inserts"
+      },
+      {
+        "type": "assertion",
+        "description": "CLS score remains below 0.1 ensuring stable UI"
+      }
+    ]
+  },
+  {
+    "id": "TC015",
+    "title": "Cross-Browser Compatibility Testing",
+    "description": "Validate platform functionality and UI rendering on latest versions of Chrome, Safari, Firefox, and Edge browsers to confirm consistent user experience.",
+    "category": "functional",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Access key user flows (login, registration, booking, venue browsing) on Chrome"
+      },
+      {
+        "type": "assertion",
+        "description": "All flows work without UI or functional defects"
+      },
+      {
+        "type": "action",
+        "description": "Repeat above flows on Safari, Firefox, and Edge"
+      },
+      {
+        "type": "assertion",
+        "description": "Functional parity and UI consistency verified across all browsers"
+      }
+    ]
+  }
+]

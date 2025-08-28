@@ -1,0 +1,11 @@
+# Task ID: 5
+# Title: Sports Fixtures Management
+# Status: done
+# Dependencies: 3, 4
+# Priority: medium
+# Description: Sistema ibrido per gestione partite: database locale + API-Football integration
+# Details:
+FixturesService dual-source: database locale 20+ partite popolari, API-Football integration, caching intelligente, ricerca multi-criteria, fallback automatico, gestione canali TV (DAZN, Sky)
+
+# Test Strategy:
+Test ricerca partite, verifica fallback API, performance caching, integrazione API-Football

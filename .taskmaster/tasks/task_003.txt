@@ -1,0 +1,11 @@
+# Task ID: 3
+# Title: Database Design & Models
+# Status: done
+# Dependencies: 1
+# Priority: high
+# Description: Progettare e implementare schema database MongoDB per tutti i data models
+# Details:
+Modelli MongoDB: User, Venue, Booking, Fixture, Offer, Review. Schemi JSON definiti nel PRD, indici per performance, validazione dati, connection pooling, migration scripts
+
+# Test Strategy:
+Test CRUD operations, verifica validazione schemi, performance queries, test connessione database

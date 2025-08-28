@@ -121,21 +121,19 @@ const Header = () => {
                   <Button
                     onClick={() => navigate('/sports-login')}
                     size="sm"
-                    className="bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white font-semibold px-4 py-2 flex items-center space-x-2"
+                    className="btn-primary px-3 py-1 text-xs"
                   >
-                    <Building2 size={16} />
-                    <span>Accedi come Locale</span>
+                    <Building2 size={12} className="mr-1" />
+                    Accedi come Locale
                   </Button>
-
-                  {/* 🎯 BOTTONE CLIENT/USERS - Con icona distintiva */}
                   <Button
                     onClick={() => navigate('/client-login')}
                     size="sm"
                     variant="outline"
-                    className="text-white border-white hover:bg-white hover:text-gray-900 px-4 py-2 flex items-center space-x-2"
+                    className="btn-secondary px-3 py-1 text-xs"
                   >
-                    <Users size={16} />
-                    <span>Accedi come Cliente</span>
+                    <Users size={12} className="mr-1" />
+                    Accedi come Cliente
                   </Button>
                 </div>
               )}

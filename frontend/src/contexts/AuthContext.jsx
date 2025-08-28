@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useReducer, useEffect } from 'react'
-import { apiClient, API_ENDPOINTS } from '../services/index.js'
+import { apiClient, apiConfig } from '../services/index.js'
 
 // Stato iniziale dell'autenticazione
 const initialState = {
@@ -156,7 +156,7 @@ export const AuthProvider = ({ children }) => {
         if (token && user) {
           // Verifica se il token è ancora valido
           try {
-            const response = await apiClient.get(API_ENDPOINTS.AUTH.VERIFY)
+            const response = await apiClient.get(apiConfig.API_ENDPOINTS.AUTH.VERIFY)
             
             dispatch({
               type: authActions.LOGIN_SUCCESS,
@@ -187,7 +187,7 @@ export const AuthProvider = ({ children }) => {
     try {
       dispatch({ type: authActions.SET_LOADING, payload: true })
 
-      const data = await apiClient.post(API_ENDPOINTS.AUTH.LOGIN, { email, password }, { includeAuth: false })
+      const data = await apiClient.post(apiConfig.API_ENDPOINTS.AUTH.LOGIN, { email, password }, { includeAuth: false })
 
       // Se è un venue owner e abbiamo dati del venue, aggiungiamoli al user
       let userWithVenue = data.user
@@ -233,7 +233,7 @@ export const AuthProvider = ({ children }) => {
     try {
       dispatch({ type: authActions.SET_LOADING, payload: true })
 
-      const data = await apiClient.post(API_ENDPOINTS.AUTH.REGISTER, userData, { includeAuth: false })
+      const data = await apiClient.post(apiConfig.API_ENDPOINTS.AUTH.REGISTER, userData, { includeAuth: false })
 
       // ✅ FIX: Se è un venue owner e abbiamo dati del venue, aggiungiamoli al user
       let userWithVenue = data.user
@@ -283,7 +283,7 @@ export const AuthProvider = ({ children }) => {
     try {
       dispatch({ type: authActions.SET_LOADING, payload: true })
 
-      const data = await apiClient.post(API_ENDPOINTS.AUTH.DEMO, {}, { includeAuth: false })
+      const data = await apiClient.post(apiConfig.API_ENDPOINTS.AUTH.DEMO, {}, { includeAuth: false })
       
       const normalizedUser = normalizeUserObject(data.user);
 

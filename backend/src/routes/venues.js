@@ -19,8 +19,8 @@ const createVenueValidation = [
     .withMessage('Valid email is required'),
   
   body('contact.phone')
-    .isMobilePhone()
-    .withMessage('Valid phone number is required'),
+    .isMobilePhone('it-IT')
+    .withMessage('Valid Italian phone number is required'),
   
   body('location.address.street')
     .trim()
@@ -39,7 +39,24 @@ const createVenueValidation = [
   
   body('capacity.total')
     .isInt({ min: 1, max: 1000 })
-    .withMessage('Total capacity must be between 1 and 1000')
+    .withMessage('Total capacity must be between 1 and 1000'),
+
+  // ✅ Nuovo: validazione opzionale maxReservations
+  body('capacity.maxReservations')
+    .optional()
+    .isInt({ min: 1, max: 500 })
+    .withMessage('Max reservations must be between 1 and 500'),
+
+  // ✅ AGGIUNTO: Validazione facilities
+  body('facilities.screens')
+    .optional()
+    .isInt({ min: 1, max: 100 })
+    .withMessage('Screens must be between 1 and 100'),
+  
+  body('facilities.services')
+    .optional()
+    .isArray()
+    .withMessage('Services must be an array')
 ]
 
 const updateVenueValidation = [
@@ -56,8 +73,8 @@ const updateVenueValidation = [
   
   body('contact.phone')
     .optional()
-    .isMobilePhone()
-    .withMessage('Valid phone number is required')
+    .isMobilePhone('it-IT')
+    .withMessage('Valid Italian phone number is required')
 ]
 
 // ================================
@@ -97,6 +114,14 @@ router.get('/details/:id', optionalAuth, venueController.getPublicVenue)
 // @access  Public
 router.get('/with-announcements', venueController.getVenuesWithAnnouncements)
 
+// @route   GET /api/venues/:id/announcements
+// @desc    Get all announcements for a specific public venue
+// @access  Public
+router.get('/:id/announcements', [
+  param('id').isMongoId().withMessage('Valid venue ID is required')
+], venueController.getPublicVenueAnnouncements)
+
+
 // @route   GET /api/venues/debug-tenant
 // @desc    Debug tenant info (TEMPORARY)
 // @access  Public
@@ -128,6 +153,17 @@ router.get('/debug-tenant',
 // ================================
 // 🔐 ROUTE PRIVATE (REQUIRE AUTH)
 // ================================
+
+// @route   POST /api/venues/admin/migrate-canonical
+// @desc    Relinka annunci al venue canonico e disattiva duplicati del tenant
+// @access  Private (Admin)
+router.post(
+  '/admin/migrate-canonical',
+  TenantMiddleware.extractTenant,
+  TenantMiddleware.requireTenant,
+  auth,
+  venueController.migrateCanonicalForTenant
+)
 
 // @route   POST /api/venues/test
 // @desc    Test venue creation without auth (TEMPORARY)
@@ -307,5 +343,16 @@ router.get(
   ],
   venueController.getVenueById
 )
+
+// @route   POST /api/venues/admin/geocode-batch
+// @desc    Geocoding automatico per venue senza coordinate  
+// @access  Private (Admin)
+router.post(
+  '/admin/geocode-batch',
+  TenantMiddleware.extractTenant,
+  TenantMiddleware.requireTenant,
+  auth,
+  venueController.geocodeBatchVenues
+);
 
 module.exports = router 

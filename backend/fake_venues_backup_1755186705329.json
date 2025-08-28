@@ -1,0 +1,349 @@
+[
+  {
+    "_id": "6883b1fd7c09bda575e42113",
+    "tenantId": "6883b1fd7c09bda575e42111",
+    "name": "sportive",
+    "owner": "6883b1fd7c09bda575e4210f",
+    "contact": {
+      "email": "sportive@gmail.com",
+      "phone": "234323432354"
+    },
+    "location": {
+      "address": {
+        "street": "sportive 12",
+        "city": "Milano",
+        "postalCode": "20121",
+        "country": "Italy"
+      },
+      "coordinates": {
+        "latitude": 45.4673,
+        "longitude": 9.1815
+      }
+    },
+    "hours": {
+      "monday": {
+        "closed": false
+      },
+      "tuesday": {
+        "closed": false
+      },
+      "wednesday": {
+        "closed": false
+      },
+      "thursday": {
+        "closed": false
+      },
+      "friday": {
+        "closed": false
+      },
+      "saturday": {
+        "closed": false
+      },
+      "sunday": {
+        "closed": false
+      }
+    },
+    "capacity": {
+      "total": 50,
+      "outdoor": 0
+    },
+    "features": [],
+    "bookingSettings": {
+      "enabled": true,
+      "requiresApproval": false,
+      "advanceBookingDays": 30,
+      "minimumPartySize": 1,
+      "maximumPartySize": 10,
+      "timeSlotDuration": 120
+    },
+    "pricing": {
+      "basePrice": 0,
+      "pricePerPerson": 0,
+      "minimumSpend": 0,
+      "currency": "EUR"
+    },
+    "status": "approved",
+    "isVerified": false,
+    "isActive": true,
+    "analytics": {
+      "totalBookings": 0,
+      "totalReviews": 0,
+      "averageRating": 0,
+      "viewCount": 0
+    },
+    "images": [
+      {
+        "url": "/uploads/venues/venue-6883b1fd7c09bda575e42113-1753461263097-586301371.png",
+        "caption": "",
+        "isMain": true,
+        "uploadedAt": "2025-07-25T16:34:23.274Z",
+        "_id": "6883b20f7c09bda575e4211e"
+      }
+    ],
+    "sportsOfferings": [],
+    "createdAt": "2025-07-25T16:34:05.814Z",
+    "updatedAt": "2025-07-25T16:34:23.276Z",
+    "slug": "sportive-e42113",
+    "__v": 1,
+    "coordinates": {
+      "latitude": 45.4673,
+      "longitude": 9.1815
+    }
+  },
+  {
+    "_id": "6883b3567c09bda575e4224f",
+    "tenantId": "6883b3567c09bda575e4224d",
+    "name": "sportive11",
+    "owner": "6883b3567c09bda575e4224b",
+    "contact": {
+      "email": "sportive11@gmail.com",
+      "phone": "12343234321"
+    },
+    "location": {
+      "address": {
+        "street": "sportive11",
+        "city": "Milano",
+        "postalCode": "20122",
+        "country": "Italy"
+      },
+      "coordinates": {
+        "latitude": 45.4908,
+        "longitude": 9.2076
+      }
+    },
+    "hours": {
+      "monday": {
+        "closed": false
+      },
+      "tuesday": {
+        "closed": false
+      },
+      "wednesday": {
+        "closed": false
+      },
+      "thursday": {
+        "closed": false
+      },
+      "friday": {
+        "closed": false
+      },
+      "saturday": {
+        "closed": false
+      },
+      "sunday": {
+        "closed": false
+      }
+    },
+    "capacity": {
+      "total": 50,
+      "outdoor": 0
+    },
+    "features": [],
+    "bookingSettings": {
+      "enabled": true,
+      "requiresApproval": false,
+      "advanceBookingDays": 30,
+      "minimumPartySize": 1,
+      "maximumPartySize": 10,
+      "timeSlotDuration": 120
+    },
+    "pricing": {
+      "basePrice": 0,
+      "pricePerPerson": 0,
+      "minimumSpend": 0,
+      "currency": "EUR"
+    },
+    "status": "approved",
+    "isVerified": false,
+    "isActive": true,
+    "analytics": {
+      "totalBookings": 0,
+      "totalReviews": 0,
+      "averageRating": 0,
+      "viewCount": 0
+    },
+    "images": [
+      {
+        "url": "/uploads/venues/venue-6883b3567c09bda575e4224f-1753461598704-628802703.png",
+        "caption": "",
+        "isMain": true,
+        "uploadedAt": "2025-07-25T16:39:58.840Z",
+        "_id": "6883b35e7c09bda575e4225a"
+      }
+    ],
+    "sportsOfferings": [],
+    "createdAt": "2025-07-25T16:39:50.774Z",
+    "updatedAt": "2025-07-25T16:39:58.841Z",
+    "slug": "sportive11-e4224f",
+    "__v": 1,
+    "coordinates": {
+      "latitude": 45.4908,
+      "longitude": 9.2076
+    }
+  },
+  {
+    "_id": "6883b3607c09bda575e42261",
+    "tenantId": "6883b3567c09bda575e4224d",
+    "name": "sportive11",
+    "owner": "6883b3567c09bda575e4224b",
+    "contact": {
+      "email": "sportive11@gmail.com",
+      "phone": "12343234321",
+      "website": ""
+    },
+    "location": {
+      "address": {
+        "street": "sportive11",
+        "city": "Milano",
+        "postalCode": "20122",
+        "country": "Italy"
+      },
+      "coordinates": {
+        "latitude": 45.4502,
+        "longitude": 9.2051
+      }
+    },
+    "capacity": {
+      "total": 5
+    },
+    "features": [],
+    "images": [
+      {
+        "url": "http:&#x2F;&#x2F;localhost:3001&#x2F;uploads&#x2F;venues&#x2F;venue-6883b3607c09bda575e42261-1753461645114-436987471.jpg",
+        "isMain": true,
+        "_id": "6883b38e7c09bda575e42294",
+        "uploadedAt": "2025-07-25T16:40:46.586Z"
+      }
+    ],
+    "sportsOfferings": [
+      {
+        "sport": "football",
+        "leagues": [
+          "Serie A"
+        ],
+        "isPrimary": true,
+        "_id": "6883b3607c09bda575e42263"
+      }
+    ],
+    "bookingSettings": {
+      "enabled": true
+    },
+    "pricing": {
+      "basePrice": 0,
+      "pricePerPerson": 0,
+      "minimumSpend": 0,
+      "currency": "EUR"
+    },
+    "status": "approved",
+    "isVerified": false,
+    "isActive": true,
+    "analytics": {
+      "totalBookings": 0,
+      "totalReviews": 0,
+      "averageRating": 0,
+      "viewCount": 0
+    },
+    "createdAt": "2025-07-25T16:40:00.570Z",
+    "updatedAt": "2025-07-25T16:40:46.589Z",
+    "slug": "sportive11-e42261",
+    "__v": 4,
+    "description": "sportive11 sportive11 sportive11",
+    "coordinates": {
+      "latitude": 45.4502,
+      "longitude": 9.2051
+    }
+  },
+  {
+    "_id": "6884c9d320bbeb91f9dc0c6a",
+    "tenantId": "687d206ece003b765eac7c06",
+    "name": "Andrea",
+    "description": "Andrea",
+    "owner": "687d206ece003b765eac7c04",
+    "contact": {
+      "email": "andrea@gmail.com",
+      "phone": "123432123432"
+    },
+    "location": {
+      "address": {
+        "street": "Andrea 12",
+        "city": "Milano",
+        "postalCode": "20121",
+        "country": "Italy"
+      },
+      "coordinates": {
+        "latitude": 45.4795,
+        "longitude": 9.1574
+      }
+    },
+    "hours": {
+      "monday": {
+        "closed": false
+      },
+      "tuesday": {
+        "closed": false
+      },
+      "wednesday": {
+        "closed": false
+      },
+      "thursday": {
+        "closed": false
+      },
+      "friday": {
+        "closed": false
+      },
+      "saturday": {
+        "closed": false
+      },
+      "sunday": {
+        "closed": false
+      }
+    },
+    "capacity": {
+      "total": 80,
+      "outdoor": 20
+    },
+    "features": [],
+    "images": [],
+    "sportsOfferings": [
+      {
+        "sport": "football",
+        "leagues": [
+          "FIFA World Cup"
+        ],
+        "isPrimary": true,
+        "_id": "6884c9d320bbeb91f9dc0c6b"
+      }
+    ],
+    "bookingSettings": {
+      "enabled": true,
+      "requiresApproval": false,
+      "advanceBookingDays": 30,
+      "minimumPartySize": 1,
+      "maximumPartySize": 12,
+      "timeSlotDuration": 120
+    },
+    "pricing": {
+      "basePrice": 0,
+      "pricePerPerson": 0,
+      "minimumSpend": 0,
+      "currency": "EUR"
+    },
+    "status": "approved",
+    "isVerified": false,
+    "isActive": true,
+    "analytics": {
+      "totalBookings": 0,
+      "totalReviews": 0,
+      "averageRating": 0,
+      "viewCount": 0
+    },
+    "createdAt": "2025-07-26T12:28:03.877Z",
+    "updatedAt": "2025-07-26T12:28:03.877Z",
+    "slug": "andrea-dc0c6a",
+    "__v": 0,
+    "coordinates": {
+      "latitude": 45.4795,
+      "longitude": 9.1574
+    }
+  }
+]

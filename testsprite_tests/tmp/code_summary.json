@@ -1,0 +1,166 @@
+{
+  "tech_stack": [
+    "JavaScript",
+    "TypeScript", 
+    "React",
+    "Node.js",
+    "Express",
+    "MongoDB",
+    "Mongoose",
+    "Tailwind CSS",
+    "Vite",
+    "Shadcn/ui",
+    "JWT",
+    "Docker"
+  ],
+  "features": [
+    {
+      "name": "User Authentication System",
+      "description": "Complete JWT-based authentication with role-based access control (client, venue_owner, admin)",
+      "files": [
+        "backend/src/middlewares/auth.js",
+        "backend/src/routes/auth.js",
+        "frontend/src/contexts/AuthContext.jsx",
+        "frontend/src/hooks/useAuth.js"
+      ]
+    },
+    {
+      "name": "Venue Registration & Onboarding",
+      "description": "Multi-step venue owner registration with photo upload, facility selection, and business information",
+      "files": [
+        "frontend/src/pages/SportsRegister.jsx",
+        "frontend/src/pages/admin/VenueOnboarding.tsx",
+        "frontend/src/components/wizard-steps/StepBasicInfo.jsx",
+        "frontend/src/components/wizard-steps/StepPhotos.tsx",
+        "frontend/src/components/wizard-steps/StepFacilities.tsx",
+        "backend/src/controllers/venueController.js"
+      ]
+    },
+    {
+      "name": "Client Registration",
+      "description": "Simplified client registration flow for sports fans",
+      "files": [
+        "frontend/src/pages/ClientRegister.jsx",
+        "frontend/src/pages/Register.jsx"
+      ]
+    },
+    {
+      "name": "Homepage & Match Discovery",
+      "description": "Homepage with hot matches, day navigation, and venue discovery for specific matches",
+      "files": [
+        "frontend/src/pages/Home.jsx",
+        "frontend/src/components/DayNavigation.jsx",
+        "frontend/src/components/MatchCard.tsx",
+        "frontend/src/services/hotMatchesService.js"
+      ]
+    },
+    {
+      "name": "Venue Listing & Search",
+      "description": "Comprehensive venue listing with search, filters, and map integration",
+      "files": [
+        "frontend/src/pages/Locali.jsx",
+        "frontend/src/components/VenueCard.tsx",
+        "frontend/src/services/venuesService.js",
+        "frontend/src/hooks/useVenues.js"
+      ]
+    },
+    {
+      "name": "Venue Detail & Booking",
+      "description": "Single venue detail page with photo carousel, booking system, and match announcements",
+      "files": [
+        "frontend/src/pages/VenueDetail.tsx",
+        "frontend/src/components/BookingForm.tsx",
+        "backend/src/controllers/bookingController.js",
+        "backend/src/models/Booking.js"
+      ]
+    },
+    {
+      "name": "Match Management System",
+      "description": "Sports match data management with announcements and venue associations",
+      "files": [
+        "backend/src/models/GlobalMatch.js",
+        "backend/src/models/MatchAnnouncement.js",
+        "backend/src/controllers/matchAnnouncementController.js",
+        "frontend/src/services/matchAnnouncementService.js"
+      ]
+    },
+    {
+      "name": "Admin Dashboard",
+      "description": "Admin panel for venue management, user oversight, and platform administration",
+      "files": [
+        "frontend/src/pages/admin/AdminDashboard.tsx",
+        "frontend/src/pages/admin/AdminLayout.tsx",
+        "frontend/src/pages/admin/AccountSettings.tsx",
+        "frontend/src/components/AdminSidebar.tsx"
+      ]
+    },
+    {
+      "name": "Photo Upload System",
+      "description": "Multi-photo upload with image processing and venue gallery management",
+      "files": [
+        "backend/src/config/multerConfig.js",
+        "backend/src/utils/imageUtils.js",
+        "frontend/src/components/wizard-steps/StepPhotos.tsx"
+      ]
+    },
+    {
+      "name": "Booking System",
+      "description": "Table reservation system for venues with match-specific bookings",
+      "files": [
+        "backend/src/models/Booking.js",
+        "backend/src/controllers/bookingController.js",
+        "frontend/src/components/BookingForm.tsx",
+        "backend/src/services/bookingsService.js"
+      ]
+    },
+    {
+      "name": "Multi-Tenant Architecture",
+      "description": "Tenant isolation system for venue-specific data segregation",
+      "files": [
+        "backend/src/middlewares/tenantMiddleware.js",
+        "backend/src/utils/tenantQuery.js",
+        "backend/src/models/Tenant.js"
+      ]
+    },
+    {
+      "name": "UI Component Library",
+      "description": "Shadcn/ui based component system with Tailwind CSS styling",
+      "files": [
+        "frontend/src/components/ui/button.tsx",
+        "frontend/src/components/ui/card.tsx",
+        "frontend/src/components/ui/input.tsx",
+        "frontend/src/components/ui/select.tsx",
+        "frontend/src/index.css"
+      ]
+    },
+    {
+      "name": "Color Palette System",
+      "description": "Gazzetta dello Sport inspired color system with CSS variables",
+      "files": [
+        "frontend/src/index.css",
+        "frontend/tailwind.config.js"
+      ]
+    },
+    {
+      "name": "API Client & Services",
+      "description": "Centralized API communication layer with service abstraction",
+      "files": [
+        "frontend/src/config/api.js",
+        "frontend/src/services/apiClient.js",
+        "frontend/src/services/venueService.js",
+        "frontend/src/services/authService.js"
+      ]
+    },
+    {
+      "name": "Database Models",
+      "description": "MongoDB models for venues, users, bookings, and matches",
+      "files": [
+        "backend/src/models/Venue.js",
+        "backend/src/models/User.js",
+        "backend/src/models/Booking.js",
+        "backend/src/models/GlobalMatch.js",
+        "backend/src/models/Tenant.js"
+      ]
+    }
+  ]
+} 

@@ -276,7 +276,7 @@ const MatchCard = React.memo(({
             {/* Find Venues Button */}
             <button
               onClick={handleFindVenues}
-              className="bg-orange-500 hover:bg-orange-600 text-white text-xs sm:text-sm font-medium px-3 py-1.5 rounded-md transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-opacity-50"
+              className="btn-primary text-xs sm:text-sm font-medium px-3 py-1.5 rounded-md transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-rosa-primary focus:ring-opacity-50"
               aria-label={`Trova locali che trasmettono ${getSafeTeamName(homeTeam)} contro ${getSafeTeamName(awayTeam)}`}
             >
               Trova locali

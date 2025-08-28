@@ -27,6 +27,314 @@
   --color-border: #e5e7eb;           /* Bordi neutri */
 }
 
+/* 🎨 PALETTE "LA GAZZETTA DELLO SPORT" - Design Tokens */
+:root {
+  /* Palette Gazzetta Primary */
+  --rosa-primary: #F2718B;
+  --rosa-hover: #E13B6D;
+  --rosa-light: #FFC6D1;
+  --vinaccia: #A23A5B;
+  --vinaccia-dark: #7C2E46;
+  --grigio-ui: #AFB0B2;
+  --nero: #000000;
+  --bg: #FFFFFF;
+
+  /* Semantic Mappings */
+  --color-primary: var(--rosa-primary);
+  --color-primary-hover: var(--rosa-hover);
+  --color-accent: var(--vinaccia);
+  --color-accent-dark: var(--vinaccia-dark);
+  --color-soft: var(--rosa-light);
+  --color-text: var(--nero);
+  --color-ui: var(--grigio-ui);
+  --color-background: var(--bg);
+
+  /* Component-specific tokens */
+  --btn-primary-bg: var(--rosa-primary);
+  --btn-primary-text: var(--bg);
+  --btn-primary-hover: var(--rosa-hover);
+  --badge-hot-bg: rgba(255, 198, 209, 0.25); /* rosa-light 25% opacity */
+  --badge-hot-text: var(--vinaccia);
+  --badge-hot-border: var(--vinaccia);
+  --gradient-cta: linear-gradient(90deg, var(--rosa-primary) 0%, var(--vinaccia) 100%);
+}
+
+/* 🎨 PALETTE GAZZETTA MINIMALISTA - RESET COMPLETO */
+
+:root {
+  /* PALETTE BASE GAZZETTA */
+  --gazzetta-bg: #F8F5F5;           /* Rosa tenue sfondo */
+  --gazzetta-text: #000000;         /* Nero testo principale */
+  --gazzetta-cta: #FF7043;          /* Arancione CTA importante */
+  --gazzetta-soft: #FFE5E5;         /* Rosa soft per elementi attivi */
+  --gazzetta-border: #E0E0E0;       /* Grigio border */
+  --gazzetta-white: #FFFFFF;        /* Bianco pulito */
+  --gazzetta-gray: #666666;         /* Grigio testo secondario */
+  --gazzetta-light-gray: #F5F5F5;   /* Grigio sfondo cards */
+}
+
+/* 🎯 RESET COMPLETO INPUT FIELDS - STILE GAZZETTA (TestSprite Approved) */
+input[type="text"],
+input[type="email"], 
+input[type="password"],
+input[type="tel"],
+input[type="url"],
+input[type="number"],
+input[type="date"],
+textarea,
+select {
+  background: var(--gazzetta-white) !important;
+  color: var(--gazzetta-text) !important;
+  border: 1px solid var(--gazzetta-border) !important;
+  border-radius: 6px !important;
+  padding: 12px 16px !important;
+  font-size: 14px !important;
+  transition: all 0.2s ease !important;
+}
+
+/* 🚨 TESTSPRITE FIX: Remove ALL invasive pink backgrounds */
+.contact-grid, 
+.venue-contact, 
+.contact-section, 
+.info-section,
+.contact-info,
+.booking-buttons,
+.button-group {
+  background: transparent !important;
+}
+
+/* Contact items MUST be white with gray borders only */
+.contact-item,
+.contact-card,
+.info-card {
+  background: var(--gazzetta-white) !important;
+  border: 1px solid var(--gazzetta-border) !important;
+  color: var(--gazzetta-text) !important;
+}
+
+input:focus,
+textarea:focus,
+select:focus {
+  outline: none !important;
+  border-color: var(--gazzetta-cta) !important;
+  box-shadow: 0 0 0 2px rgba(255, 112, 67, 0.1) !important;
+}
+
+/* PLACEHOLDER GRIGIO */
+input::placeholder,
+textarea::placeholder {
+  color: var(--gazzetta-gray) !important;
+  opacity: 0.7 !important;
+}
+
+/* 🎯 BUTTONS STRATEGICI GAZZETTA */
+/* PRIMARY CTA - SOLO ARANCIONE GAZZETTA */
+.btn-primary,
+button[type="submit"],
+.cta-button,
+.primary-action {
+  background: var(--gazzetta-cta) !important;
+  color: var(--gazzetta-white) !important;
+  border: none !important;
+  border-radius: 6px !important;
+  padding: 12px 24px !important;
+  font-weight: 600 !important;
+  transition: all 0.2s ease !important;
+}
+
+.btn-primary:hover,
+button[type="submit"]:hover,
+.cta-button:hover {
+  background: #E85A2B !important; /* Arancione più scuro */
+  transform: translateY(-1px) !important;
+}
+
+/* SECONDARY BUTTONS - BIANCO CON BORDER (TestSprite Fix) */
+.btn-secondary,
+.secondary-action,
+button[type="button"],
+.button-outline {
+  background: var(--gazzetta-white) !important;
+  color: var(--gazzetta-text) !important;
+  border: 1px solid var(--gazzetta-border) !important;
+  border-radius: 6px !important;
+  padding: 12px 24px !important;
+  font-weight: 500 !important;
+}
+
+.btn-secondary:hover,
+.secondary-action:hover,
+button[type="button"]:hover,
+.button-outline:hover {
+  background: var(--gazzetta-light-gray) !important;
+  border-color: var(--gazzetta-gray) !important;
+}
+
+/* 🚨 TESTSPRITE CRITICAL: Remove INVASIVE pink from booking buttons */
+.booking-buttons .btn,
+.booking-form button,
+.contact-buttons button {
+  background: var(--gazzetta-white) !important;
+  border: 1px solid var(--gazzetta-border) !important;
+  color: var(--gazzetta-text) !important;
+}
+
+.booking-buttons .btn:not(.btn-primary),
+.booking-form button:not([type="submit"]),
+.contact-buttons button:not(.btn-primary) {
+  background: var(--gazzetta-white) !important;
+  border: 1px solid var(--gazzetta-border) !important;
+  color: var(--gazzetta-text) !important;
+}
+
+/* 🎯 CARDS E CONTAINERS PULITI */
+/* 🎯 FIX CRITICO: Rimuovi tutti i fondi rosa/pink e banner sovrapposti */
+.card,
+.bg-white,
+.container,
+[class*="card"],
+[class*="bg-pink"],
+[class*="bg-rose"],
+[class*="contact"] {
+  background: var(--gazzetta-white) !important;
+  border: 1px solid var(--gazzetta-border) !important;
+  color: var(--gazzetta-text) !important;
+  border-radius: 8px !important;
+}
+
+/* 🚫 FIX CRITICO: RIMUOVI BOX ROSA DAI CONTATTI */
+.text-orange-600,
+.text-gray-600,
+a[class*="text-orange"],
+p[class*="text-gray"] {
+  background: transparent !important;
+  background-color: transparent !important;
+  display: inline !important;
+  padding: 0 !important;
+}
+
+/* 🎯 OVERRIDE AGGRESSIVO PER VALORI CONTATTI */
+.flex.items-center a,
+.flex.items-start p,
+.text-orange-600,
+.text-gray-600 {
+  background: none !important;
+  background-color: transparent !important;
+}
+
+/* 🚫 FIX SPECIFICO: TELEFONO, SITO WEB, INDIRIZZO, CAPACITÀ */
+a[href^="tel:"],
+a[href^="http"],
+p:contains("persone"),
+button:contains("Google Maps") {
+  background: transparent !important;
+  background-color: transparent !important;
+  padding: 0 !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+/* 🎯 ASSICURA CHE I TESTI SIANO VISIBILI E SPAZIATI */
+.flex.items-center div a,
+.flex.items-center div p,
+.flex.items-start div p,
+.flex.items-start div a {
+  background: transparent !important;
+  display: block !important;
+  margin-bottom: 0 !important;
+  line-height: 1.5 !important;
+}
+
+/* 🚫 RIMUOVI TUTTI I BOX COLORATI NELLE ICONE */
+.h-5.w-5,
+.h-4.w-4 {
+  background: transparent !important;
+  background-color: transparent !important;
+}
+
+/* 🎯 SPAZIO TRA LABEL E VALORE NEI CONTATTI */
+.font-semibold + a,
+.font-semibold + p {
+  margin-top: 4px !important;
+}
+
+/* 🎯 DISABILITA PSEUDO-ELEMENTI CHE CREANO BANNER */
+div[class*="contact"] *::before,
+div[class*="contact"] *::after,
+div[class*="font-medium"]::before,
+div[class*="font-medium"]::after,
+p[class*="font-medium"]::before,
+p[class*="font-medium"]::after {
+  display: none !important;
+  content: none !important;
+  background: none !important;
+}
+
+/* 🚫 RIMUOVI DECORAZIONI SU CONTATTI */
+.flex.items-center *::before,
+.flex.items-start *::before {
+  display: none !important;
+}
+
+/* 🎯 NAVIGATION ACTIVE - ROSA SOFT */
+.nav-link.active,
+.tab-active,
+.day-tab.active {
+  background: var(--gazzetta-soft) !important;
+  color: var(--gazzetta-text) !important;
+  border-color: var(--gazzetta-soft) !important;
+}
+
+/* 🎯 BADGES E CHIPS MINIMAL */
+.badge,
+.chip,
+.status-badge {
+  background: var(--gazzetta-light-gray) !important;
+  color: var(--gazzetta-text) !important;
+  border: 1px solid var(--gazzetta-border) !important;
+  border-radius: 16px !important;
+  padding: 4px 12px !important;
+  font-size: 12px !important;
+  font-weight: 500 !important;
+}
+
+.badge.active {
+  background: var(--gazzetta-soft) !important;
+  border-color: var(--gazzetta-soft) !important;
+}
+
+/* 🎯 OVERRIDE COMPLETO ELEMENTI ROSA INVASIVI */
+[class*="bg-"][class*="pink"],
+[class*="bg-"][class*="rose"],
+.bg-pink-500,
+.bg-pink-600,
+.bg-rose-500 {
+  background: var(--gazzetta-white) !important;
+  border: 1px solid var(--gazzetta-border) !important;
+}
+
+/* 🎯 SEARCH BAR PULITA */
+.search-input,
+input[type="search"] {
+  background: var(--gazzetta-white) !important;
+  border: 1px solid var(--gazzetta-border) !important;
+  border-radius: 6px !important;
+}
+
+/* 🎯 FILTER TAGS NEUTRI */
+.filter-tag,
+.filter-badge {
+  background: var(--gazzetta-white) !important;
+  color: var(--gazzetta-text) !important;
+  border: 1px solid var(--gazzetta-border) !important;
+  border-radius: 20px !important;
+}
+
+.filter-tag:hover,
+.filter-tag.active {
+  background: var(--gazzetta-soft) !important;
+}
+
 /* BODY E HTML */
 html, body {
   background: var(--color-background) !important;
@@ -70,10 +378,9 @@ header *, .header *, nav * {
 
 /* CARDS */
 .card, .bg-card, [class*="card"] {
-  background: var(--color-white) !important;
-  color: var(--color-text-primary) !important;
-  border: 2px solid var(--color-border) !important;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1) !important;
+  background: #FFFFFF !important;
+  border: 1px solid rgba(242, 113, 139, 0.2) !important;
+  color: #000000 !important;
 }
 
 /* BUTTONS - ARANCIONE */
@@ -112,16 +419,18 @@ header *, .header *, nav * {
 
 /* INPUTS */
 input, textarea, select {
-  background: var(--color-white) !important;
-  color: var(--color-text-primary) !important;
-  border: 2px solid var(--color-border) !important;
-  padding: 8px 12px;
-  border-radius: 4px;
+  background: #FFFFFF !important;
+  border: 2px solid #F2718B !important;
+  color: #000000 !important;
+  border-radius: 8px !important;
+  padding: 12px 16px !important;
+  transition: all 0.2s ease !important;
 }
 
 input:focus, textarea:focus, select:focus {
-  border-color: var(--color-primary) !important;
   outline: none !important;
+  border-color: #E13B6D !important; /* rosa-hover */
+  box-shadow: 0 0 0 3px rgba(242, 113, 139, 0.1) !important;
 }
 
 /* TESTI E TITOLI */
@@ -466,19 +775,21 @@ form {
 .admin-main textarea,
 .admin-main select {
   width: 100% !important;
-  background: var(--color-white) !important;
-  border: 2px solid var(--color-border) !important;
-  border-radius: 6px !important;
+  background: #FFFFFF !important;
+  border: 2px solid rgba(242, 113, 139, 0.5) !important;
+  color: #000000 !important;
+  border-radius: 8px !important;
   padding: 12px 16px !important;
-  color: var(--color-text-primary) !important;
+  transition: all 0.2s ease !important;
   margin-bottom: 16px !important;
 }
 
 .admin-main input:focus,
 .admin-main textarea:focus,
 .admin-main select:focus {
-  border-color: var(--color-primary) !important;
   outline: none !important;
+  border-color: #E13B6D !important; /* rosa-hover */
+  box-shadow: 0 0 0 3px rgba(242, 113, 139, 0.1) !important;
 }
 
 /* =================================
@@ -515,20 +826,17 @@ form {
 /* ADMIN BUTTONS ARANCIONE */
 .admin-main .btn-primary,
 .admin-main button[type="submit"] {
-  background: var(--color-primary) !important;
-  color: var(--color-light) !important;
-  border: 2px solid var(--color-primary) !important;
-  border-radius: 6px !important;
-  padding: 12px 24px !important;
+  background: #F2718B !important;
+  color: #FFFFFF !important;
+  border: none !important;
+  border-radius: 8px !important;
   font-weight: 600 !important;
   cursor: pointer !important;
   transition: all 0.2s ease !important;
 }
 
-.admin-main .btn-primary:hover,
-.admin-main button[type="submit"]:hover {
-  background: var(--color-secondary) !important;
-  border-color: var(--color-secondary) !important;
+.admin-main .btn-primary:hover {
+  background: #E13B6D !important;
 }
 
 .admin-main .btn-secondary {
@@ -2352,5 +2660,648 @@ form {
     max-width: 600px;
     line-height: 1.6;
   }
+}
+
+/* 🎯 PRIMARY BUTTONS - Gazzetta Style */
+.btn-primary {
+  background: #F2718B !important;
+  color: #FFFFFF !important;
+  border: none !important;
+  border-radius: 8px !important;
+  font-weight: 600 !important;
+  transition: all 0.2s ease !important;
+  box-shadow: none !important; /* No ombre esterne */
+}
+
+.btn-primary:hover {
+  background: #E13B6D !important;
+  color: #FFFFFF !important;
+}
+
+/* Secondary Button (outline) */
+.btn-secondary {
+  background: transparent !important;
+  color: #F2718B !important;
+  border: 2px solid #F2718B !important;
+  border-radius: 8px !important;
+  font-weight: 600 !important;
+  transition: all 0.2s ease !important;
+}
+
+.btn-secondary:hover {
+  background: #F2718B !important;
+  color: #FFFFFF !important;
+}
+
+/* Gradient CTA Button */
+.btn-gradient {
+  background: var(--gradient-cta) !important;
+  color: var(--bg) !important;
+  border: none !important;
+  border-radius: 8px !important;
+  font-weight: 600 !important;
+}
+
+/* 🎯 NAVBAR - Gazzetta Style */
+.navbar-link-active {
+  color: #A23A5B !important;
+  border-bottom: 3px solid #A23A5B !important;
+}
+
+.navbar-link:hover {
+  color: #F2718B !important;
+}
+
+/* Toggle light/dark icon */
+.theme-toggle-active {
+  stroke: #F2718B !important;
+}
+
+/* 🎯 TAB STRIP - Gazzetta Style */
+.tab-active {
+  background: #FFC6D1 !important;
+  color: #A23A5B !important;
+}
+
+.tab-inactive {
+  color: #000000 !important;
+  background: transparent !important;
+  border-bottom: 1px solid rgba(175, 176, 178, 0.4) !important; /* grigio-ui 40% */
+}
+
+.tab-inactive:hover {
+  background: rgba(255, 198, 209, 0.05) !important; /* rosa-light 5% */
+}
+
+/* 🎯 BADGES - Gazzetta Style */
+.badge-hot {
+  background: var(--badge-hot-bg) !important;
+  color: var(--badge-hot-text) !important;
+  border: 1px solid var(--badge-hot-border) !important;
+  font-weight: 600 !important;
+  border-radius: 12px !important;
+}
+
+.badge-hot:hover {
+  background: rgba(255, 198, 209, 0.4) !important; /* rosa-light 40% */
+}
+
+/* 🎯 MATCH CARDS - Gazzetta Style */
+.match-card {
+  border: 1px solid rgba(175, 176, 178, 0.2) !important; /* grigio-ui 20% */
+  transition: all 0.2s ease !important;
+}
+
+.match-card:hover {
+  box-shadow: 0 0 0 2px #FFC6D1 !important;
+}
+
+.match-card .tournament-title {
+  color: #A23A5B !important;
+  font-weight: 600 !important;
+}
+
+/* 🎯 CHIPS VS / DATA-ORA - Gazzetta Style */
+.chip-vs,
+.chip-datetime {
+  background: #FFC6D1 !important;
+  color: #000000 !important;
+  font-weight: 600 !important;
+  border-radius: 20px !important;
+  padding: 4px 12px !important;
+}
+
+/* 🎯 ICONE DI STATO - Gazzetta Style */
+.icon-status {
+  color: #F2718B !important;
+}
+
+.icon-status:hover {
+  color: #E13B6D !important;
+}
+
+/* 🎯 STATO CHIUSO - Gazzetta Style */
+.badge-closed {
+  background: rgba(255, 198, 209, 0.3) !important; /* rosa-light 30% */
+  color: #A23A5B !important;
+  font-weight: 600 !important;
+  border-radius: 6px !important;
+}
+
+/* 🎯 OVERRIDES GLOBALI PALETTE GAZZETTA - FORZA APPLICAZIONE */
+
+/* Tutti i button primary */
+button[class*="bg-orange"],
+button[class*="orange"],
+.bg-orange-500,
+.bg-orange-600,
+.bg-orange-700 {
+  background: #F2718B !important;
+  border-color: #F2718B !important;
+}
+
+button[class*="bg-orange"]:hover,
+button[class*="orange"]:hover,
+.bg-orange-500:hover,
+.bg-orange-600:hover {
+  background: #E13B6D !important;
+  border-color: #E13B6D !important;
+}
+
+/* Text colors */
+.text-orange-500,
+.text-orange-600,
+.text-orange-700 {
+  color: #F2718B !important;
+}
+
+.text-orange-500:hover,
+.text-orange-600:hover {
+  color: #E13B6D !important;
+}
+
+/* Border colors */
+.border-orange-500,
+.border-orange-600 {
+  border-color: #F2718B !important;
+}
+
+/* Accent colors */
+.bg-red-600,
+.bg-red-700 {
+  background: #A23A5B !important;
+}
+
+/* Focus rings */
+.focus\:ring-orange-500:focus,
+.focus\:border-orange-500:focus {
+  outline: 2px solid #E13B6D !important;
+  border-color: #E13B6D !important;
+}
+
+/* 🎯 HOMEPAGE MATCH CARDS - PALETTE GAZZETTA */
+.match-cta-button {
+  background: var(--gradient-cta) !important; /* Linear gradient rosa → vinaccia */
+  color: var(--bg) !important;
+  border: none !important;
+  border-radius: 8px !important;
+  padding: 12px 16px !important;
+  font-weight: 600 !important;
+  transition: all 0.2s ease !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  width: 100% !important;
+  justify-content: center !important;
+}
+
+.match-cta-button:hover {
+  background: #7C2E46 !important;
+  transform: translateY(-1px) !important;
+}
+
+.cta-icon-map,
+.cta-icon-arrow {
+  color: var(--bg) !important;
+}
+
+/* 🎯 BIG FIXTURES TAB - TESTSPRITE SOFT PINK FIX */
+.day-nav button[data-active="true"],
+.day-nav .active {
+  background: var(--gazzetta-soft) !important; /* #FFE5E5 - ONLY for active states */
+  color: var(--gazzetta-text) !important;
+  border: 1px solid var(--gazzetta-cta) !important;
+}
+
+.day-nav button:hover:not(.active) {
+  background: var(--gazzetta-light-gray) !important; /* Gray hover, NOT pink */
+  border-color: var(--gazzetta-border) !important;
+}
+
+/* 🎯 VENUE COUNT - PALETTE GAZZETTA */
+.venue-count {
+  color: #A23A5B !important;
+  font-weight: 500 !important;
+}
+
+/* 🎯 MATCH CARD HOVER EFFECTS */
+.hot-match-card:hover {
+  border-color: #F2718B !important;
+  box-shadow: 0 4px 12px rgba(242, 113, 139, 0.15) !important; /* rosa-primary 15% */
+}
+
+/* 🔥 SUPER AGGRESSIVI OVERRIDES - ELIMINA TUTTI GLI ARANCIONI */
+
+/* Qualsiasi cosa contenga "orange" nel nome della classe */
+[class*="orange"] {
+  background-color: #F2718B !important;
+  border-color: #F2718B !important;
+  color: #FFFFFF !important;
+}
+
+[class*="orange"]:hover {
+  background-color: #E13B6D !important;
+  border-color: #E13B6D !important;
+}
+
+/* Background specifici che sono arancioni */
+.bg-gradient-to-r.from-orange-500,
+.bg-gradient-to-r.from-orange-600,
+.bg-orange-500,
+.bg-orange-600,
+.bg-orange-700 {
+  background: var(--gradient-cta) !important;
+}
+
+/* Text arancioni */
+.text-orange-500,
+.text-orange-600,
+.text-orange-700,
+.text-orange-800 {
+  color: #F2718B !important;
+}
+
+/* Borders arancioni */
+.border-orange-500,
+.border-orange-600 {
+  border-color: #F2718B !important;
+}
+
+/* Focus states arancioni */
+.focus\:ring-orange-500:focus,
+.focus\:border-orange-500:focus {
+  --tw-ring-color: #E13B6D !important;
+  border-color: #E13B6D !important;
+}
+
+/* Gradients arancioni specifici */
+.from-orange-500.to-orange-600,
+.from-orange-600.to-orange-700 {
+  background: var(--gradient-cta) !important;
+}
+
+/* Tutti i button che dovrebbero essere rosa */
+button[style*="background-color: #"],
+button[style*="background: #"] {
+  background: #F2718B !important;
+  border-color: #F2718B !important;
+}
+
+/* Override diretto per colori HEX arancioni */
+button[style*="#F0541E"],
+button[style*="#ff7043"],
+.bg-\[\#F0541E\],
+.bg-\[\#ff7043\] {
+  background: #F2718B !important;
+}
+
+/* 🎯 DAY NAVIGATION TABS - PALETTE GAZZETTA */
+.day-tab {
+  background: transparent !important;
+  color: #000000 !important;
+  border: 2px solid transparent !important;
+  border-radius: 8px !important;
+  padding: 12px 24px !important;
+  font-weight: 600 !important;
+  transition: all 0.2s ease !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.5px !important;
+}
+
+.day-tab:hover {
+  background: rgba(255, 198, 209, 0.1) !important; /* rosa-light 10% */
+  color: #F2718B !important;
+}
+
+.day-tab.active {
+  background: #FFC6D1 !important;
+  color: #A23A5B !important;
+  border-color: #F2718B !important;
+  font-weight: 700 !important;
+}
+
+/* Specific override for BIG FIXTURES */
+.day-tab[data-id="big-fixtures"],
+button[key="big-fixtures"] {
+  background: #FFC6D1 !important;
+  color: #A23A5B !important;
+  border-color: #F2718B !important;
+}
+
+/* 🎯 DAY NAVIGATION CONTAINER */
+.day-navigation {
+  background: var(--bg) !important;
+  padding: 20px 0 !important;
+  border-bottom: 1px solid rgba(175, 176, 178, 0.2) !important;
+}
+
+.day-tabs {
+  display: flex !important;
+  gap: 12px !important;
+  flex-wrap: wrap !important;
+  justify-content: center !important;
+}
+
+/* RIMOSSO - SOSTITUITO CON PALETTE GAZZETTA */
+
+/* 🎯 CARDS E BADGES ELEGANTI - NO ROSA INVASIVO */
+
+/* CARDS SEMPRE BIANCHE CON BORDER ROSA SOTTILE */
+.card,
+.bg-white,
+.facility-card,
+[class*="card"] {
+  background: #FFFFFF !important;
+  border: 1px solid rgba(242, 113, 139, 0.2) !important;
+  color: #000000 !important;
+}
+
+/* FACILITY CARDS SELEZIONATE - ROSA SOFT */
+.facility-selected,
+.facility-card.selected,
+.facility-card[data-selected="true"],
+.facility-card.active {
+  background: rgba(242, 113, 139, 0.08) !important;
+  border: 2px solid #F2718B !important;
+  color: #A23A5B !important;
+}
+
+/* BADGES INFORMATIVI - ROSA SOFT */
+.badge,
+.badge-info,
+.status-badge,
+.opening-hours .badge {
+  background: rgba(242, 113, 139, 0.1) !important;
+  color: #A23A5B !important;
+  border: 1px solid rgba(242, 113, 139, 0.3) !important;
+}
+
+/* CONTACT INFO CARDS - BIANCHE CON ACCENTI */
+.contact-card,
+.info-card,
+.contact-info .card {
+  background: #FFFFFF !important;
+  border: 1px solid rgba(242, 113, 139, 0.15) !important;
+}
+
+/* OPENING HOURS SPECIFICI */
+.opening-hours .day-active,
+.opening-hours .today {
+  background: rgba(242, 113, 139, 0.1) !important;
+  color: #A23A5B !important;
+  border-color: #F2718B !important;
+}
+
+/* BOOKING MODAL INPUTS */
+.booking-modal input,
+.booking-modal select,
+.booking-modal textarea {
+  background: #FFFFFF !important;
+  border: 2px solid rgba(242, 113, 139, 0.5) !important;
+  color: #000000 !important;
+}
+
+/* 🎯 OVERRIDE SPECIFICI ELEMENTI PROBLEMATICI NEGLI SCREENSHOT */
+
+/* REGISTER FORMS - SCREENSHOT 1 & 4 */
+.register-form input,
+.register-form select,
+.register-form textarea,
+.auth-form input,
+.auth-form select {
+  background: var(--gazzetta-white) !important;
+  border: 1px solid var(--gazzetta-border) !important;
+  color: var(--gazzetta-text) !important;
+}
+
+.register-form .btn-primary,
+.auth-form .btn-primary {
+  background: var(--gazzetta-cta) !important;
+  color: var(--gazzetta-white) !important;
+}
+
+/* CHECKBOX E LINK TERMS */
+.terms-link,
+.privacy-link,
+a[href*="terms"],
+a[href*="privacy"] {
+  color: var(--gazzetta-text) !important;
+  text-decoration: underline !important;
+}
+
+.terms-link:hover,
+.privacy-link:hover {
+  color: var(--gazzetta-cta) !important;
+}
+
+/* NAVIGATION TABS - SCREENSHOT 6 */
+.big-fixtures-tab,
+.day-navigation button,
+[data-id="big-fixtures"],
+.nav-tabs button {
+  background: var(--gazzetta-white) !important;
+  color: var(--gazzetta-text) !important;
+  border: 1px solid var(--gazzetta-border) !important;
+}
+
+.big-fixtures-tab.active,
+.day-navigation button.active,
+[data-id="big-fixtures"].active {
+  background: var(--gazzetta-soft) !important; /* #FFE5E5 - ONLY for active/selected */
+  border-color: var(--gazzetta-cta) !important; /* Orange border for clarity */
+  color: var(--gazzetta-text) !important;
+}
+
+/* MATCH CARDS CTA BUTTONS */
+.trova-locali-btn,
+.match-cta-button,
+button[class*="trova"] {
+  background: var(--gazzetta-cta) !important;
+  color: var(--gazzetta-white) !important;
+  border: none !important;
+}
+
+/* SEARCH E FILTERS - SCREENSHOT 7 */
+.search-bar input,
+.filters-container .filter-chip,
+.venue-filters button {
+  background: var(--gazzetta-white) !important;
+  border: 1px solid var(--gazzetta-border) !important;
+  color: var(--gazzetta-text) !important;
+}
+
+/* VENUE DETAIL - SCREENSHOT 8-9 */
+.contact-info .info-card,
+.venue-contact .card,
+.capacity-card,
+.phone-card,
+.address-card {
+  background: var(--gazzetta-white) !important;
+  border: 1px solid var(--gazzetta-border) !important;
+}
+
+.prenota-ora-btn,
+.booking-cta,
+button[class*="prenota"] {
+  background: var(--gazzetta-cta) !important;
+  color: var(--gazzetta-white) !important;
+}
+
+/* OPENING HOURS BADGES */
+.opening-hours .day-badge,
+.hours-badge,
+.day-status {
+  background: var(--gazzetta-light-gray) !important;
+  color: var(--gazzetta-text) !important;
+  border: 1px solid var(--gazzetta-border) !important;
+}
+
+.opening-hours .today,
+.hours-badge.today,
+.day-status.today {
+  background: var(--gazzetta-soft) !important;
+}
+
+/* FACILITY SELECTION - ONBOARDING */
+.facility-card,
+.facility-option,
+.amenity-card {
+  background: var(--gazzetta-white) !important;
+  border: 1px solid var(--gazzetta-border) !important;
+  color: var(--gazzetta-text) !important;
+}
+
+.facility-card.selected,
+.facility-option.selected {
+  background: var(--gazzetta-soft) !important;
+  border-color: var(--gazzetta-cta) !important;
+}
+
+/* BOOKING MODAL */
+.booking-modal input,
+.booking-modal select,
+.booking-form input,
+.reservation-form input {
+  background: var(--gazzetta-white) !important;
+  border: 1px solid var(--gazzetta-border) !important;
+  color: var(--gazzetta-text) !important;
+}
+
+/* FORCE OVERRIDE SU CLASSI TAILWIND ROSA - COMPLETO */
+.bg-pink-100,
+.bg-pink-200,
+.bg-pink-300,
+.bg-pink-400,
+.bg-pink-500,
+.bg-pink-600,
+.bg-rose-100,
+.bg-rose-200,
+.bg-rose-300,
+.bg-rose-400,
+.bg-rose-500,
+.bg-rose-600,
+/* OVERRIDE AGGRESSIVO TUTTE LE VARIANTI ROSA */
+*[class*="bg-pink"],
+*[class*="bg-rose"],
+*[style*="background: pink"],
+*[style*="background-color: pink"],
+*[style*="background: #e91e63"],
+*[style*="background-color: #e91e63"],
+*[style*="background: #f48fb1"],
+*[style*="background-color: #f48fb1"] {
+  background: var(--gazzetta-white) !important;
+  background-color: var(--gazzetta-white) !important;
+  border: 1px solid var(--gazzetta-border) !important;
+}
+
+/* TEXT COLORS FORCE */
+.text-pink-500,
+.text-pink-600,
+.text-rose-500,
+.text-rose-600 {
+  color: var(--gazzetta-text) !important;
+}
+
+/* HOVER STATES NEUTRI */
+.card:hover,
+.venue-card:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1) !important;
+  border-color: var(--gazzetta-cta) !important;
+}
+
+/* 🚨 TESTSPRITE CRITICAL FIXES - FINAL IMPLEMENTATION */
+
+/* Contact sections - ABSOLUTE pink background removal */
+.contact-grid,
+.venue-contact-section,
+.venue-info-section,
+.contact-cards-container,
+.venue-contact,
+.contact-section,
+.info-section {
+  background: transparent !important;
+}
+
+.contact-card,
+.info-card,
+.venue-contact-card,
+.contact-item {
+  background: var(--gazzetta-white) !important;
+  border: 1px solid var(--gazzetta-border) !important;
+  border-radius: 8px !important;
+  padding: 16px !important;
+  color: var(--gazzetta-text) !important;
+}
+
+/* Booking buttons - ENFORCE white secondary buttons */
+.booking-form .btn:not(.btn-primary):not([type="submit"]),
+.booking-buttons .btn:not(.btn-primary),
+.venue-booking button:not([type="submit"]) {
+  background: var(--gazzetta-white) !important;
+  color: var(--gazzetta-text) !important;
+  border: 1px solid var(--gazzetta-border) !important;
+}
+
+/* Password input consistency across ALL forms */
+.admin-login input[type="password"],
+.sports-login input[type="password"],
+.auth-form input[type="password"],
+.client-login input[type="password"],
+.venue-login input[type="password"],
+.tenant-login input[type="password"] {
+  background: var(--gazzetta-white) !important;
+  border: 1px solid var(--gazzetta-border) !important;
+  color: var(--gazzetta-text) !important;
+}
+
+/* Date picker white enforcement */
+.date-picker,
+.calendar-popup,
+.date-input,
+.react-datepicker {
+  background: var(--gazzetta-white) !important;
+  border: 1px solid var(--gazzetta-border) !important;
+}
+
+/* Remove pink from venue detail sections */
+.venue-detail .contact-info,
+.venue-detail .info-section,
+.venue-detail .booking-section,
+.venue-detail .venue-contact {
+  background: transparent !important;
+}
+
+
+.react-datepicker {
+  background: var(--gazzetta-white) !important;
+  border: 1px solid var(--gazzetta-border) !important;
+}
+
+/* Remove pink from venue detail sections */
+.venue-detail .contact-info,
+.venue-detail .info-section,
+.venue-detail .booking-section,
+.venue-detail .venue-contact {
+  background: transparent !important;
 }
 

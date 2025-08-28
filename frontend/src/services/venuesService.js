@@ -1,4 +1,4 @@
-import { apiClient, API_ENDPOINTS } from './index.js';
+import { apiClient, apiConfig } from './index.js';
 
 class VenuesService {
   // Ottiene venue per owner
@@ -15,12 +15,13 @@ class VenuesService {
   // Ottiene venues formattati per la homepage e pagine pubbliche
   async getFormattedVenues() {
     try {
+      console.log('🏟️ Fetching venues from /venues/public...');
       const response = await apiClient.get('/venues/public');
       
       // L'endpoint ora restituisce {success, data} correttamente
       const venues = response.data || [];
       
-      // Formatta i dati per l'uso nel frontend
+      // Formatta i dati per l'uso nel frontend (INCLUDE COORDINATES!)
       const formattedVenues = venues.map(venue => ({
         id: venue._id,
         name: venue.name,
@@ -31,7 +32,10 @@ class VenuesService {
         features: venue.features || [],
         type: venue.type || 'Sport Bar',
         rating: venue.rating || 4.5,
-        slug: venue.slug || venue._id
+        slug: venue.slug || venue._id,
+        // 🗺️ CRITICAL: Passa le coordinate per le mappe
+        coordinates: venue.coordinates || venue.location?.coordinates,
+        location: venue.location // Mantieni anche location completa
       }));
 
       console.log(`🏟️ Loaded ${formattedVenues.length} venues from public API`);
@@ -96,14 +100,15 @@ class VenuesService {
   // Ottiene un venue formattato per ID (per visualizzazione pubblica)
   async getFormattedVenueById(venueId) {
     try {
-      const response = await apiClient.get(`/venues/${venueId}`, { includeAuth: false }); // ✅ Rimosso /api/ e aggiunto includeAuth: false per accesso pubblico
+      // Usa endpoint pubblico dedicato per garantire shape coerente e fields (hours, features, announcements)
+      const response = await apiClient.get(`/venues/public/${venueId}`, { includeAuth: false });
       
       if (!response.data) {
         throw new Error('Venue non trovato');
       }
       
-      // Il backend ora restituisce direttamente il venue, non wrapped in .venue
-      const venue = response.data.venue || response.data;
+      // Il backend pubblico restituisce { success, venue, data }
+      const venue = response.venue || response.data?.venue || response.data;
       
       // Formatta il venue per il frontend
       return this.convertBackendVenueToLegacy(venue);
@@ -177,7 +182,27 @@ class VenuesService {
   }
 
   // Converte un array raw di operatingHours in formato legacy
-  convertOpeningHours(rawHours = []) {
+  convertOpeningHours(rawHours = {}) {
+    // 🎯 NUOVO: Gestisci formato backend 'hours' (object con chiavi monday, tuesday, etc.)
+    if (typeof rawHours === 'object' && !Array.isArray(rawHours) && Object.keys(rawHours).length > 0) {
+      const dayMapping = {
+        monday: 'MON',
+        tuesday: 'TUE', 
+        wednesday: 'WED',
+        thursday: 'THU',
+        friday: 'FRI',
+        saturday: 'SAT',
+        sunday: 'SUN'
+      };
+      
+      return Object.entries(rawHours).map(([day, info]) => ({
+        day: dayMapping[day] || day.toUpperCase(),
+        status: info?.closed ? 'closed' : (info?.open && info?.close ? 'open' : 'closed'),
+        openTime: info?.open || '11:00',
+        closeTime: info?.close || '23:00'
+      }));
+    }
+    
     // Il backend può restituire vari formati; gestiamo alcuni casi comuni
     // Caso 1: array di oggetti { day, openTime, closeTime, status }
     if (Array.isArray(rawHours) && rawHours.length > 0 && rawHours[0].day !== undefined) {
@@ -189,7 +214,7 @@ class VenuesService {
       }));
     }
 
-    // Caso 2: object mapping day -> {openTime, closeTime}
+    // Caso 2: object mapping day -> {openTime, closeTime} (formato legacy)
     if (typeof rawHours === 'object' && !Array.isArray(rawHours)) {
       return Object.entries(rawHours).map(([day, info]) => ({
         day,
@@ -262,8 +287,11 @@ class VenuesService {
         }))
       },
       
-      // Opening hours
-      openingHours: this.convertOpeningHours(backendVenue.operatingHours || []),
+      // Opening hours - FIX: Usa 'hours' dal backend invece di 'operatingHours'
+      openingHours: this.convertOpeningHours(backendVenue.hours || backendVenue.operatingHours || {}),
+      
+      // ✅ NUOVO: Aggiungi anche 'hours' per compatibilità
+      hours: backendVenue.hours || {},
       
       // ✅ FIX: Aggiungi bookingSettings per abilitare le prenotazioni
       bookingSettings: backendVenue.bookingSettings || { enabled: false },
@@ -271,6 +299,10 @@ class VenuesService {
       // Altri campi
       rating: backendVenue.rating || 0,
       capacity: backendVenue.capacity?.total || 50,
+      
+      // 🗺️ CRITICAL: Coordinate per le mappe
+      coordinates: backendVenue.coordinates || backendVenue.location?.coordinates,
+      location: backendVenue.location, // Mantieni anche location completa
       
       // Mantieni il backendId per il salvataggio
       backendId: backendVenue._id

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { Search, MapPin, Calendar, ChevronDown, ChevronUp, Star, Users, Clock, TrendingUp } from 'lucide-react';
+import { Search, MapPin, Calendar, ChevronDown, ChevronUp, Star, Users, Clock, TrendingUp, X } from 'lucide-react';
 import Header from '@/components/Header';
 import VenueCard from '@/components/VenueCard';
 import MatchCard from '@/components/MatchCard';
@@ -726,31 +726,102 @@ const Locali = React.memo(() => {
 
           {/* Map Section - Desktop */}
           <aside className="hidden lg:block lg:col-span-2" aria-label="Mappa locali">
-            <div className="sticky top-24 bg-white rounded-lg border border-gray-200 overflow-hidden">
-              <div className="h-96 bg-gray-200 flex items-center justify-center">
-                <div className="text-center">
-                  {/* MapIcon className="h-16 w-16 text-gray-400 mx-auto mb-4" aria-hidden="true" /> */}
-                  <p className="text-gray-600 font-medium">Mappa in arrivo</p>
-                  <p className="text-gray-500 text-sm">
-                    Visualizzazione geografica dei locali
-                  </p>
+            <div className="sticky top-24">
+              <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                {/* Map Header */}
+                <div className="px-4 py-3 border-b border-gray-100 bg-gray-50">
+                  <div className="flex items-center justify-between">
+                    <h3 className="font-semibold text-gray-900 text-sm">
+                      Mappa Locali
+                    </h3>
+                    <div className="flex items-center gap-1 text-xs text-gray-500">
+                      <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
+                      <span>{safeEnhancedVenues.length} locali</span>
+                    </div>
+                  </div>
+                </div>
+                
+                {/* Map Container */}
+                <div className="relative">
+                  {safeEnhancedVenues.length > 0 ? (
+                    <React.Suspense fallback={
+                      <div className="h-96 bg-gray-50 flex items-center justify-center">
+                        <div className="text-center">
+                          <div className="animate-spin rounded-full h-8 w-8 border-2 border-orange-500 border-t-transparent mx-auto mb-2"></div>
+                          <p className="text-sm text-gray-500">Caricamento mappa...</p>
+                        </div>
+                      </div>
+                    }>
+                      {(() => {
+                        const VenuesMap = React.lazy(() => import('../components/VenuesMap'));
+                        return <VenuesMap 
+                          venues={safeEnhancedVenues} 
+                          height="calc(100vh - 280px)"
+                          className="rounded-none"
+                          showControls={true}
+                        />
+                      })()}
+                    </React.Suspense>
+                  ) : (
+                    <div className="h-96 bg-gray-50 flex items-center justify-center">
+                      <div className="text-center text-gray-400">
+                        <svg className="w-12 h-12 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                        </svg>
+                        <p className="font-medium text-gray-600 mb-1">Nessun locale trovato</p>
+                        <p className="text-sm text-gray-500">Prova a modificare i filtri</p>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
           </aside>
 
-          {/* Map Section - Mobile */}
+          {/* Map Section - Mobile Fullscreen */}
           {showMap && (
-            <section className="lg:hidden mt-6" aria-label="Mappa locali">
-              <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
-                <div className="h-96 bg-gray-200 flex items-center justify-center">
-                  <div className="text-center">
-                    {/* MapIcon className="h-16 w-16 text-gray-400 mx-auto mb-4" aria-hidden="true" /> */}
-                    <p className="text-gray-600 font-medium">Mappa in arrivo</p>
-                    <p className="text-gray-500 text-sm">
-                      Visualizzazione geografica dei locali
-                    </p>
+            <section className="lg:hidden fixed inset-0 z-50 bg-white" aria-label="Mappa locali">
+              <div className="h-full flex flex-col">
+                {/* Mobile Map Header */}
+                <div className="flex items-center justify-between p-4 border-b border-gray-200 bg-white">
+                  <div className="flex items-center gap-3">
+                    <h3 className="font-semibold text-gray-900">Mappa Locali</h3>
+                    <div className="flex items-center gap-1 text-xs text-gray-500">
+                      <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
+                      <span>{safeEnhancedVenues.length} locali</span>
+                    </div>
                   </div>
+                  <button
+                    onClick={() => setShowMap(false)}
+                    className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                  >
+                    <X className="h-5 w-5 text-gray-600" />
+                  </button>
+                </div>
+                
+                {/* Mobile Map Container */}
+                <div className="flex-1 relative">
+                  {safeEnhancedVenues.length > 0 && (
+                    <React.Suspense fallback={
+                      <div className="h-full bg-gray-50 flex items-center justify-center">
+                        <div className="text-center">
+                          <div className="animate-spin rounded-full h-8 w-8 border-2 border-orange-500 border-t-transparent mx-auto mb-2"></div>
+                          <p className="text-sm text-gray-500">Caricamento mappa...</p>
+                        </div>
+                      </div>
+                    }>
+                      {(() => {
+                        const VenuesMap = React.lazy(() => import('../components/VenuesMap'));
+                        return <VenuesMap 
+                          venues={safeEnhancedVenues} 
+                          height="100%" 
+                          className="rounded-none"
+                          showControls={true}
+                        />
+                      })()}
+                    </React.Suspense>
+                  )}
                 </div>
               </div>
             </section>

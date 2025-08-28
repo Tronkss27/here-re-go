@@ -185,16 +185,24 @@ const Index = () => {
                       {/* Match Header - Logo Lega */}
                       <div className="match-card-header">
                         <div className="competition-info">
-                          {getLeagueLogo(match.competition.name) ? (
+                          {match.leagueLogo ? (
                             <img 
-                              src={getLeagueLogo(match.competition.name)} 
-                              alt={getLeagueDisplayName(match.competition.name)}
-                              className="competition-logo-img"
+                              src={match.leagueLogo} 
+                              alt={match.league || 'League'}
+                              className="competition-logo-img w-5 h-5 object-contain"
+                              onError={(e) => {
+                                e.currentTarget.style.display = 'none';
+                                e.currentTarget.nextElementSibling.style.display = 'inline';
+                              }}
                             />
-                          ) : (
-                            <span className="competition-logo-placeholder">⚽</span>
-                          )}
-                          <span>{getLeagueDisplayName(match.competition.name)}</span>
+                          ) : null}
+                          <span 
+                            className="competition-logo-placeholder"
+                            style={{ display: match.leagueLogo ? 'none' : 'inline' }}
+                          >
+                            ⚽
+                          </span>
+                          <span>{match.league || getLeagueDisplayName(match.competition?.name) || 'Campionato'}</span>
                         </div>
                         <div className="hot-badge">
                           <TrendingUp size={12} />
@@ -208,7 +216,21 @@ const Index = () => {
                           {/* Logo squadra casa */}
                           <div className="flex flex-col items-center">
                             <div className="team-logo-placeholder">
-                              <span className="text-lg font-bold text-gray-500">
+                              {match.homeTeamLogo ? (
+                                <img 
+                                  src={match.homeTeamLogo} 
+                                  alt={`${match.homeTeam} logo`}
+                                  className="w-8 h-8 object-contain"
+                                  onError={(e) => {
+                                    e.currentTarget.style.display = 'none';
+                                    e.currentTarget.nextElementSibling.style.display = 'block';
+                                  }}
+                                />
+                              ) : null}
+                              <span 
+                                className="text-lg font-bold text-gray-500"
+                                style={{ display: match.homeTeamLogo ? 'none' : 'block' }}
+                              >
                                 {match.homeTeam.charAt(0)}
                               </span>
                             </div>
@@ -223,7 +245,21 @@ const Index = () => {
                           {/* Logo squadra ospite */}
                           <div className="flex flex-col items-center">
                             <div className="team-logo-placeholder">
-                              <span className="text-lg font-bold text-gray-500">
+                              {match.awayTeamLogo ? (
+                                <img 
+                                  src={match.awayTeamLogo} 
+                                  alt={`${match.awayTeam} logo`}
+                                  className="w-8 h-8 object-contain"
+                                  onError={(e) => {
+                                    e.currentTarget.style.display = 'none';
+                                    e.currentTarget.nextElementSibling.style.display = 'block';
+                                  }}
+                                />
+                              ) : null}
+                              <span 
+                                className="text-lg font-bold text-gray-500"
+                                style={{ display: match.awayTeamLogo ? 'none' : 'block' }}
+                              >
                                 {match.awayTeam.charAt(0)}
                               </span>
                             </div>

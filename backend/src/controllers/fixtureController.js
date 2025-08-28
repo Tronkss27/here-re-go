@@ -1,5 +1,10 @@
 const fixturesService = require('../services/fixturesService')
+const sportsApiService = require('../services/sportsApiService')
+const standardFixturesService = require('../services/standardFixturesService')
+const roundBasedSyncService = require('../services/roundBasedSyncService')
 const Fixture = require('../models/Fixture')
+const PopularMatch = require('../models/PopularMatch')
+const MatchAnnouncement = require('../models/MatchAnnouncement')
 const TenantQuery = require('../utils/tenantQuery')
 
 class FixtureController {
@@ -356,29 +361,204 @@ class FixtureController {
 
   /**
    * POST /fixtures/sync
-   * Sincronizza fixtures popolari dal servizio API
+   * Sincronizza fixtures popolari da Sportmonks API e crea PopularMatch
    */
   async syncFixtures(req, res) {
     try {
-      // Solo admin possono sincronizzare
-      if (req.user.role !== 'admin') {
+      // Solo admin e venue_owner possono sincronizzare
+      if (req.user.role !== 'admin' && req.user.role !== 'venue_owner') {
         return res.status(403).json({
           success: false,
           error: 'Access denied',
-          message: 'Solo gli admin possono sincronizzare le fixtures'
+          message: 'Solo gli admin e proprietari di locali possono sincronizzare le fixtures'
         })
       }
 
-      const result = await fixturesService.syncPopularFixtures()
+      console.log('🔄 Avvio sincronizzazione fixtures da Sportmonks API...')
+      
+      const { dateRange = 30, league } = req.body; // Default: prossimi 30 giorni, lega opzionale
+      
+      if (league) {
+        console.log(`🎯 Sincronizzazione specifica per lega: ${league}`);
+      } else {
+        console.log('🌍 Sincronizzazione per tutte le leghe');
+      }
+      
+      // ✅ FIX: Gestisci dateRange come numero (legacy) o oggetto (da jobQueue)
+      let startDate, endDate, dayCount;
+      
+      if (typeof dateRange === 'object' && dateRange.startDate && dateRange.endDate) {
+        // Nuovo formato da jobQueue con date specifiche
+        startDate = new Date(dateRange.startDate);
+        endDate = new Date(dateRange.endDate);
+        dayCount = dateRange.days || Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24));
+        console.log(`📅 Using specific date range from jobQueue: ${startDate.toISOString().split('T')[0]} → ${endDate.toISOString().split('T')[0]} (${dayCount} days)`);
+      } else {
+        // Formato legacy: numero di giorni da oggi
+        dayCount = typeof dateRange === 'number' ? dateRange : 30;
+        startDate = new Date();
+        endDate = new Date(startDate);
+        endDate.setDate(startDate.getDate() + dayCount);
+        console.log(`📅 Using legacy date range: oggi + ${dayCount} giorni (${startDate.toISOString().split('T')[0]} → ${endDate.toISOString().split('T')[0]})`);
+      }
+      const results = {
+        total: 0,
+        created: 0,
+        updated: 0,
+        popularMatches: 0,
+        errors: []
+      }
+
+      let allStandardFixtures = [];
+
+      if (league) {
+        // 🎯 NUOVO APPROCCIO: Usa season filter per lega specifica
+        console.log(`🎯 Using season filter approach for league: ${league}`);
+        
+        const dateRangeObj = {
+          startDate: startDate.toISOString(),
+          endDate: endDate.toISOString()
+        };
+        
+        try {
+          console.log(`📅 Sincronizzando fixtures per stagione ${league} (${startDate.toISOString().split('T')[0]} - ${endDate.toISOString().split('T')[0]})`);
+          
+          // ✅ USA NUOVO METODO SEASON-BASED CON DATE CORRETTE
+          allStandardFixtures = await standardFixturesService.getStandardFixturesBySeason(league, dateRangeObj);
+          
+          if (!Array.isArray(allStandardFixtures) || allStandardFixtures.length === 0) {
+            console.log(`⚠️ No standard fixtures returned for season ${league}, ending sync...`);
+          } else {
+            console.log(`✅ Retrieved ${allStandardFixtures.length} fixtures for ${league} season`);
+          }
+        } catch (error) {
+          console.error(`❌ Error getting season fixtures for ${league}:`, error.message);
+          return res.status(500).json({
+            success: false,
+            error: error.message,
+            message: `Errore durante la sincronizzazione della stagione ${league}`
+          });
+        }
+      } else {
+        // 📅 APPROCCIO LEGACY: Itera giorno per giorno (quando non è specificata una lega)
+        console.log('📅 Using legacy date-by-date approach for all leagues');
+        
+        const today = new Date()
+        const mockDates = ['2025-09-14', '2025-09-15', '2025-09-21'] // Date presenti nei mock
+        
+        for (let i = 0; i < dateRange; i++) {
+          const currentDate = new Date(today)
+          currentDate.setDate(today.getDate() + i)
+          let dateString = currentDate.toISOString().split('T')[0]
+          
+          // Per test con mock, usa anche date future specifiche
+          if (process.env.USE_MOCK_API === 'true' && i < mockDates.length) {
+            dateString = mockDates[i]
+            console.log(`📅 Using mock date for testing: ${dateString}`)
+          }
+          
+          try {
+            console.log(`📅 Sincronizzando fixtures per: ${dateString}`)
+            
+            // ✅ USA STANDARDFIXTURES SERVICE CON ADAPTER (legacy)
+            const standardFixtures = await standardFixturesService.getStandardFixturesByDate(dateString)
+            
+            if (!Array.isArray(standardFixtures) || standardFixtures.length === 0) {
+              console.log(`⚠️ No standard fixtures returned for ${dateString}, skipping...`)
+              continue
+            }
+            
+            // Aggiungi fixtures di questo giorno al totale
+            allStandardFixtures.push(...standardFixtures);
+            
+          } catch (error) {
+            console.error(`❌ Error getting fixtures for ${dateString}:`, error.message)
+            results.errors.push(`Errore per ${dateString}: ${error.message}`)
+          }
+        }
+      }
+
+      // Processa tutte le fixtures ottenute (sia da season che da date)
+      if (allStandardFixtures.length > 0) {
+        console.log(`🔄 Processing ${allStandardFixtures.length} total fixtures...`);
+        
+        for (const standardFixture of allStandardFixtures) {
+          try {
+            // Per l'approccio season-based, non è necessario filtrare per lega (già fatto dall'API)
+            // Per l'approccio legacy, manteniamo il filtro se necessario
+            if (league && !league.includes('all') && !standardFixturesService._matchesLeague(standardFixture, league)) {
+              console.log(`⏭️ Skipping fixture from different league: ${standardFixture.league.name}`);
+              continue;
+            }
+            
+            // Crea/aggiorna PopularMatch usando DTO standardizzato
+            let popularMatch = await PopularMatch.findOne({ matchId: standardFixture.externalId })
+            
+            if (popularMatch) {
+              // ♻️ CACHE HIT: Riutilizza match esistente e aggiorna con DTO standardizzato
+              console.log(`♻️ Reusing existing PopularMatch: ${standardFixture.externalId} (${popularMatch.homeTeam} vs ${popularMatch.awayTeam})`);
+              
+              // Aggiorna usando StandardFixture DTO
+              const homeParticipant = standardFixture.participants.find(p => p.role === 'home')
+              const awayParticipant = standardFixture.participants.find(p => p.role === 'away')
+              
+              popularMatch.homeTeam = homeParticipant?.name || 'TBD'
+              popularMatch.homeTeamLogo = homeParticipant?.image_path || null
+              popularMatch.awayTeam = awayParticipant?.name || 'TBD'
+              popularMatch.awayTeamLogo = awayParticipant?.image_path || null
+              popularMatch.date = standardFixture.date
+              popularMatch.time = standardFixture.time
+              popularMatch.league = standardFixture.league.name
+              popularMatch.leagueLogo = standardFixture.league.logo
+              await popularMatch.save()
+              results.updated++
+            } else {
+              // 🆕 CACHE MISS: Crea nuovo PopularMatch da StandardFixture DTO
+              console.log(`🆕 Creating new PopularMatch from StandardFixture: ${standardFixture.externalId}`);
+              
+              // Usa il metodo helper per convertire DTO a PopularMatch format
+              const popularMatchData = standardFixturesService.convertToPopularMatchFormat(standardFixture)
+              
+              popularMatch = new PopularMatch(popularMatchData)
+              
+              await popularMatch.save()
+              await popularMatch.updatePopularity() // Calcola popolarità iniziale
+              results.created++
+              results.popularMatches++
+            }
+            
+            results.total++
+            
+          } catch (fixtureError) {
+            console.error(`❌ Error processing StandardFixture ${standardFixture.fixtureId}:`, fixtureError.message)
+            results.errors.push(`StandardFixture ${standardFixture.fixtureId}: ${fixtureError.message}`)
+          }
+        }
+      } else {
+        console.log('⚠️ No fixtures found to process')
+      }
+      
+      console.log('✅ Sincronizzazione completata:', results)
+      
+      // Calcola statistiche cache per lega specifica
+      const cacheHitRate = results.total > 0 ? ((results.updated / results.total) * 100).toFixed(1) : 0;
       
       res.json({
         success: true,
-        ...result,
-        message: `Sincronizzazione completata: ${result.created} create, ${result.updated} aggiornate`
+        ...results,
+        message: league 
+          ? `Sincronizzazione ${league} completata: ${results.total} fixtures, ${results.created} nuove, ${results.updated} cache hits (${cacheHitRate}%)`
+          : `Sincronizzazione completata: ${results.created} create, ${results.updated} aggiornate, ${results.popularMatches} PopularMatch processati`,
+        cacheStats: {
+          hitRate: `${cacheHitRate}%`,
+          reusedMatches: results.updated,
+          newMatches: results.created,
+          league: league || 'all'
+        }
       })
 
     } catch (error) {
-      console.error('Sync fixtures error:', error)
+      console.error('❌ Sync fixtures error:', error)
       res.status(500).json({
         success: false,
         error: error.message,
@@ -505,6 +685,203 @@ class FixtureController {
       })
     }
   }
+
+  /**
+   * 🎯 NUOVO SYNC FIXTURES V2 - Round-Based Filtering
+   * 
+   * Usa RoundBasedSyncService per sincronizzazione avanzata:
+   * - Supporta "prossime giornate" (rounds) e "giorni" (date-based)
+   * - Risolve problemi Ligue 1, Serie B, etc.  
+   * - Usa `/fixtures/date/{date}` invece di season filtering
+   * - Garantisce completezza delle partite
+   */
+  async syncFixturesV2(req, res) {
+    try {
+      // Solo admin e venue_owner possono sincronizzare
+      if (req.user.role !== 'admin' && req.user.role !== 'venue_owner') {
+        return res.status(403).json({
+          success: false,
+          error: 'Access denied',
+          message: 'Solo gli admin e proprietari di locali possono sincronizzare le fixtures'
+        })
+      }
+
+      console.log('🎯 Avvio sincronizzazione V2 con RoundBasedSyncService...')
+      
+      const { dateRange, league, syncInfo } = req.body;
+      
+      if (!league) {
+        return res.status(400).json({
+          success: false,
+          error: 'League required',
+          message: 'È necessario specificare una lega per la sincronizzazione V2'
+        })
+      }
+      
+      console.log(`🎯 Sincronizzazione V2 per lega: ${league}`);
+      console.log(`📊 Sync info:`, syncInfo);
+      
+      // Determina il tipo di sincronizzazione
+      let syncOptions = {
+        type: 'days', // default
+        count: 7
+      };
+      
+      if (syncInfo && syncInfo.type === 'rounds') {
+        syncOptions = {
+          type: 'rounds',
+          count: syncInfo.roundCount || 3
+        };
+        console.log(`⚽ Round-based sync: ${syncOptions.count} giornate`);
+      } else if (typeof dateRange === 'object' && dateRange.startDate && dateRange.endDate) {
+        syncOptions = {
+          type: 'days',
+          startDate: new Date(dateRange.startDate),
+          endDate: new Date(dateRange.endDate)
+        };
+        console.log(`📅 Date-based sync: ${syncOptions.startDate.toISOString().split('T')[0]} → ${syncOptions.endDate.toISOString().split('T')[0]}`);
+      } else {
+        const dayCount = typeof dateRange === 'number' ? dateRange : 7;
+        syncOptions = {
+          type: 'days',
+          count: dayCount
+        };
+        console.log(`📅 Date-based sync: ${dayCount} giorni da oggi`);
+      }
+      
+      // Esegui sincronizzazione con RoundBasedSyncService
+      const syncResult = await roundBasedSyncService.syncFixtures(league, syncOptions);
+      
+      if (!syncResult.success) {
+        return res.status(500).json({
+          success: false,
+          error: syncResult.error,
+          message: `Errore durante la sincronizzazione V2 per ${league}`
+        });
+      }
+      
+      // 💾 VERO SALVATAGGIO NEL DATABASE
+      console.log(`💾 Salvando ${syncResult.totalFixtures} fixtures nel database...`);
+      
+      const dbResults = {
+        total: 0,
+        created: 0,
+        updated: 0,
+        popularMatches: 0,
+        errors: []
+      };
+      
+      // 🎯 Ottieni e salva le StandardFixtures reali
+      if (syncResult.metadata && syncResult.metadata.syncResults) {
+        for (const dateResult of syncResult.metadata.syncResults) {
+          if (dateResult.success && dateResult.fixtures > 0) {
+            try {
+              // Ri-ottieni le StandardFixtures per questa data 
+              const dateString = dateResult.date;
+              console.log(`💾 Saving fixtures for date: ${dateString}`);
+              
+              const standardFixtures = await standardFixturesService.getStandardFixturesByDate(dateString);
+              const leagueFixtures = standardFixtures.filter(fixture => 
+                standardFixturesService._matchesLeague(fixture, league)
+              );
+              
+              console.log(`💾 Found ${leagueFixtures.length} fixtures for ${league} on ${dateString}`);
+              
+              // Salva ogni fixture nel database come PopularMatch
+              for (const standardFixture of leagueFixtures) {
+                try {
+                  const existingMatch = await PopularMatch.findOne({ matchId: standardFixture.externalId });
+                  
+                  if (existingMatch) {
+                    // Aggiorna match esistente
+                    console.log(`♻️ Updating existing PopularMatch: ${standardFixture.externalId}`);
+                    
+                    existingMatch.homeTeam = standardFixture.participants.find(p => p.role === 'home')?.name || 'TBD';
+                    existingMatch.awayTeam = standardFixture.participants.find(p => p.role === 'away')?.name || 'TBD';
+                    existingMatch.homeTeamLogo = standardFixture.participants.find(p => p.role === 'home')?.image_path || null;
+                    existingMatch.awayTeamLogo = standardFixture.participants.find(p => p.role === 'away')?.image_path || null;
+                    existingMatch.league = standardFixture.league.name;
+                    existingMatch.leagueLogo = standardFixture.league.image_path || null;
+                    existingMatch.date = new Date(standardFixture.startingAt);
+                    existingMatch.lastUpdated = new Date();
+                    
+                    await existingMatch.save();
+                    dbResults.updated++;
+                  } else {
+                    // Crea nuovo match
+                    console.log(`🆕 Creating new PopularMatch: ${standardFixture.externalId}`);
+                    
+                    // ✅ USA campi già validati dal provider adapter
+                    const newMatch = new PopularMatch({
+                      matchId: standardFixture.externalId,
+                      homeTeam: standardFixture.participants.find(p => p.role === 'home')?.name || 'TBD',
+                      awayTeam: standardFixture.participants.find(p => p.role === 'away')?.name || 'TBD',
+                      homeTeamLogo: standardFixture.participants.find(p => p.role === 'home')?.image_path || null,
+                      awayTeamLogo: standardFixture.participants.find(p => p.role === 'away')?.image_path || null,
+                      league: standardFixture.league.name,
+                      leagueLogo: standardFixture.league.logo || null,
+                      date: standardFixture.date,        // ✅ SICURO: già validato YYYY-MM-DD
+                      time: standardFixture.time,        // ✅ SICURO: già validato HH:MM
+                      source: 'sync-api',
+                      lastUpdated: new Date()
+                    });
+                    
+                    await newMatch.save();
+                    await newMatch.updatePopularity(); // Calcola popolarità iniziale
+                    dbResults.created++;
+                  }
+                  
+                  dbResults.total++;
+                  dbResults.popularMatches++;
+                  
+                } catch (fixtureError) {
+                  console.error(`❌ Error saving fixture ${standardFixture.externalId}:`, fixtureError.message);
+                  dbResults.errors.push(`Fixture ${standardFixture.externalId}: ${fixtureError.message}`);
+                }
+              }
+              
+            } catch (dateError) {
+              console.error(`❌ Error processing date ${dateResult.date}:`, dateError.message);
+              dbResults.errors.push(`Date ${dateResult.date}: ${dateError.message}`);
+            }
+          }
+        }
+      }
+      
+      console.log(`✅ Sincronizzazione V2 completata: ${dbResults.total} fixtures processati`);
+      
+      const cacheStats = {
+        totalFixtures: syncResult.totalFixtures, // ✅ FIX: Campo mancante per jobQueue
+        hitRate: syncResult.cacheHits > 0 ? ((syncResult.cacheHits / syncResult.totalFixtures) * 100).toFixed(1) : 0,
+        reusedMatches: syncResult.cacheHits,
+        newMatches: syncResult.newMatches,
+        league: league
+      };
+      
+      res.json({
+        success: true,
+        message: `Sincronizzazione ${syncOptions.type === 'rounds' ? 'per giornate' : 'per giorni'} completata per ${league}`,
+        data: {
+          ...dbResults,
+          cacheStats,
+          syncInfo: {
+            approach: syncOptions.type,
+            count: syncOptions.count,
+            datesProcessed: syncResult.datesProcessed,
+            metadata: syncResult.metadata
+          }
+        }
+      });
+
+    } catch (error) {
+      console.error('Sync V2 error:', error);
+      res.status(500).json({
+        success: false,
+        error: error.message,
+        message: 'Errore durante la sincronizzazione V2'
+      });
+    }
+  }
 }
 
-module.exports = new FixtureController() 
+module.exports = new FixtureController();

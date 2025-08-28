@@ -82,23 +82,24 @@ export const getHeaders = (includeAuth = true) => {
     'Content-Type': 'application/json'
   }
   
+    // 🔐 Authentication header (solo se richiesto)
   if (includeAuth) {
     const token = localStorage.getItem('token')
     if (token) {
       headers.Authorization = `Bearer ${token}`
     }
   }
-  
-  // Aggiungi tenant header solo se il ruolo dell'utente lo richiede
+
+  // 🏢 Tenant header (SEMPRE se disponibile, anche per richieste pubbliche)
   const user = localStorage.getItem('user')
   if (user) {
     try {
       const userData = JSON.parse(user)
-      // Invia l'header solo per venue_owner (o admin multi-tenant) e solo se presente tenantId
-      if (userData.tenantId && (userData.role === 'venue_owner' || userData.role === 'admin')) {
+      // Invia tenant header per TUTTE le richieste se tenantId esiste
+      if (userData.tenantId) {
         headers['X-Tenant-ID'] = userData.tenantId
+        console.log('🏢 Using tenant ID:', userData.tenantId, 'for user role:', userData.role, '- includeAuth:', includeAuth)
       }
-      // In tutti gli altri casi NON impostare X-Tenant-ID
     } catch (error) {
       console.warn('Error parsing user data for tenant header:', error)
     }

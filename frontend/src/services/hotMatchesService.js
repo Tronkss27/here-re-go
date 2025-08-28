@@ -22,11 +22,31 @@ export const hotMatchesService = {
       
       const response = await apiClient.get(`/match-announcements/hot?limit=${limit}`);
       
-      console.log(`✅ Found ${response.data?.data?.length || response.data?.length || 0} hot matches`);
+      const rawData = response.data?.data || response.data || [];
+      console.log(`📊 Raw hot matches count: ${rawData.length}`);
+      
+      // 🎯 FIX: Filtra solo partite future (oggi e oltre)
+      const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+      const futureMatches = rawData.filter(match => {
+        const matchDate = match.match?.date || match.date;
+        if (!matchDate) return false;
+        
+        // Confronta le date in formato YYYY-MM-DD
+        const matchDateStr = matchDate.split('T')[0];
+        const isFuture = matchDateStr >= today;
+        
+        if (!isFuture) {
+          console.log(`🗑️ Filtering out past match: ${match.match?.homeTeam} vs ${match.match?.awayTeam} (${matchDateStr})`);
+        }
+        
+        return isFuture;
+      });
+      
+      console.log(`✅ Found ${futureMatches.length} future hot matches (filtered from ${rawData.length})`);
       
       const result = {
         success: true,
-        data: response.data?.data || response.data || [],
+        data: futureMatches,
         meta: response.data?.meta || {}
       };
 

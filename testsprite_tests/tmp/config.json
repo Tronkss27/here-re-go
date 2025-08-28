@@ -1,0 +1,18 @@
+{
+  "status": "commited",
+  "type": "frontend",
+  "scope": "codebase",
+  "localEndpoint": "http://localhost:5174",
+  "loginUser": "test.venue@sports.local",
+  "loginPassword": "TestVenue2025!",
+  "executionArgs": {
+    "projectName": "SPOrTS",
+    "projectPath": "/Users/nicolotroncone/SPOrTS",
+    "testIds": [],
+    "additionalInstruction": "VERIFICA POST-IMPLEMENTAZIONE CORREZIONI TESTSPRITE:\n\n**PRIMARY FOCUS - Color Consistency Improvements:**\n1. **Contact Info Sections**: Verificare rimozione completa pink backgrounds invasivi\n2. **Button Hierarchy**: Confermare che solo primary CTAs usano #FF7043 arancione\n3. **Input Fields**: Validare che TUTTI gli input abbiano background bianco con border grigio\n4. **Soft Pink Usage**: Verificare che #FFE5E5 appaia SOLO per active/selected states\n5. **Booking Forms**: Controllare che secondary buttons siano bianchi/neutri\n\n**SPECIFIC UI ELEMENTS TO TEST:**\n- Homepage: day navigation, match cards, CTA buttons\n- VenueDetail: contact sections, booking buttons, info cards  \n- Auth Forms: password input consistency, form styling\n- Admin Dashboard: login forms, button hierarchy\n\n**COMPARISON METRICS:**\n- Confrontare con il primo test: identificare miglioramenti specifici\n- Misurare riduzione degli \"invasive pink backgrounds\"\n- Validare implementazione corretta gerarchia colori\n- Verificare consistenza palette Gazzetta dello Sport\n\n**EXPECTED IMPROVEMENTS:**\n- Zero pink backgrounds in contact/info sections\n- Consistent white input fields across all forms\n- Clear button hierarchy (orange primary, white secondary)\n- Better color accessibility and professional appearance\n\nFornire analisi dettagliata dei miglioramenti ottenuti e eventuali inconsistenze residue da correggere.",
+    "envs": {
+      "API_KEY": "sk-user-94_-hk570Ufq2KP2tqoUz3bLaBZd3NWvFuttlTSDA3ALbOjhgDJRQkvTsiLU6_gKaeL90JLiP1R9fq6hDPfVQGNPa7RKR7cXvuqTkMB684PRFKiJbYU0HcKaTpvlR7hf9xc"
+    }
+  },
+  "proxy": "http://4415bfd1-4851-49e7-b9b0-1249793e3d2c:tkYjZ4B33LahwnjqvF2MK25IRfs3gglz@tun.testsprite.com:8080"
+}

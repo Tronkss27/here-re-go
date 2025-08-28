@@ -17,41 +17,54 @@ export default {
       },
     },
     extend: {
-      // SISTEMA COLORI CENTRALIZZATO - PALETTE COERENTE
-      colors: {
-        // PALETTE ARANCIONE RIPRISTINATA
-        'primary': '#ea580c',           // Arancione principale
-        'secondary': '#fb923c',         // Arancione secondario
-        'accent': '#fed7aa',            // Arancione chiaro
-        'dark': '#1a1a1a',             // Nero
-        'light': '#ffffff',            // Bianco
-        'grey': '#f3f4f6',             // Grigio
-        
-        // COLORI SEMANTICI
-        'background': '#ffffff',        // Sfondo principale
-        'foreground': '#1a1a1a',       // Testo principale
-        'muted': '#ea580c',            // Arancione per testi secondari
-        'border': '#e5e7eb',           // Bordi neutri
-        
-        // CARDS E COMPONENTI
-        'card': '#ffffff',             // Sfondo cards
-        'card-foreground': '#1a1a1a',  // Testo su cards
-        
-        // INPUTS
-        'input': '#ffffff',            // Sfondo inputs
-        'input-border': '#e5e7eb',     // Bordi inputs
-        
-        // MAPPATURA SPORTS COLORS
-        'sports-primary': '#ea580c',   // Arancione
-        'sports-secondary': '#f3f4f6', // Grigio
-        'sports-accent': '#fed7aa',    // Arancione chiaro
-        'sports-white': '#ffffff',     // Bianco
-        'sports-dark': '#1a1a1a',      // Scuro
-      },
       fontFamily: {
-        special: ['Special Gothic Expanded One', 'sans-serif'],
-        racing: ['Special Elite', 'cursive'],
-        sans: ['-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif'],
+        'special': ['Special Gothic Expanded One', 'sans-serif']
+      },
+      colors: {
+        // 🎨 SEMANTIC COLOR SYSTEM - HSL TOKENS
+        // Mapped to CSS custom properties in design-tokens.css
+        border: "hsl(var(--border))",
+        input: "hsl(var(--input))",
+        ring: "hsl(var(--ring))",
+        background: "hsl(var(--background))",
+        foreground: "hsl(var(--foreground))",
+        primary: {
+          DEFAULT: "hsl(var(--primary))",
+          foreground: "hsl(var(--primary-foreground))",
+          dark: "hsl(var(--primary-dark))",
+          light: "hsl(var(--primary-light))"
+        },
+        secondary: {
+          DEFAULT: "hsl(var(--secondary))",
+          foreground: "hsl(var(--secondary-foreground))"
+        },
+        destructive: {
+          DEFAULT: "hsl(var(--destructive))",
+          foreground: "hsl(var(--destructive-foreground))"
+        },
+        muted: {
+          DEFAULT: "hsl(var(--muted))",
+          foreground: "hsl(var(--muted-foreground))"
+        },
+        accent: {
+          DEFAULT: "hsl(var(--accent))",
+          foreground: "hsl(var(--accent-foreground))"
+        },
+        popover: {
+          DEFAULT: "hsl(var(--popover))",
+          foreground: "hsl(var(--popover-foreground))"
+        },
+        card: {
+          DEFAULT: "hsl(var(--card))",
+          foreground: "hsl(var(--card-foreground))"
+        },
+        chart: {
+          "1": "hsl(var(--chart-1))",
+          "2": "hsl(var(--chart-2))",
+          "3": "hsl(var(--chart-3))",
+          "4": "hsl(var(--chart-4))",
+          "5": "hsl(var(--chart-5))"
+        }
       },
       keyframes: {
         "accordion-down": {

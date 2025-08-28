@@ -1,0 +1,11 @@
+# Task ID: 10
+# Title: Reviews & Customer Feedback
+# Status: pending
+# Dependencies: 6, 8
+# Priority: low
+# Description: Sistema recensioni con rating e moderazione
+# Details:
+ReviewsAdmin gestione feedback, rating 1-5 stelle, commenti testuali, moderazione workflow, risposta proprietario, public API widget, rating calculation aggregation
+
+# Test Strategy:
+Test workflow moderazione, calcolo rating aggregato, public API widget, spam protection

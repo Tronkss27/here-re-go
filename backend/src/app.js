@@ -130,6 +130,7 @@ app.use('/api/fixtures', fixtureRoutes);
 app.use('/api/match-announcements', matchAnnouncementRoutes);
 app.use('/api/matches', matchRoutes);
 app.use('/api/global-matches', require('./routes/globalMatches'));
+app.use('/api/sync-jobs', require('./routes/syncJobs'));
 
 // Health check endpoint (non richiede tenant)
 app.get('/api/health', (req, res) => {
@@ -160,4 +161,5 @@ app.use((req, res) => {
   })
 })
 
+module.exports = app 
 module.exports = app 

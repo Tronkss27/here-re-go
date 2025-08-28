@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Download, Calendar, Edit, Trash2, Eye, Archive, RotateCcw, ExternalLink } from 'lucide-react';
+import { Plus, Download, Calendar, Edit, Trash2, Eye, Archive, RotateCcw, ExternalLink, RefreshCw } from 'lucide-react';
 import { Button } from '../../components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { Alert, AlertDescription } from '../../components/ui/alert';
@@ -47,6 +47,7 @@ const CalendarioPartite = () => {
   const [viewingAnnouncement, setViewingAnnouncement] = useState<Announcement | null>(null);
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [loading, setLoading] = useState(true);
+  const [syncing, setSyncing] = useState(false);
   const [message, setMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
 
   // Funzione per caricare gli annunci dal backend
@@ -191,7 +192,27 @@ const CalendarioPartite = () => {
 
   const handleEditAnnouncement = (id: string) => {
     console.log('✏️ Editing announcement', id);
-    setEditingAnnouncementId(id);
+    // 🎯 RIATTIVATO: Ora apre il prompt di modifica semplice
+    const newDescription = prompt('Inserisci una nuova descrizione per questo annuncio:');
+    if (newDescription !== null) {
+      handleUpdateAnnouncement(id, { 'eventDetails.description': newDescription });
+    }
+  };
+
+  const handleUpdateAnnouncement = async (id: string, updates: any) => {
+    try {
+      const result = await updateAnnouncement(id, updates);
+      
+      if (result.success) {
+        showMessage('Annuncio modificato con successo!', 'success');
+        fetchAnnouncements();
+      } else {
+        showMessage(result.error || 'Errore durante la modifica', 'error');
+      }
+    } catch (error) {
+      console.error('❌ Error updating announcement:', error);
+      showMessage('Errore durante la modifica dell\'annuncio', 'error');
+    }
   };
 
   const handleEditSuccess = () => {
@@ -214,6 +235,42 @@ const CalendarioPartite = () => {
     } catch (error) {
       console.error('❌ Error viewing announcement:', error);
       showMessage('Errore durante il caricamento dei dettagli', 'error');
+    }
+  };
+
+  // Funzione per sincronizzare partite dalla API sportiva
+  const handleSyncFixtures = async () => {
+    setSyncing(true);
+    console.log('🔄 Sincronizzando partite dalla API sportiva...');
+    
+    try {
+      const response = await fetch('/api/fixtures/sync', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ dateRange: 30 }) // Prossimi 30 giorni
+      });
+      
+      const result = await response.json();
+      
+      if (result.success) {
+        showMessage(
+          `Sincronizzazione completata! ${result.created} partite create, ${result.updated} aggiornate`, 
+          'success'
+        );
+        // Le partite sincronizzate sono PopularMatch, non annunci diretti
+        // Ma è utile ricaricare per vedere eventuali nuove opzioni
+        console.log('✅ Sync results:', result);
+      } else {
+        showMessage(result.message || 'Errore durante la sincronizzazione', 'error');
+      }
+    } catch (error) {
+      console.error('❌ Error syncing fixtures:', error);
+      showMessage('Errore durante la sincronizzazione delle partite', 'error');
+    } finally {
+      setSyncing(false);
     }
   };
 
@@ -344,11 +401,67 @@ const CalendarioPartite = () => {
         />
       )} */}
 
-      {/* <ViewAnnouncementModal
-        isOpen={!!viewingAnnouncement}
-        onClose={() => setViewingAnnouncement(null)}
-        announcement={viewingAnnouncement}
-      /> */}
+      {/* 🎯 MODALE VISUALIZZA DETTAGLI SEMPLICE */}
+      {viewingAnnouncement && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg max-w-2xl w-full max-h-[80vh] overflow-y-auto">
+            <div className="p-6">
+              <div className="flex justify-between items-start mb-4">
+                <h3 className="text-xl font-bold">Dettagli Annuncio</h3>
+                <Button variant="ghost" size="sm" onClick={() => setViewingAnnouncement(null)}>
+                  ✕
+                </Button>
+              </div>
+              
+              <div className="space-y-4">
+                <div>
+                  <strong>Partita:</strong> {viewingAnnouncement.match?.homeTeam} vs {viewingAnnouncement.match?.awayTeam}
+                </div>
+                <div>
+                  <strong>Data:</strong> {viewingAnnouncement.match?.date} - {viewingAnnouncement.match?.time}
+                </div>
+                <div>
+                  <strong>Competizione:</strong> {viewingAnnouncement.match?.competition?.name}
+                </div>
+                <div>
+                  <strong>Status:</strong> <Badge>{viewingAnnouncement.status}</Badge>
+                </div>
+                <div>
+                  <strong>Visualizzazioni:</strong> {viewingAnnouncement.views}
+                </div>
+                <div>
+                  <strong>Click:</strong> {viewingAnnouncement.clicks}
+                </div>
+                {viewingAnnouncement.eventDetails?.description && (
+                  <div>
+                    <strong>Descrizione:</strong>
+                    <p className="mt-1 text-gray-600">{viewingAnnouncement.eventDetails.description}</p>
+                  </div>
+                )}
+                {viewingAnnouncement.eventDetails?.selectedOffers && viewingAnnouncement.eventDetails.selectedOffers.length > 0 && (
+                  <div>
+                    <strong>Offerte:</strong>
+                    <ul className="mt-1 space-y-1">
+                      {viewingAnnouncement.eventDetails.selectedOffers.map((offer: any, index: number) => (
+                        <li key={index} className="text-gray-600">• {offer.title}: {offer.description}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
+              
+              <div className="mt-6 flex justify-end space-x-2">
+                <Button variant="outline" onClick={() => setViewingAnnouncement(null)}>
+                  Chiudi
+                </Button>
+                <Button onClick={() => handleEditAnnouncement(viewingAnnouncement._id)}>
+                  Modifica
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

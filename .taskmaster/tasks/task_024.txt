@@ -1,0 +1,69 @@
+# Task ID: 24
+# Title: Connect Venue Onboarding to Database - Replace localStorage with Real API Calls
+# Status: pending
+# Dependencies: 8, 22
+# Priority: high
+# Description: Replace localStorage implementation in venueProfileService with real API calls to save venues to MongoDB database, updating the backend controller to handle complete venue profile persistence.
+# Details:
+1. Backend API Development:
+   - Create comprehensive venue API endpoints:
+     * POST /api/venues - Create new venue profile with validation
+     * PUT /api/venues/:id - Update existing venue profile
+     * GET /api/venues/:id - Retrieve venue profile by ID
+     * GET /api/venues/owner/:userId - Get venues by owner
+   - Implement venue controller with proper validation using Joi or similar
+   - Add image upload handling with multer for venue photos and gallery
+   - Implement proper error handling and status codes (400, 409, 500)
+   - Add authentication middleware to protect venue endpoints
+
+2. Frontend Service Refactoring:
+   - Replace all localStorage operations in venueProfileService with HTTP calls
+   - Implement proper error handling and loading states
+   - Add retry logic for failed API calls
+   - Update service methods to handle async operations properly
+   - Maintain backward compatibility during transition
+
+3. Data Migration Strategy:
+   - Create migration script to move existing localStorage venue data to database
+   - Handle data validation and cleanup during migration
+   - Implement fallback mechanisms for data integrity
+
+4. Integration with Venue Profile Component:
+   - Update venue profile forms to use new API service
+   - Add proper loading indicators and error messages
+   - Implement optimistic updates for better UX
+   - Handle image upload progress and validation
+
+5. Database Schema Enhancements:
+   - Ensure Venue model supports all profile fields (images, services, hours, contacts)
+   - Add proper indexing for venue queries
+   - Implement data validation at database level
+
+# Test Strategy:
+1. API Testing:
+   - Test all venue CRUD endpoints with Postman/Thunder Client
+   - Verify proper authentication and authorization
+   - Test image upload functionality with various file types and sizes
+   - Validate error responses for invalid data and unauthorized access
+
+2. Frontend Integration Testing:
+   - Test venue profile creation and editing flows
+   - Verify data persistence across browser sessions
+   - Test error handling for network failures and server errors
+   - Validate loading states and user feedback
+
+3. Data Migration Testing:
+   - Test migration script with sample localStorage data
+   - Verify data integrity after migration
+   - Test rollback procedures if migration fails
+
+4. End-to-End Testing:
+   - Complete venue onboarding flow from registration to profile completion
+   - Test venue profile updates and image uploads
+   - Verify venue data appears correctly in admin panels and public listings
+   - Test concurrent venue operations by multiple users
+
+5. Performance Testing:
+   - Test API response times with large venue datasets
+   - Verify image upload performance and storage limits
+   - Test database query performance with proper indexing

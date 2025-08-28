@@ -28,9 +28,32 @@ export const getVenueAnnouncements = async (options = {}) => {
     });
     
     const response = await apiClient.get(`/match-announcements/venue?${params}`);
+    const rawData = response.data.data || response.data || [];
+    
+    // 🎯 FIX: Filtra partite passate solo se NON includeArchived (per admin mantieni tutto)
+    let filteredData = rawData;
+    if (!options.includeArchived) {
+      const today = new Date().toISOString().split('T')[0];
+      filteredData = rawData.filter(announcement => {
+        const matchDate = announcement.match?.date || announcement.eventDetails?.startDate;
+        if (!matchDate) return true; // Mantieni se non ha data
+        
+        const matchDateStr = matchDate.split('T')[0];
+        const isFuture = matchDateStr >= today;
+        
+        if (!isFuture) {
+          console.log(`🗑️ Filtering out past announcement: ${announcement.match?.homeTeam} vs ${announcement.match?.awayTeam} (${matchDateStr})`);
+        }
+        
+        return isFuture;
+      });
+      
+      console.log(`✅ Venue announcements: ${filteredData.length} future (filtered from ${rawData.length})`);
+    }
+    
     return {
       success: true,
-      data: response.data.data || response.data,
+      data: filteredData,
       pagination: response.data.pagination,
       stats: response.data.stats
     };

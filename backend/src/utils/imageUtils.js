@@ -81,7 +81,9 @@ function processVenueWithImages(venue, baseUrlOrReq = 'http://localhost:3001') {
   
   return {
     ...venue,
-    images: processVenueImages(venue.images, baseUrl)
+    images: processVenueImages(venue.images, baseUrl),
+    // 🗺️ CRITICAL: Copy location.coordinates to root for frontend maps
+    coordinates: venue.coordinates || venue.location?.coordinates
   };
 }
 
