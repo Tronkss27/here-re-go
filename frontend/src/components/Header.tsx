@@ -15,8 +15,6 @@ const Header = () => {
   const navigationItems = [
     { label: 'Partite', href: '/' },
     { label: 'Locali', href: '/locali' },
-    { label: 'App', href: '/app' },
-    { label: 'Guida TV', href: '/guida-tv' },
     { label: 'Chi Siamo', href: '/chi-siamo' }
   ];
 
@@ -36,7 +34,7 @@ const Header = () => {
   };
 
   return (
-    <header className="header sticky top-0 z-50">
+    <header className="header sticky top-0 z-50 bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))]">
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between h-16 md:h-16 lg:h-16">
           {/* Mobile hamburger menu */}
@@ -65,7 +63,7 @@ const Header = () => {
               <a
                 key={item.href}
                 href={item.href}
-                className="text-white hover:text-green-300 transition-colors font-medium"
+                className="text-white hover:text-white/90 transition-colors font-medium border-b-2 border-transparent hover:border-white/40"
               >
                 {item.label}
               </a>
@@ -98,7 +96,7 @@ const Header = () => {
                     <Button
                       onClick={() => handleAuthAction('admin')}
                       size="sm"
-                      className="btn-accent"
+                      className="bg-[hsl(var(--primary-dark))] text-white hover:bg-[hsl(var(--primary))]"
                     >
                       <CalendarCheck size={16} className="mr-1" />
                       Admin
@@ -130,7 +128,7 @@ const Header = () => {
                     onClick={() => navigate('/client-login')}
                     size="sm"
                     variant="outline"
-                    className="btn-secondary px-3 py-1 text-xs"
+                    className="px-3 py-1 text-xs border-white text-white hover:bg-white hover:text-gray-900"
                   >
                     <Users size={12} className="mr-1" />
                     Accedi come Cliente

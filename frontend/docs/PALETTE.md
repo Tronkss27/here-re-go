@@ -271,3 +271,4 @@ A: Verifica che `tailwind.config.js` mappi correttamente i CSS variables
 ---
 
 *Per domande o suggerimenti sulla palette, consulta il team design o apri una issue.*
+

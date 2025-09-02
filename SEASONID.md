@@ -1,3 +1,5 @@
+Campionati:
+
 Premier League: id = 8, currentSeasonId = 25583, Regular Season (ID: 77476879):
 
 372195
@@ -784,4 +786,12 @@ Round 41
 Round 42
 
 
+Coppe e Competizioni:
 
+
+Coppa Italia: id = 390, currentSeasonId = 25642, All stages of season ID 25642:
+
+Preliminary Round (ID: 77476910)
+1st Round (ID: 77477579)
+2nd Round (ID: 77477970)
+8th Finals (ID: 77477578)

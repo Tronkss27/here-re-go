@@ -5,6 +5,7 @@ require('dotenv').config({ path: path.resolve(__dirname, '../../.env') });
 const sportsApiService = require('./sportsApiService');
 const stagesRoundsService = require('./stagesRoundsService');
 const standardFixturesService = require('./standardFixturesService');
+const providerFactory = require('./providers');
 
 /**
  * 🎯 ROUND-BASED SYNC SERVICE - VERO APPROCCIO GIORNATE
@@ -62,10 +63,98 @@ class RoundBasedSyncService {
         const roundDates = await this.getRoundDates(leagueKey, count);
         
         if (roundDates.length === 0) {
-          console.log(`⚠️ No round dates found for ${leagueKey}, fallback to date-based approach`);
-          // Fallback: usa approccio date se rounds non disponibili
-          datesToSync = this.generateDateRange(new Date(), count * 7); // count giornate ≈ count*7 giorni
-          metadata.fallback = 'date_based';
+          console.log(`⚠️ No round dates found for ${leagueKey}, using BETWEEN fallback to build two rounds`);
+          // Fallback robusto: usa fixtures/between e raggruppa per round_id
+          const start = new Date();
+          const end = new Date();
+          end.setDate(end.getDate() + count * 10); // finestra ampia per coprire 2 giornate
+
+          const rawBetween = await sportsApiService.getFixturesBetween(
+            start.toISOString().slice(0,10),
+            end.toISOString().slice(0,10),
+            { leagueKey }
+          );
+
+          // Raggruppa per round_id e prendi i primi N round completi
+          const byRound = new Map();
+          for (const fx of rawBetween) {
+            const rid = fx.round_id || fx.round?.id;
+            if (!rid) continue;
+            if (!byRound.has(rid)) byRound.set(rid, []);
+            byRound.get(rid).push(fx);
+          }
+
+          // Ordina i round per data minima effettiva, non per ID
+          const roundEntries = Array.from(byRound.entries()).map(([rid, arr]) => {
+            const minDate = arr
+              .map(fx => (fx.starting_at || fx.starting_at_timestamp || fx.datetime || '')?.toString().slice(0,10))
+              .filter(Boolean)
+              .sort()[0] || '9999-12-31';
+            return { rid, minDate };
+          }).sort((a,b) => a.minDate.localeCompare(b.minDate));
+
+          const selectedRounds = roundEntries.slice(0, count).map(e => e.rid);
+
+          const dateSet = new Set();
+          const fixturesForSelectedRounds = [];
+          for (const rid of selectedRounds) {
+            for (const fx of byRound.get(rid)) {
+              const d = (fx.starting_at || fx.starting_at_timestamp || fx.datetime || '').toString().slice(0,10);
+              if (d) dateSet.add(d);
+              fixturesForSelectedRounds.push(fx);
+            }
+          }
+
+          datesToSync = Array.from(dateSet).map(d => new Date(d)).sort((a,b)=>a-b);
+          metadata.fallback = 'between_grouped_rounds';
+
+          // 🔥 Salva anche direttamente dal BETWEEN per non perdere match (no dipendenza da /date)
+          try {
+            const mapping = providerFactory.mapFixtures(fixturesForSelectedRounds);
+            const PopularMatch = require('../models/PopularMatch');
+            for (const standardFixture of mapping.successful) {
+              // Filtra solo la lega richiesta
+              if (!standardFixturesService._matchesLeague(standardFixture, leagueKey)) continue;
+              try {
+                const existingMatch = await PopularMatch.findOne({ matchId: standardFixture.externalId });
+                if (existingMatch) {
+                  existingMatch.homeTeam = standardFixture.participants.find(p => p.role === 'home')?.name || 'TBD';
+                  existingMatch.awayTeam = standardFixture.participants.find(p => p.role === 'away')?.name || 'TBD';
+                  existingMatch.homeTeamLogo = standardFixture.participants.find(p => p.role === 'home')?.image_path || null;
+                  existingMatch.awayTeamLogo = standardFixture.participants.find(p => p.role === 'away')?.image_path || null;
+                  existingMatch.league = standardFixture.league.name;
+                  existingMatch.leagueLogo = standardFixture.league.logo || null;
+                  existingMatch.date = standardFixture.date;
+                  existingMatch.time = standardFixture.time;
+                  existingMatch.roundId = standardFixture.meta?.round || null;
+                  existingMatch.roundNumber = null; // opzionale, valorizzabile con mapping
+                  existingMatch.lastUpdated = new Date();
+                  await existingMatch.save();
+                } else {
+                  const newMatch = new PopularMatch({
+                    matchId: standardFixture.externalId,
+                    homeTeam: standardFixture.participants.find(p => p.role === 'home')?.name || 'TBD',
+                    awayTeam: standardFixture.participants.find(p => p.role === 'away')?.name || 'TBD',
+                    homeTeamLogo: standardFixture.participants.find(p => p.role === 'home')?.image_path || null,
+                    awayTeamLogo: standardFixture.participants.find(p => p.role === 'away')?.image_path || null,
+                    league: standardFixture.league.name,
+                    leagueLogo: standardFixture.league.logo || null,
+                    date: standardFixture.date,
+                    time: standardFixture.time,
+                    roundId: standardFixture.meta?.round || null,
+                    roundNumber: null,
+                    source: 'sync-api',
+                    lastUpdated: new Date()
+                  });
+                  await newMatch.save();
+                }
+              } catch (e) {
+                console.warn(`[RoundBasedSyncService] Save-from-between warning for ${standardFixture.externalId}:`, e.message);
+              }
+            }
+          } catch (mapErr) {
+            console.warn('[RoundBasedSyncService] Direct save from BETWEEN failed, will rely on /date loop only:', mapErr.message);
+          }
         } else {
           datesToSync = roundDates;
           metadata.roundsFound = roundDates.length;
@@ -269,6 +358,8 @@ class RoundBasedSyncService {
                 existingMatch.leagueLogo = standardFixture.league.logo || null;
                 existingMatch.date = standardFixture.date;
                 existingMatch.time = standardFixture.time;
+                existingMatch.roundId = standardFixture.meta?.round || null;
+                existingMatch.roundNumber = standardFixture.meta?.round ? null : null;
                 existingMatch.lastUpdated = new Date();
                 
                 await existingMatch.save();
@@ -287,6 +378,8 @@ class RoundBasedSyncService {
                   leagueLogo: standardFixture.league.logo || null,
                   date: standardFixture.date,
                   time: standardFixture.time,
+                  roundId: standardFixture.meta?.round || null,
+                  roundNumber: standardFixture.meta?.round ? null : null,
                   source: 'sync-api',
                   lastUpdated: new Date()
                 });

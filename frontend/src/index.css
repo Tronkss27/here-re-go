@@ -1,76 +1,40 @@
 @import url('https://fonts.googleapis.com/css2?family=Special+Elite:wght@400&family=Special+Gothic+Expanded+One:wght@400&display=swap');
 
+@import './styles/design-tokens.css';
+@import './styles/design-system.css';
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 /* =================================
-   🎨 SISTEMA COLORI CENTRALIZZATO - BIANCO/NERO/GRIGIO
-   Un unico punto di controllo per tutti i colori
+   🎨 BRIDGE: vecchi nomi → nuovi token HSL (solo palette)
    ================================= */
 
-/* 🎯 PALETTE ORIGINALE ARANCIONE - RIPRISTINATA */
 :root {
-  /* PALETTE ARANCIONE STABILE */
-  --color-primary: #ea580c;        /* Arancione principale */
-  --color-secondary: #fb923c;      /* Arancione secondario */
-  --color-accent: #fed7aa;         /* Arancione chiaro accent */
-  --color-dark: #1a1a1a;          /* Nero per testi */
-  --color-light: #ffffff;         /* Bianco */
-  --color-grey: #f3f4f6;          /* Grigio backgrounds */
-  
-  /* COLORI SEMANTICI */
-  --color-text-primary: #1a1a1a;     /* Testo principale */
-  --color-text-secondary: #ea580c;   /* Testo secondario */
-  --color-background: #ffffff;       /* Sfondo principale */
-  --color-background-alt: #f3f4f6;   /* Sfondo alternato */
-  --color-border: #e5e7eb;           /* Bordi neutri */
+  /* Palette semantica (alias ai nuovi token HSL) */
+  --color-primary: hsl(var(--primary));
+  --color-secondary: hsl(var(--primary-light));
+  --color-accent: hsl(var(--secondary));
+  --color-light: hsl(var(--primary-foreground));
+  --color-dark: hsl(var(--foreground));
+  --color-background: hsl(var(--background));
+  --color-background-alt: hsl(var(--secondary));
+  --color-border: hsl(var(--border));
+  --color-text-primary: hsl(var(--foreground));
+  --color-text-secondary: hsl(var(--primary));
+  --gradient-cta: linear-gradient(90deg, hsl(var(--secondary)) 0%, hsl(var(--primary)) 100%);
 }
 
-/* 🎨 PALETTE "LA GAZZETTA DELLO SPORT" - Design Tokens */
+/* Alias per variabili "gazzetta" già usate in CSS (nessun cambio componenti) */
 :root {
-  /* Palette Gazzetta Primary */
-  --rosa-primary: #F2718B;
-  --rosa-hover: #E13B6D;
-  --rosa-light: #FFC6D1;
-  --vinaccia: #A23A5B;
-  --vinaccia-dark: #7C2E46;
-  --grigio-ui: #AFB0B2;
-  --nero: #000000;
-  --bg: #FFFFFF;
-
-  /* Semantic Mappings */
-  --color-primary: var(--rosa-primary);
-  --color-primary-hover: var(--rosa-hover);
-  --color-accent: var(--vinaccia);
-  --color-accent-dark: var(--vinaccia-dark);
-  --color-soft: var(--rosa-light);
-  --color-text: var(--nero);
-  --color-ui: var(--grigio-ui);
-  --color-background: var(--bg);
-
-  /* Component-specific tokens */
-  --btn-primary-bg: var(--rosa-primary);
-  --btn-primary-text: var(--bg);
-  --btn-primary-hover: var(--rosa-hover);
-  --badge-hot-bg: rgba(255, 198, 209, 0.25); /* rosa-light 25% opacity */
-  --badge-hot-text: var(--vinaccia);
-  --badge-hot-border: var(--vinaccia);
-  --gradient-cta: linear-gradient(90deg, var(--rosa-primary) 0%, var(--vinaccia) 100%);
-}
-
-/* 🎨 PALETTE GAZZETTA MINIMALISTA - RESET COMPLETO */
-
-:root {
-  /* PALETTE BASE GAZZETTA */
-  --gazzetta-bg: #F8F5F5;           /* Rosa tenue sfondo */
-  --gazzetta-text: #000000;         /* Nero testo principale */
-  --gazzetta-cta: #FF7043;          /* Arancione CTA importante */
-  --gazzetta-soft: #FFE5E5;         /* Rosa soft per elementi attivi */
-  --gazzetta-border: #E0E0E0;       /* Grigio border */
-  --gazzetta-white: #FFFFFF;        /* Bianco pulito */
-  --gazzetta-gray: #666666;         /* Grigio testo secondario */
-  --gazzetta-light-gray: #F5F5F5;   /* Grigio sfondo cards */
+  --gazzetta-white: hsl(var(--card));
+  --gazzetta-text: hsl(var(--foreground));
+  --gazzetta-cta: hsl(var(--primary));
+  --gazzetta-soft: hsl(var(--secondary));
+  --gazzetta-border: hsl(var(--border));
+  --gazzetta-light-gray: hsl(var(--muted));
+  --bg: hsl(var(--background));
 }
 
 /* 🎯 RESET COMPLETO INPUT FIELDS - STILE GAZZETTA (TestSprite Approved) */
@@ -349,13 +313,13 @@ html, body {
 
 /* HEADER */
 header, .header, nav {
-  background: var(--color-white) !important;
-  color: var(--color-text-primary) !important;
-  border-bottom: 2px solid var(--color-border) !important;
+  background: hsl(var(--primary)) !important;
+  color: hsl(var(--primary-foreground)) !important;
+  border-bottom: none !important;
 }
 
 header *, .header *, nav * {
-  color: var(--color-text-primary) !important;
+  color: hsl(var(--primary-foreground)) !important;
 }
 
 /* SIDEBAR */
@@ -379,7 +343,7 @@ header *, .header *, nav * {
 /* CARDS */
 .card, .bg-card, [class*="card"] {
   background: #FFFFFF !important;
-  border: 1px solid rgba(242, 113, 139, 0.2) !important;
+  border: 1px solid hsl(var(--border)) !important;
   color: #000000 !important;
 }
 
@@ -420,7 +384,7 @@ header *, .header *, nav * {
 /* INPUTS */
 input, textarea, select {
   background: #FFFFFF !important;
-  border: 2px solid #F2718B !important;
+  border: 1px solid hsl(var(--border)) !important;
   color: #000000 !important;
   border-radius: 8px !important;
   padding: 12px 16px !important;
@@ -429,8 +393,8 @@ input, textarea, select {
 
 input:focus, textarea:focus, select:focus {
   outline: none !important;
-  border-color: #E13B6D !important; /* rosa-hover */
-  box-shadow: 0 0 0 3px rgba(242, 113, 139, 0.1) !important;
+  border-color: hsl(var(--ring)) !important; /* primary ring */
+  box-shadow: 0 0 0 3px rgba(var(--primary-rgb) / 0.15) !important;
 }
 
 /* TESTI E TITOLI */
@@ -776,7 +740,7 @@ form {
 .admin-main select {
   width: 100% !important;
   background: #FFFFFF !important;
-  border: 2px solid rgba(242, 113, 139, 0.5) !important;
+  border: 1px solid hsl(var(--border)) !important;
   color: #000000 !important;
   border-radius: 8px !important;
   padding: 12px 16px !important;
@@ -788,8 +752,8 @@ form {
 .admin-main textarea:focus,
 .admin-main select:focus {
   outline: none !important;
-  border-color: #E13B6D !important; /* rosa-hover */
-  box-shadow: 0 0 0 3px rgba(242, 113, 139, 0.1) !important;
+  border-color: hsl(var(--ring)) !important;
+  box-shadow: 0 0 0 3px rgba(var(--primary-rgb) / 0.15) !important;
 }
 
 /* =================================
@@ -826,8 +790,8 @@ form {
 /* ADMIN BUTTONS ARANCIONE */
 .admin-main .btn-primary,
 .admin-main button[type="submit"] {
-  background: #F2718B !important;
-  color: #FFFFFF !important;
+  background: hsl(var(--primary)) !important;
+  color: hsl(var(--primary-foreground)) !important;
   border: none !important;
   border-radius: 8px !important;
   font-weight: 600 !important;
@@ -836,7 +800,7 @@ form {
 }
 
 .admin-main .btn-primary:hover {
-  background: #E13B6D !important;
+  background: hsl(var(--primary-dark)) !important;
 }
 
 .admin-main .btn-secondary {
@@ -989,14 +953,14 @@ form {
 }
 
 .day-tab.active {
-  background: var(--color-accent) !important;
-  color: var(--color-primary) !important;
-  border-bottom-color: var(--color-primary) !important;
+  background: hsl(var(--secondary)) !important;
+  color: hsl(var(--primary)) !important;
+  border-bottom-color: hsl(var(--primary)) !important;
 }
 
 .day-tab:hover:not(.active) {
-  background: var(--color-background-alt) !important;
-  color: var(--color-text-primary) !important;
+  background: hsl(var(--secondary)) !important;
+  color: hsl(var(--primary)) !important;
 }
 
 /* =================================
@@ -1121,8 +1085,8 @@ form {
 
 /* Time Highlight Box */
 .time-highlight {
-  background: linear-gradient(135deg, #fff7ed 0%, #fed7aa 100%);
-  border: 1px solid #fed7aa;
+  background: linear-gradient(135deg, hsl(var(--secondary)) 0%, hsl(var(--muted)) 100%);
+  border: 1px solid hsl(var(--border));
   border-radius: 8px;
   padding: 0.75rem 1rem;
   display: inline-block;
@@ -1367,12 +1331,12 @@ form {
 
 /* Match Banner Improvements */
 .match-banner {
-  background: linear-gradient(135deg, #fff7ed 0%, #fed7aa 50%, #fff7ed 100%);
-  border: 2px solid #fed7aa;
+  background: linear-gradient(135deg, hsl(var(--secondary)) 0%, hsl(var(--muted)) 50%, hsl(var(--secondary)) 100%);
+  border: 1px solid hsl(var(--border));
   border-radius: 12px;
   padding: 2rem;
   margin-bottom: 2rem;
-  box-shadow: 0 4px 12px rgba(234, 88, 12, 0.1);
+  box-shadow: 0 4px 12px rgba(var(--primary-rgb) / 0.08);
 }
 
 .match-teams-container {
@@ -1993,18 +1957,19 @@ form {
 }
 
 .day-tab.active {
-  background: #ea580c;
-  color: white;
-  transform: scale(1.02);
+  background: hsl(var(--secondary));
+  color: hsl(var(--primary));
+  border: 1px solid hsl(var(--primary));
+  transform: none;
 }
 
 .day-tab:hover {
-  background: #fef3cd;
-  color: #92400e;
+  background: hsl(var(--secondary)) !important;
+  color: hsl(var(--primary)) !important;
 }
 
 .day-tab.active:hover {
-  background: #dc2626;
+  background: hsl(var(--secondary));
 }
 
 /* Match Cards Grid - Mobile First */
@@ -2090,14 +2055,14 @@ form {
 .vs-separator {
   font-size: 12px;
   font-weight: 900;
-  color: #ea580c;
+  color: hsl(var(--primary));
   padding: 6px 8px;
-  background: #fef3cd;
+  background: hsl(var(--secondary));
   border-radius: 8px;
-  min-width: 36px; /* Larghezza fissa per centrare */
+  min-width: 36px;
   max-width: 36px;
   text-align: center;
-  flex-shrink: 0; /* Non rimpicciolisce mai */
+  flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -2167,12 +2132,12 @@ form {
 /* CTA Button - Mobile */
 .match-cta-button {
   width: 100%;
-  background: linear-gradient(135deg, #ea580c, #dc2626);
-  color: white;
+  background: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
   border: none;
-  padding: 10px 16px;
-  border-radius: 8px;
-  font-size: 12px;
+  padding: 12px 18px;
+  border-radius: 10px;
+  font-size: 13px;
   font-weight: 700;
   display: flex;
   align-items: center;
@@ -2183,12 +2148,12 @@ form {
 }
 
 .match-cta-button:hover {
-  background: linear-gradient(135deg, #dc2626, #b91c1c);
-  transform: scale(1.02);
+  background: hsl(var(--primary-dark));
+  transform: translateY(-1px);
 }
 
 .cta-icon-map {
-  color: #fbbf24;
+  color: hsl(var(--primary-foreground));
 }
 
 .cta-icon-arrow {
@@ -2664,8 +2629,8 @@ form {
 
 /* 🎯 PRIMARY BUTTONS - Gazzetta Style */
 .btn-primary {
-  background: #F2718B !important;
-  color: #FFFFFF !important;
+  background: hsl(var(--primary)) !important;
+  color: hsl(var(--primary-foreground)) !important;
   border: none !important;
   border-radius: 8px !important;
   font-weight: 600 !important;
@@ -2674,23 +2639,23 @@ form {
 }
 
 .btn-primary:hover {
-  background: #E13B6D !important;
-  color: #FFFFFF !important;
+  background: hsl(var(--primary-dark)) !important;
+  color: hsl(var(--primary-foreground)) !important;
 }
 
 /* Secondary Button (outline) */
 .btn-secondary {
   background: transparent !important;
-  color: #F2718B !important;
-  border: 2px solid #F2718B !important;
+  color: hsl(var(--primary)) !important;
+  border: 2px solid hsl(var(--primary)) !important;
   border-radius: 8px !important;
   font-weight: 600 !important;
   transition: all 0.2s ease !important;
 }
 
 .btn-secondary:hover {
-  background: #F2718B !important;
-  color: #FFFFFF !important;
+  background: hsl(var(--primary)) !important;
+  color: hsl(var(--primary-foreground)) !important;
 }
 
 /* Gradient CTA Button */
@@ -2704,23 +2669,23 @@ form {
 
 /* 🎯 NAVBAR - Gazzetta Style */
 .navbar-link-active {
-  color: #A23A5B !important;
-  border-bottom: 3px solid #A23A5B !important;
+  color: hsl(var(--secondary-foreground)) !important;
+  border-bottom: 3px solid hsl(var(--secondary)) !important;
 }
 
 .navbar-link:hover {
-  color: #F2718B !important;
+  color: hsl(var(--primary)) !important;
 }
 
 /* Toggle light/dark icon */
 .theme-toggle-active {
-  stroke: #F2718B !important;
+  stroke: hsl(var(--primary)) !important;
 }
 
 /* 🎯 TAB STRIP - Gazzetta Style */
 .tab-active {
-  background: #FFC6D1 !important;
-  color: #A23A5B !important;
+  background: hsl(var(--secondary)) !important;
+  color: hsl(var(--secondary-foreground)) !important;
 }
 
 .tab-inactive {
@@ -2730,7 +2695,7 @@ form {
 }
 
 .tab-inactive:hover {
-  background: rgba(255, 198, 209, 0.05) !important; /* rosa-light 5% */
+  background: rgba(var(--primary-rgb) / 0.04) !important;
 }
 
 /* 🎯 BADGES - Gazzetta Style */
@@ -2743,7 +2708,7 @@ form {
 }
 
 .badge-hot:hover {
-  background: rgba(255, 198, 209, 0.4) !important; /* rosa-light 40% */
+  background: rgba(var(--primary-rgb) / 0.15) !important;
 }
 
 /* 🎯 MATCH CARDS - Gazzetta Style */
@@ -2753,19 +2718,19 @@ form {
 }
 
 .match-card:hover {
-  box-shadow: 0 0 0 2px #FFC6D1 !important;
+  box-shadow: 0 0 0 2px hsl(var(--secondary)) !important;
 }
 
 .match-card .tournament-title {
-  color: #A23A5B !important;
+  color: hsl(var(--muted-foreground)) !important;
   font-weight: 600 !important;
 }
 
 /* 🎯 CHIPS VS / DATA-ORA - Gazzetta Style */
 .chip-vs,
 .chip-datetime {
-  background: #FFC6D1 !important;
-  color: #000000 !important;
+  background: hsl(var(--secondary)) !important;
+  color: hsl(var(--foreground)) !important;
   font-weight: 600 !important;
   border-radius: 20px !important;
   padding: 4px 12px !important;
@@ -2773,17 +2738,17 @@ form {
 
 /* 🎯 ICONE DI STATO - Gazzetta Style */
 .icon-status {
-  color: #F2718B !important;
+  color: hsl(var(--primary)) !important;
 }
 
 .icon-status:hover {
-  color: #E13B6D !important;
+  color: hsl(var(--primary-dark)) !important;
 }
 
 /* 🎯 STATO CHIUSO - Gazzetta Style */
 .badge-closed {
-  background: rgba(255, 198, 209, 0.3) !important; /* rosa-light 30% */
-  color: #A23A5B !important;
+  background: rgb(var(--primary-rgb) / 0.15) !important;
+  color: hsl(var(--primary)) !important;
   font-weight: 600 !important;
   border-radius: 6px !important;
 }
@@ -2886,8 +2851,8 @@ button[class*="orange"]:hover,
 
 /* 🎯 MATCH CARD HOVER EFFECTS */
 .hot-match-card:hover {
-  border-color: #F2718B !important;
-  box-shadow: 0 4px 12px rgba(242, 113, 139, 0.15) !important; /* rosa-primary 15% */
+  border-color: hsl(var(--ring)) !important;
+  box-shadow: 0 4px 12px rgba(var(--primary-rgb) / 0.15) !important;
 }
 
 /* 🔥 SUPER AGGRESSIVI OVERRIDES - ELIMINA TUTTI GLI ARANCIONI */
@@ -3012,7 +2977,7 @@ button[key="big-fixtures"] {
 .facility-card,
 [class*="card"] {
   background: #FFFFFF !important;
-  border: 1px solid rgba(242, 113, 139, 0.2) !important;
+  border: 1px solid hsl(var(--border)) !important;
   color: #000000 !important;
 }
 
@@ -3021,9 +2986,9 @@ button[key="big-fixtures"] {
 .facility-card.selected,
 .facility-card[data-selected="true"],
 .facility-card.active {
-  background: rgba(242, 113, 139, 0.08) !important;
-  border: 2px solid #F2718B !important;
-  color: #A23A5B !important;
+  background: rgba(var(--primary-rgb) / 0.06) !important;
+  border: 1px solid hsl(var(--ring)) !important;
+  color: hsl(var(--primary)) !important;
 }
 
 /* BADGES INFORMATIVI - ROSA SOFT */
@@ -3031,9 +2996,9 @@ button[key="big-fixtures"] {
 .badge-info,
 .status-badge,
 .opening-hours .badge {
-  background: rgba(242, 113, 139, 0.1) !important;
-  color: #A23A5B !important;
-  border: 1px solid rgba(242, 113, 139, 0.3) !important;
+  background: rgba(var(--primary-rgb) / 0.08) !important;
+  color: hsl(var(--primary)) !important;
+  border: 1px solid rgba(var(--primary-rgb) / 0.25) !important;
 }
 
 /* CONTACT INFO CARDS - BIANCHE CON ACCENTI */
@@ -3041,15 +3006,15 @@ button[key="big-fixtures"] {
 .info-card,
 .contact-info .card {
   background: #FFFFFF !important;
-  border: 1px solid rgba(242, 113, 139, 0.15) !important;
+  border: 1px solid hsl(var(--border)) !important;
 }
 
 /* OPENING HOURS SPECIFICI */
 .opening-hours .day-active,
 .opening-hours .today {
-  background: rgba(242, 113, 139, 0.1) !important;
-  color: #A23A5B !important;
-  border-color: #F2718B !important;
+  background: rgba(var(--primary-rgb) / 0.08) !important;
+  color: hsl(var(--primary)) !important;
+  border-color: hsl(var(--ring)) !important;
 }
 
 /* BOOKING MODAL INPUTS */
@@ -3057,7 +3022,7 @@ button[key="big-fixtures"] {
 .booking-modal select,
 .booking-modal textarea {
   background: #FFFFFF !important;
-  border: 2px solid rgba(242, 113, 139, 0.5) !important;
+  border: 1px solid hsl(var(--border)) !important;
   color: #000000 !important;
 }
 

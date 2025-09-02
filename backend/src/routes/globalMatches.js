@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { query } = require('express-validator');
 const PopularMatch = require('../models/PopularMatch');
+const roundMappingService = require('../services/roundMappingService');
 
 // GET /api/global-matches - Lista partite disponibili per admin
 router.get('/', [
@@ -23,6 +24,7 @@ router.get('/', [
       const leagueMap = {
         'serie-a': 'Serie A',
         'serie-b': 'Serie B',
+        'coppa-italia': 'Coppa Italia',
         'premier-league': 'Premier League', 
         'championship': 'Championship',
         'la-liga': 'La Liga',
@@ -152,6 +154,13 @@ router.get('/leagues', async (req, res) => {
         available: true // ✅ Sempre disponibile con round-based sync
       },
       {
+        id: 'coppa-italia',
+        name: 'Coppa Italia',
+        flag: '',
+        logo: 'https://upload.wikimedia.org/wikipedia/it/thumb/3/3d/Coppa_Italia_logo_2020.svg/1200px-Coppa_Italia_logo_2020.svg.png',
+        available: true
+      },
+      {
         id: 'premier-league', 
         name: 'Premier League',
         flag: '',
@@ -233,6 +242,103 @@ router.get('/leagues', async (req, res) => {
       message: 'Errore durante il recupero delle leghe',
       error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
     });
+  }
+});
+
+// GET /api/global-matches/rounds - Partite raggruppate per giornata (round)
+router.get('/rounds', [
+  query('league').isString().withMessage('league is required'),
+  query('limitRounds').optional().isInt({ min: 1, max: 5 })
+], async (req, res) => {
+  try {
+    const { league, limitRounds = 2 } = req.query;
+
+    // Mappa gli ID delle leghe dal frontend al formato PopularMatch.league
+    const leagueMap = {
+      'serie-a': 'Serie A',
+      'serie-b': 'Serie B',
+      'coppa-italia': 'Coppa Italia',
+      'premier-league': 'Premier League', 
+      'championship': 'Championship',
+      'la-liga': 'La Liga',
+      'bundesliga': 'Bundesliga',
+      'ligue-1': 'Ligue 1',
+      'eredivisie': 'Eredivisie',
+      'primeira-liga': 'Liga Portugal'
+    };
+
+    const leagueName = leagueMap[league] || league;
+
+    // Solo future (da oggi in poi)
+    const today = new Date().toISOString().split('T')[0];
+
+    // Recupera tutte le partite future con roundId valorizzato
+    const matches = await PopularMatch.find({
+      league: leagueName,
+      roundId: { $ne: null },
+      date: { $gte: today }
+    })
+      .sort({ date: 1, time: 1 })
+      .lean();
+
+    // Group by roundId
+    const byRound = new Map();
+    for (const m of matches) {
+      if (!m.roundId) continue;
+      if (!byRound.has(m.roundId)) byRound.set(m.roundId, []);
+      byRound.get(m.roundId).push(m);
+    }
+
+    // Ordina i round per data minima (primi in calendario)
+    const sortedRoundEntries = Array.from(byRound.entries()).sort((a, b) => {
+      const minA = a[1][0]?.date || '9999-12-31';
+      const minB = b[1][0]?.date || '9999-12-31';
+      return minA.localeCompare(minB);
+    });
+
+    const limitedRounds = sortedRoundEntries.slice(0, Number(limitRounds));
+
+    // Trasforma per frontend
+    const rounds = limitedRounds.map(([roundId, list], idx) => {
+      // Calcola numero giornata a partire da SEASONID.md per coerenza
+      const mappedRoundNumber = roundMappingService.getRoundNumber(league, roundId);
+      const inferredRoundNumber = mappedRoundNumber || (list.find(m => typeof m.roundNumber === 'number')?.roundNumber || null);
+      const items = list.map(match => ({
+        id: match.matchId,
+        homeTeam: match.homeTeam,
+        homeTeamLogo: match.homeTeamLogo,
+        awayTeam: match.awayTeam,
+        awayTeamLogo: match.awayTeamLogo,
+        competition: {
+          id: (match.league || '').toLowerCase().replace(' ', '-'),
+          name: match.league,
+          logo: match.leagueLogo
+        },
+        date: match.date,
+        time: match.time || null,
+        venue: 'Stadium',
+        source: 'sync-api'
+      })).sort((a, b) => {
+        // Ordina per data+ora
+        const d = a.date.localeCompare(b.date);
+        if (d !== 0) return d;
+        return (a.time || '00:00').localeCompare(b.time || '00:00');
+      });
+
+      return {
+        roundId,
+        roundNumber: inferredRoundNumber || idx + 1,
+        count: items.length,
+        earliestDate: items[0]?.date || null,
+        fixtures: items
+      };
+    });
+
+    res.json({ success: true, data: rounds });
+
+  } catch (error) {
+    console.error('❌ Error fetching rounds:', error);
+    res.status(500).json({ success: false, message: 'Errore durante il recupero delle giornate' });
   }
 });
 

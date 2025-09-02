@@ -37,6 +37,15 @@ const apiClient = axios.create({
     },
 });
 
+// Usa anche Authorization Bearer per corretta misurazione su dashboard e best practice
+if (API_TOKEN) {
+  try {
+    apiClient.defaults.headers.common['Authorization'] = `Bearer ${API_TOKEN}`;
+  } catch (_) {
+    // headers default non disponibili in alcuni runtime, ignora silenziosamente
+  }
+}
+
 // Configurazione di axios-retry
 axiosRetry(apiClient, { 
     retries: 3,
@@ -184,6 +193,70 @@ async function getFixturesBySeason(leagueKey, dateRange = null) {
 }
 
 /**
+ * Recupera le partite tra due date usando l'endpoint "between"
+ * Opzionalmente filtra per lega tramite leagueKey o leagueId
+ */
+async function getFixturesBetween(startDate, endDate, options = {}) {
+    if (USE_MOCK_API) {
+        console.log(`[MOCK] Restituzione dati finti per range ${startDate} → ${endDate}`);
+        const start = new Date(startDate);
+        const end = new Date(endDate);
+        return mockFixtures.filter(f => {
+            const d = new Date(f.starting_at);
+            return d >= start && d <= end;
+        });
+    }
+
+    const cacheKey = `fixtures_between_${startDate}_${endDate}_${options.leagueKey || options.leagueId || 'all'}`;
+    const cachedData = apiCache.get(cacheKey);
+    if (cachedData) {
+        console.log(`[Cache] HIT per ${cacheKey}`);
+        return cachedData;
+    }
+
+    // Mapping leagueKey → numeric ID
+    const leagueIdMapping = {
+        'premier-league': 8,
+        'serie-a': 384,
+        'serie-b': 387,
+        'championship': 9,
+        'la-liga': 564,
+        'bundesliga': 82,
+        'ligue-1': 301,
+        'ligue-2': 302,
+        'eredivisie': 72,
+        'primeira-liga': 271,
+    };
+
+    const leagueId = options.leagueId || leagueIdMapping[options.leagueKey];
+
+    const apiCall = async () => {
+        console.log(`[API] MISS per ${cacheKey}. Chiamata a Sportmonks (between)...`);
+        const params = {
+            include: 'participants;league;round',
+            per_page: 200,
+        };
+        // Filtra lato provider se disponibile
+        if (leagueId) {
+            params.filters = `fixtureLeagues:${leagueId}`;
+        }
+
+        const response = await apiClient.get(`/fixtures/between/${startDate}/${endDate}`, { params });
+        const fixtures = response.data?.data || [];
+        apiCache.set(cacheKey, fixtures, 300);
+        console.log(`✅ Retrieved ${fixtures.length} fixtures for between ${startDate} → ${endDate}${leagueId ? ` (league ${leagueId})` : ''}`);
+        return fixtures;
+    };
+
+    try {
+        return await callApiWithCircuitBreaker('getFixturesBetween', apiCall);
+    } catch (error) {
+        console.error(`Errore durante il recupero delle partite (between ${startDate} → ${endDate}):`, error.message);
+        throw error;
+    }
+}
+
+/**
  * Recupera le partite per una data specifica, utilizzando cache e circuit breaker.
  * DEPRECATO: Ora usa getFixturesBySeason quando possibile per migliore coverage.
  */
@@ -216,7 +289,8 @@ async function getFixturesByDate(date) {
         console.log(`🌍 Using direct date endpoint for all leagues coverage...`);
         const response = await apiClient.get(`/fixtures/date/${date}`, {
             params: {
-                include: 'participants;league'  // ✅ Include participants e league data
+                // ✅ Include anche 'round' così salviamo sempre roundId/roundNumber
+                include: 'participants;league;round'
             }
         });
         
@@ -336,6 +410,7 @@ module.exports = {
     getLeagues,
     getFixturesByDate,
     getFixturesBySeason,  // ✅ Ora con auto-detection current season
+    getFixturesBetween,
     getFixtureById,
     searchMatches,
     currentSeasonService, // ✅ Export del service per uso esterno

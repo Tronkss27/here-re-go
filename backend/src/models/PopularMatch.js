@@ -43,6 +43,15 @@ const PopularMatchSchema = new mongoose.Schema({
   leagueLogo: {
     type: String
   },
+  // Info giornata (round)
+  roundId: {
+    type: String,
+    index: true
+  },
+  roundNumber: {
+    type: Number,
+    index: true
+  },
   
   status: {
     type: String,

@@ -457,10 +457,33 @@
       ]
     }
   },
+  "tiers": {
+    "TIER_1": {
+      "description": "Always fresh - Italian priority leagues",
+      "refreshInterval": "daily",
+      "leagues": ["serie-a", "serie-b", "coppa-italia"]
+    },
+    "TIER_2": {
+      "description": "Semi-automatic - Major international leagues", 
+      "refreshInterval": "2days",
+      "leagues": ["premier-league", "la-liga", "champions-league", "europa-league"]
+    },
+    "TIER_3": {
+      "description": "Standard refresh - Other leagues",
+      "refreshInterval": "3days", 
+      "leagues": ["ligue-1", "bundesliga", "eredivisie", "primeira-liga"]
+    }
+  },
   "metadata": {
     "lastUpdated": "2025-08-28T09:00:00.000Z",
     "source": "Manual extraction from Sportmonks dashboard",
     "description": "Authoritative season and round mappings for 2025/2026 season",
-    "version": "1.0.0"
+    "version": "1.0.0",
+    "leagueManagement": {
+      "automaticRefresh": true,
+      "backgroundScheduler": true,
+      "slidingWindow": true,
+      "importantMatchDetection": true
+    }
   }
 }

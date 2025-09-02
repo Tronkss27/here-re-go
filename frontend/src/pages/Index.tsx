@@ -142,14 +142,14 @@ const Index = () => {
           <div className="mb-16">
             <div className="flex items-center justify-between mb-8">
               <div className="flex items-center gap-3">
-                <TrendingUp className="text-orange-500" size={32} />
+                <TrendingUp className="text-[hsl(var(--primary))]" size={28} />
                 <h2 className="text-3xl font-bold text-gray-900 font-special">
                   {getActiveTabTitle()}
                 </h2>
               </div>
               <button 
                 onClick={() => navigate('/locali')}
-                className="flex items-center gap-2 text-orange-600 hover:text-orange-700 font-medium transition-colors"
+                className="flex items-center gap-2 text-[hsl(var(--primary))] hover:text-[hsl(var(--primary-dark))] font-medium transition-colors"
               >
                 Vedi tutti i locali <ChevronRight size={16} />
               </button>

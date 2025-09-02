@@ -142,3 +142,4 @@ if (passCount === totalCount) {
   console.log('   - Considerare varianti alternative per testi piccoli');
   process.exit(1);
 }
+

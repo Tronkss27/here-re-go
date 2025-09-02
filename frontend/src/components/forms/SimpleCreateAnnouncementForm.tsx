@@ -17,6 +17,9 @@ const SimpleCreateAnnouncementForm: React.FC<SimpleCreateAnnouncementFormProps> 
   const [step, setStep] = useState(1); // 1: campionato, 2: partite, 3: dettagli
   const [selectedLeague, setSelectedLeague] = useState('');
   const [availableMatches, setAvailableMatches] = useState([]);
+  // Stato per giornate (rounds)
+  const [roundsData, setRoundsData] = useState<any[]>([]);
+  const [selectedRoundIdx, setSelectedRoundIdx] = useState(0);
   const [selectedMatch, setSelectedMatch] = useState(null);
   const [loadingMatches, setLoadingMatches] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -41,25 +44,7 @@ const SimpleCreateAnnouncementForm: React.FC<SimpleCreateAnnouncementFormProps> 
   const [availableLeagues, setAvailableLeagues] = useState([]);
   const [loadingLeagues, setLoadingLeagues] = useState(false);
   
-  // Stato per la sincronizzazione asincrona - DEVE essere PRIMA del return null!
-  const [syncStatus, setSyncStatus] = useState({
-    isRunning: false,
-    jobId: null,
-    progress: 0,
-    statusText: '',
-    dateRange: { startDate: '', endDate: '' }
-  });
-  
-  // Stato per selezione periodo di sincronizzazione  
-  const [selectedPeriod, setSelectedPeriod] = useState(3); // Default: prossime 3 giornate
-  
-  // 🎯 CONFIGURAZIONE PERIODS - SOLO GIORNATE (come richiesto)
-  const syncPeriods = [
-    { value: 1, label: 'Prossima giornata', type: 'rounds', icon: '⚽' },
-    { value: 2, label: 'Prossime 2 giornate', type: 'rounds', icon: '⚽' },
-    { value: 3, label: 'Prossime 3 giornate', type: 'rounds', icon: '⚽' },
-    { value: 4, label: 'Prossime 4 giornate', type: 'rounds', icon: '⚽' }
-  ];
+  // ✅ AUTOMATIC SYSTEM: No sync state needed anymore
   
   // Carica leghe disponibili al mount del componente
   useEffect(() => {
@@ -95,8 +80,8 @@ const SimpleCreateAnnouncementForm: React.FC<SimpleCreateAnnouncementFormProps> 
 
   if (!isOpen) return null;
 
-  // Funzione per creare un job di sincronizzazione
-  const handleSyncLeague = async (leagueId) => {
+  // ✅ DEPRECATED: Sync is now automatic via backgroundScheduler
+  /* const handleSyncLeague = async (leagueId) => {
     console.log('🔄 Creating sync job for league:', leagueId);
     setLoadingMatches(true);
     setSyncStatus(prev => ({ ...prev, isRunning: true, statusText: 'Avvio sincronizzazione...' }));
@@ -166,7 +151,7 @@ const SimpleCreateAnnouncementForm: React.FC<SimpleCreateAnnouncementFormProps> 
     } finally {
       setLoadingMatches(false);
     }
-  };
+  }; */
 
   // Polling per monitorare lo stato del job
   const pollJobStatus = async (jobId) => {
@@ -240,27 +225,33 @@ const SimpleCreateAnnouncementForm: React.FC<SimpleCreateAnnouncementFormProps> 
     setStep(2);
 
     try {
-      console.log(`🔍 Loading matches for league: ${league.id} (cache-first approach)`);
-      
-      // 🎯 CACHE-FIRST: Prima controlla se ci sono partite già sincronizzate nel database
-      const response = await apiClient.get('/global-matches', {
-        params: {
-          league: league.id,
-          limit: 10,
-          fromDate: new Date().toISOString().split('T')[0] // Solo partite future
-        }
+      console.log(`🔍 Loading rounds for league: ${league.id}`);
+
+      // 🎯 NUOVO: carica giornate (by-round) e mostra due round completi
+      const roundsResp = await apiClient.get('/global-matches/rounds', {
+        params: { league: league.id, limitRounds: 2 }
       });
-      
-      if (response.success && response.data.length > 0) {
-        console.log(`✅ Found ${response.data.length} cached matches for ${league.name}`);
-        setAvailableMatches(response.data);
+
+      if (roundsResp.success && Array.isArray(roundsResp.data) && roundsResp.data.length > 0) {
+        setRoundsData(roundsResp.data);
+        setSelectedRoundIdx(0);
+        setAvailableMatches(roundsResp.data[0]?.fixtures || []);
+        console.log(`✅ Loaded ${roundsResp.data.length} rounds for ${league.name}`);
       } else {
-        console.log(`📭 No cached matches found for ${league.name}. Use sync button to load.`);
-        setAvailableMatches([]); // Lista vuota - utente deve cliccare sync manualmente
+        // Fallback: vecchia lista piatta (cache-first)
+        const response = await apiClient.get('/global-matches', {
+          params: {
+            league: league.id,
+            limit: 20,
+            fromDate: new Date().toISOString().split('T')[0]
+          }
+        });
+        setRoundsData([]);
+        setAvailableMatches(response.success ? (response.data || []) : []);
       }
     } catch (error) {
       console.error('❌ Errore caricamento partite:', error);
-      console.log('⚠️ No matches available - try syncing manually');
+      console.log('⚠️ No matches available - automatic system will update soon');
       setAvailableMatches([]);
     } finally {
       setLoadingMatches(false);
@@ -505,94 +496,35 @@ const SimpleCreateAnnouncementForm: React.FC<SimpleCreateAnnouncementFormProps> 
                   </div>
                 </div>
                 
-                {/* Selector Giornate di Sincronizzazione */}
-                <div className="bg-green-50 p-3 rounded-md space-y-3 mb-4">
-                  <h4 className="text-sm font-medium text-green-700">⚽ Giornate di Calcio</h4>
-                  <p className="text-xs text-green-600">
-                    Sincronizza per <strong>giornate calcistiche</strong> precise. Ottieni TUTTE le partite delle giornate selezionate.
-                  </p>
-                  <div className="grid grid-cols-4 gap-2">
-                    {syncPeriods.map((period) => (
-                      <button
-                        key={period.value}
-                        onClick={() => setSelectedPeriod(period.value)}
-                        disabled={syncStatus.isRunning}
-                        className={`px-3 py-3 text-xs rounded-md transition-colors font-medium ${
-                          selectedPeriod === period.value
-                            ? 'bg-green-600 text-white shadow-lg' 
-                            : 'bg-white text-green-600 border border-green-200 hover:bg-green-100'
-                        } ${syncStatus.isRunning ? 'opacity-50 cursor-not-allowed' : ''}`}
-                      >
-                        <div className="flex flex-col items-center">
-                          <span className="text-lg">{period.icon}</span>
-                          <span className="text-xs mt-1">{period.label}</span>
-                        </div>
-                      </button>
-                    ))}
-                  </div>
-                  <div className="text-xs text-green-600">
-                    {(() => {
-                      const selectedConfig = syncPeriods.find(p => p.value === selectedPeriod);
-                      if (!selectedConfig) return null;
-                      
-                      return (
-                        <>
-                          <span className="font-medium">⚽ Selezionato:</span> {selectedConfig.label}
-                          <span className="ml-2 text-green-700">
-                            (Approccio preciso - tutte le partite delle giornate)
-                          </span>
-                        </>
-                      );
-                    })()}
+
+
+                {/* ✅ AUTOMATIC SYSTEM: No more manual sync needed! */}
+                <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                    <div className="text-sm text-green-700">
+                      <span className="font-medium">Sistema automatico attivo</span>
+                      <p className="text-green-600 mt-1">Le partite si aggiornano automaticamente ogni 6 ore. Non è necessaria sincronizzazione manuale.</p>
+                    </div>
                   </div>
                 </div>
 
-                {/* Pulsante Sincronizza per la lega selezionata con progress tracking */}
-                <div className="space-y-3">
-                  <button
-                    onClick={() => handleSyncLeague(selectedLeague.id)}
-                    disabled={loadingMatches || syncStatus.isRunning}
-                    className="px-4 py-2 text-sm border border-gray-300 text-gray-600 hover:bg-gray-50 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-                  >
-                    {(loadingMatches || syncStatus.isRunning) ? (
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-500"></div>
-                    ) : (
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                      </svg>
-                    )}
-                    {syncStatus.isRunning ? 'Sincronizzazione in corso...' : (() => {
-                      const selectedConfig = syncPeriods.find(p => p.value === selectedPeriod);
-                      const label = selectedConfig ? selectedConfig.label : `${selectedPeriod} giorni`;
-                      return `Sincronizza ${selectedLeague.name} (${label})`;
-                    })()}
-                  </button>
-                  
-                  {/* Progress bar e status quando sync è attivo */}
-                  {syncStatus.isRunning && (
-                    <div className="bg-gray-50 p-3 rounded-md space-y-2">
-                      <div className="flex justify-between text-sm">
-                        <span className="text-gray-600">Progresso</span>
-                        <span className="text-gray-900 font-medium">{syncStatus.progress}%</span>
-                      </div>
-                      <div className="w-full bg-gray-200 rounded-full h-2">
-                        <div 
-                          className="bg-blue-600 h-2 rounded-full transition-all duration-300 ease-out"
-                          style={{ width: `${syncStatus.progress}%` }}
-                        ></div>
-                      </div>
-                      <p className="text-xs text-gray-500">{syncStatus.statusText}</p>
-                    </div>
-                  )}
-                  
-                  {/* Status finale quando sync è completato */}
-                  {!syncStatus.isRunning && syncStatus.statusText && (
-                    <div className="bg-green-50 border border-green-200 p-3 rounded-md">
-                      <p className="text-sm text-green-700">{syncStatus.statusText}</p>
-                    </div>
-                  )}
-                </div>
               </div>
+
+              {/* Selettore Giornata (Round) */}
+              {roundsData.length > 0 && (
+                <div className="flex items-center gap-2 mb-2">
+                  {roundsData.map((r, idx) => (
+                    <button
+                      key={r.roundId || idx}
+                      onClick={() => { setSelectedRoundIdx(idx); setAvailableMatches(r.fixtures || []); }}
+                      className={`px-3 py-1 rounded-md text-sm border ${selectedRoundIdx === idx ? 'bg-gray-900 text-white border-gray-900' : 'bg-white text-gray-700 border-gray-300'}`}
+                    >
+                      Giornata {r.roundNumber || (idx + 1)}
+                    </button>
+                  ))}
+                </div>
+              )}
 
               {loadingMatches ? (
                 <div className="text-center py-8">
