@@ -1,0 +1,106 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "SPOrTS API",
+    "version": "1.0.0",
+    "description": "Freeze dei contratti REST correnti (non-breaking)."
+  },
+  "servers": [
+    { "url": "http://localhost:3001/api" }
+  ],
+  "paths": {
+    "/health": { "get": { "summary": "Health check", "responses": { "200": { "description": "OK", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Health" } } } } } } },
+
+    "/auth/register": {
+      "post": {
+        "summary": "Register user (optional venue+tenant)",
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/AuthRegisterRequest" } } } },
+        "responses": { "201": { "description": "Created", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/AuthRegisterResponse" } } } },
+          "400": { "$ref": "#/components/responses/ValidationError" }, "500": { "$ref": "#/components/responses/ServerError" } }
+      }
+    },
+    "/auth/login": {
+      "post": {
+        "summary": "Login",
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/AuthLoginRequest" } } } },
+        "responses": { "200": { "description": "OK", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/AuthLoginResponse" } } } },
+          "401": { "$ref": "#/components/responses/Unauthorized" }, "400": { "$ref": "#/components/responses/ValidationError" } }
+      }
+    },
+    "/auth/verify": { "get": { "summary": "Verify token", "security": [{"bearerAuth":[]}], "responses": { "200": { "description": "OK", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/AuthVerifyResponse" } } } }, "401": { "$ref": "#/components/responses/Unauthorized" } } } },
+    "/auth/me": { "get": { "summary": "Get current user", "security": [{"bearerAuth":[]}], "responses": { "200": { "description": "OK", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/SuccessUser" } } } }, "401": { "$ref": "#/components/responses/Unauthorized" } } } },
+    "/auth/demo": { "post": { "summary": "Demo login", "responses": { "200": { "description": "OK", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/AuthLoginResponse" } } } } } } },
+
+    "/venues/public": { "get": { "summary": "Public venues list", "responses": { "200": { "description": "OK", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/PublicVenueList" } } } } } } },
+    "/venues/search": { "get": { "summary": "Search venues by match", "parameters": [ {"name":"query","in":"query","schema":{"type":"string"}} ], "responses": { "200": { "description": "OK" } } } },
+    "/venues/public/{id}": { "get": { "summary": "Public venue detail", "parameters": [ {"name":"id","in":"path","required":true,"schema":{"type":"string"}} ], "responses": { "200": { "description": "OK", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Venue" } } } }, "404": { "$ref": "#/components/responses/NotFound" } } } },
+    "/venues/{id}/announcements": { "get": { "summary": "Venue announcements (public)", "parameters": [ {"name":"id","in":"path","required":true,"schema":{"type":"string"}} ], "responses": { "200": { "description": "OK" } } } },
+
+    "/bookings": { "get": { "summary": "List bookings (tenant)", "security": [{"bearerAuth":[]}], "responses": { "200": { "description": "OK" } } },
+      "post": { "summary": "Create booking (public)", "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CreateBookingRequest" } } } }, "responses": { "201": { "description": "Created", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Booking" } } } }, "400": { "$ref": "#/components/responses/ValidationError" } } } },
+    "/bookings/availability/{venueId}": { "get": { "summary": "Check availability (public)", "parameters": [ {"name":"venueId","in":"path","required":true,"schema":{"type":"string"}} ], "responses": { "200": { "description": "OK" } } } },
+    "/bookings/{id}": { "get": { "summary": "Get booking (private)", "security": [{"bearerAuth":[]}], "parameters": [ {"name":"id","in":"path","required":true,"schema":{"type":"string"}} ], "responses": { "200": { "description": "OK", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Booking" } } } }, "404": { "$ref": "#/components/responses/NotFound" } } },
+      "put": { "summary": "Update booking (private)", "security": [{"bearerAuth":[]}], "parameters": [ {"name":"id","in":"path","required":true,"schema":{"type":"string"}} ], "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/BookingUpdate" } } } }, "responses": { "200": { "description": "OK" }, "404": { "$ref": "#/components/responses/NotFound" } } },
+      "delete": { "summary": "Delete booking (private)", "security": [{"bearerAuth":[]}], "parameters": [ {"name":"id","in":"path","required":true,"schema":{"type":"string"}} ], "responses": { "200": { "description": "OK" }, "404": { "$ref": "#/components/responses/NotFound" } } } },
+
+    "/match-announcements/search/matches": { "get": { "summary": "Search external matches", "parameters": [ {"name":"query","in":"query","schema":{"type":"string"}}, {"name":"league","in":"query","schema":{"type":"string"}}, {"name":"fromDate","in":"query","schema":{"type":"string","format":"date"}}, {"name":"toDate","in":"query","schema":{"type":"string","format":"date"}} ], "responses": { "200": { "description": "OK" } } } },
+    "/match-announcements/search/public": { "get": { "summary": "Public announcements search", "parameters": [ {"name":"query","in":"query","schema":{"type":"string"}}, {"name":"date","in":"query","schema":{"type":"string","format":"date"}}, {"name":"competition","in":"query","schema":{"type":"string"}}, {"name":"city","in":"query","schema":{"type":"string"}} ], "responses": { "200": { "description": "OK" } } } },
+    "/match-announcements/public/{id}": { "get": { "summary": "Public announcement detail", "parameters": [ {"name":"id","in":"path","required":true,"schema":{"type":"string"}}, {"name":"incrementView","in":"query","schema":{"type":"boolean"}} ], "responses": { "200": { "description": "OK" }, "404": { "$ref": "#/components/responses/NotFound" } } } },
+    "/match-announcements": { "post": { "summary": "Create announcement (venue)", "security": [{"bearerAuth":[]}], "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CreateAnnouncementRequest" } } } }, "responses": { "201": { "description": "Created" }, "400": { "$ref": "#/components/responses/ValidationError" } } } },
+    "/match-announcements/venue": { "get": { "summary": "Venue announcements (venue)", "security": [{"bearerAuth":[]}], "parameters": [ {"name":"status","in":"query","schema":{"type":"string","enum":["published","draft","archived"]}} ], "responses": { "200": { "description": "OK" } } } },
+    "/match-announcements/{id}": { "get": { "summary": "Announcement detail (venue)", "security": [{"bearerAuth":[]}], "parameters": [ {"name":"id","in":"path","required":true,"schema":{"type":"string"}} ], "responses": { "200": { "description": "OK" }, "404": { "$ref": "#/components/responses/NotFound" } } },
+      "put": { "summary": "Update announcement (venue)", "security": [{"bearerAuth":[]}], "parameters": [ {"name":"id","in":"path","required":true,"schema":{"type":"string"}} ], "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/UpdateAnnouncementRequest" } } } }, "responses": { "200": { "description": "OK" } } },
+      "delete": { "summary": "Delete announcement (venue)", "security": [{"bearerAuth":[]}], "parameters": [ {"name":"id","in":"path","required":true,"schema":{"type":"string"}} ], "responses": { "200": { "description": "OK" }, "404": { "$ref": "#/components/responses/NotFound" } } } },
+    "/match-announcements/hot": { "get": { "summary": "Hot matches (public)", "responses": { "200": { "description": "OK" } } } },
+    "/match-announcements/match/{matchId}/venues": { "get": { "summary": "Venues for match (public)", "parameters": [ {"name":"matchId","in":"path","required":true,"schema":{"type":"string"}} ], "responses": { "200": { "description": "OK" } } } },
+
+    "/global-matches": { "get": { "summary": "Global matches list", "responses": { "200": { "description": "OK" } } } },
+    "/global-matches/leagues": { "get": { "summary": "Leagues list", "responses": { "200": { "description": "OK" } } } },
+    "/global-matches/rounds": { "get": { "summary": "Rounds grouped fixtures", "parameters": [ {"name":"league","in":"query","required":true,"schema":{"type":"string"}} ], "responses": { "200": { "description": "OK" } } } },
+
+    "/analytics/profile-view": { "post": { "summary": "Track profile view (public)", "requestBody": { "required": true, "content": { "application/json": { "schema": { "type":"object","properties": {"venueId": {"type":"string"}}, "required":["venueId"] } } } }, "responses": { "200": { "description": "OK" } } } },
+    "/analytics/profile-click": { "post": { "summary": "Track profile click (public)", "requestBody": { "required": true, "content": { "application/json": { "schema": { "type":"object","properties": {"venueId": {"type":"string"}}, "required":["venueId"] } } } }, "responses": { "200": { "description": "OK" } } } },
+    "/analytics/match-click": { "post": { "summary": "Track match click (public)", "requestBody": { "required": true, "content": { "application/json": { "schema": { "type":"object","properties": {"matchId": {"type":"string"}}, "required":["matchId"] } } } }, "responses": { "200": { "description": "OK" } } } },
+    "/analytics/matches/top": { "get": { "summary": "Top matches (public)", "parameters": [ {"name":"from","in":"query","schema":{"type":"string","format":"date"}}, {"name":"to","in":"query","schema":{"type":"string","format":"date"}}, {"name":"limit","in":"query","schema":{"type":"integer","minimum":1,"maximum":50}} ], "responses": { "200": { "description": "OK" } } } },
+
+    "/venues/{venueId}/analytics/overview": { "get": { "summary": "Venue analytics overview", "security": [{"bearerAuth":[]}], "parameters": [ {"name":"venueId","in":"path","required":true,"schema":{"type":"string"}}, {"name":"from","in":"query","schema":{"type":"string","format":"date"}}, {"name":"to","in":"query","schema":{"type":"string","format":"date"}} ], "responses": { "200": { "description": "OK", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/AnalyticsOverview" } } } } } } },
+    "/venues/{venueId}/analytics/top": { "get": { "summary": "Venue top analytics", "security": [{"bearerAuth":[]}], "parameters": [ {"name":"venueId","in":"path","required":true,"schema":{"type":"string"}}, {"name":"metric","in":"query","schema":{"type":"string","enum":["views","clicks"]}}, {"name":"limit","in":"query","schema":{"type":"integer","minimum":1,"maximum":50}} ], "responses": { "200": { "description": "OK" } } } },
+    "/venues/{venueId}/analytics/timeseries": { "get": { "summary": "Venue timeseries", "security": [{"bearerAuth":[]}], "parameters": [ {"name":"venueId","in":"path","required":true,"schema":{"type":"string"}}, {"name":"metric","in":"query","schema":{"type":"string","enum":["views","clicks"]}}, {"name":"from","in":"query","schema":{"type":"string","format":"date"}}, {"name":"to","in":"query","schema":{"type":"string","format":"date"}} ], "responses": { "200": { "description": "OK", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/AnalyticsTimeseries" } } } } } } },
+    "/venues/{venueId}/analytics/match-traffic": { "get": { "summary": "Venue match traffic", "parameters": [ {"name":"venueId","in":"path","required":true,"schema":{"type":"string"}}, {"name":"from","in":"query","schema":{"type":"string","format":"date"}}, {"name":"to","in":"query","schema":{"type":"string","format":"date"}} ], "responses": { "200": { "description": "OK" } } } },
+
+    "/offer-templates": { "get": { "summary": "List offer templates", "security": [{"bearerAuth":[]}], "responses": { "200": { "description": "OK", "content": { "application/json": { "schema": { "type":"object","properties": {"success":{"type":"boolean"},"data":{"type":"array","items": {"$ref": "#/components/schemas/OfferTemplate"}} } } } } } } },
+      "post": { "summary": "Create offer template", "security": [{"bearerAuth":[]}], "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/OfferTemplateCreate" } } } }, "responses": { "201": { "description": "Created" } } } },
+    "/offer-templates/{id}": { "put": { "summary": "Update offer template", "security": [{"bearerAuth":[]}], "parameters": [ {"name":"id","in":"path","required":true,"schema":{"type":"string"}} ], "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/OfferTemplateUpdate" } } } }, "responses": { "200": { "description": "OK" }, "404": { "$ref": "#/components/responses/NotFound" } } },
+      "delete": { "summary": "Delete offer template", "security": [{"bearerAuth":[]}], "parameters": [ {"name":"id","in":"path","required":true,"schema":{"type":"string"}} ], "responses": { "200": { "description": "OK" }, "404": { "$ref": "#/components/responses/NotFound" } } } }
+  },
+  "components": {
+    "securitySchemes": { "bearerAuth": { "type": "http", "scheme": "bearer", "bearerFormat": "JWT" } },
+    "responses": {
+      "ValidationError": { "description": "Validation error" },
+      "Unauthorized": { "description": "Unauthorized" },
+      "NotFound": { "description": "Not found" },
+      "ServerError": { "description": "Server error" }
+    },
+    "schemas": {
+      "Health": { "type": "object", "properties": { "status": {"type":"string"}, "message": {"type":"string"}, "timestamp": {"type":"string","format":"date-time"}, "tenant": {"type":"string"} } },
+      "User": { "type": "object", "properties": { "id": {"type":"string"}, "email": {"type":"string"}, "name": {"type":"string"}, "role": {"type":"string"}, "venueId": {"type":"string","nullable": true}, "tenantId": {"type":"string","nullable": true} }, "required": ["id","email","name","role"] },
+      "Venue": { "type": "object", "properties": { "id": {"type":"string"}, "name": {"type":"string"}, "location": {"type":"object"}, "status": {"type":"string"}, "isActive": {"type":"boolean"} } },
+      "Booking": { "type": "object", "properties": { "id": {"type":"string"}, "venueId": {"type":"string"}, "userId": {"type":"string"}, "date": {"type":"string","format":"date"}, "time": {"type":"string"}, "status": {"type":"string"} } },
+      "BookingUpdate": { "type": "object", "properties": { "status": {"type":"string"} } },
+      "CreateBookingRequest": { "type": "object", "properties": { "venueId": {"type":"string"}, "date": {"type":"string","format":"date"}, "time": {"type":"string"}, "partySize": {"type":"integer"}, "notes": {"type":"string"} }, "required": ["venueId","date","time","partySize"] },
+      "AuthRegisterRequest": { "type": "object", "properties": { "name": {"type":"string"}, "email": {"type":"string"}, "password": {"type":"string"}, "isVenueOwner": {"type":"boolean"}, "businessInfo": {"type":"object"} }, "required": ["name","email","password"] },
+      "AuthRegisterResponse": { "type": "object", "properties": { "success": {"type":"boolean"}, "token": {"type":"string"}, "user": {"$ref": "#/components/schemas/User"}, "venue": {"$ref": "#/components/schemas/Venue"} } },
+      "AuthLoginRequest": { "type": "object", "properties": { "email": {"type":"string"}, "password": {"type":"string"} }, "required": ["email","password"] },
+      "AuthLoginResponse": { "type": "object", "properties": { "success": {"type":"boolean"}, "token": {"type":"string"}, "user": {"$ref": "#/components/schemas/User"}, "venue": {"$ref": "#/components/schemas/Venue"} } },
+      "AuthVerifyResponse": { "type": "object", "properties": { "success": {"type":"boolean"}, "valid": {"type":"boolean"}, "user": {"$ref": "#/components/schemas/User"} } },
+      "OfferTemplate": { "type": "object", "properties": { "id": {"type":"string"}, "title": {"type":"string"}, "description": {"type":"string"}, "price": {"type":"number","nullable": true}, "tags": {"type":"array","items":{"type":"string"}}, "isActive": {"type":"boolean"} } },
+      "OfferTemplateCreate": { "type": "object", "properties": { "title": {"type":"string"}, "description": {"type":"string"}, "price": {"type":"number","nullable": true}, "tags": {"type":"array","items":{"type":"string"}} }, "required": ["title","description"] },
+      "OfferTemplateUpdate": { "type": "object", "properties": { "title": {"type":"string"}, "description": {"type":"string"}, "price": {"type":"number","nullable": true}, "tags": {"type":"array","items":{"type":"string"}}, "isActive": {"type":"boolean"} } },
+      "AnalyticsOverview": { "type": "object", "properties": { "views": {"type":"integer"}, "clicks": {"type":"integer"}, "conversionRate": {"type":"number"} } },
+      "AnalyticsTimeseries": { "type": "object", "properties": { "metric": {"type":"string"}, "series": {"type":"array","items": {"type":"object","properties": {"date": {"type":"string","format":"date"}, "value": {"type":"integer"}}} } } },
+      "PublicVenueList": { "type": "object", "properties": { "items": {"type":"array","items": {"$ref": "#/components/schemas/Venue"}} } },
+      "CreateAnnouncementRequest": { "type": "object", "properties": { "match": {"type":"object"}, "eventDetails": {"type":"object"} }, "required": ["match","eventDetails"] },
+      "UpdateAnnouncementRequest": { "type": "object", "properties": { "eventDetails": {"type":"object"}, "status": {"type":"string","enum":["published","draft","archived"]}, "isActive": {"type":"boolean"} } }
+    }
+  }
+}

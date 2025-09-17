@@ -6,6 +6,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { venueProfileService, statisticsService } from '@/services/venueService';
+import adminVenueService from '@/services/adminVenueService';
+import { analyticsService } from '@/services';
 import SimpleCreateAnnouncementForm from '@/components/forms/SimpleCreateAnnouncementForm';
 
 interface DashboardStats {
@@ -42,20 +44,56 @@ const AdminDashboard = () => {
     venue: { screens: 0, sports: 0 }
   });
 
-  // Carica i dati del venue e calcola le statistiche
+  // Carica profilo locale e statistiche (preferisci API analytics se disponibili)
   useEffect(() => {
-    if (user?.id) {
-      // Carica sempre il profilo venue se disponibile, indipendentemente dall'onboarding
-      const profile = venueProfileService.getProfile(user.id);
-      setVenueProfile(profile);
-      
-      // Calcola le statistiche solo se l'onboarding è completato
-      if (user.hasCompletedOnboarding) {
-        const calculatedStats = statisticsService.calculateStatistics(user.id);
-        setStats(calculatedStats);
+    if (!user?.id) return;
+
+    // Carica profilo locale (localStorage)
+    const profile = venueProfileService.getProfile(user.id);
+    setVenueProfile(profile);
+    (async () => {
+      // Ricava venueId: utente -> admin service -> profilo locale
+      let venueId = user?.venue?.id || user?.venue?.backendId || profile?.backendId || '';
+      if (!venueId) {
+        try {
+          const adminProfile = await adminVenueService.getVenueProfile();
+          venueId = adminProfile?.backendId || venueId;
+        } catch {
+          // ignore, fallback sotto
+        }
       }
-    }
-  }, [user?.id, user.hasCompletedOnboarding]);
+
+      if (!venueId) {
+        // Fallback locale
+        const calculated = await statisticsService.calculateStatistics(user.id);
+        setStats(calculated);
+        return;
+      }
+
+      try {
+        const res = await analyticsService.getOverview(venueId);
+        const d = res?.data || {};
+        setStats(prev => ({
+          ...prev,
+          views: d.views ?? 0,
+          clicks: d.clicks ?? 0,
+          bookings: {
+            total: d.bookings?.total ?? 0,
+            confirmed: d.bookings?.confirmed ?? 0,
+            pending: d.bookings?.pending ?? 0
+          },
+          fixtures: {
+            total: d.fixtures?.total ?? 0,
+            upcoming: d.fixtures?.upcoming ?? 0
+          },
+          venue: prev.venue
+        }));
+      } catch (e) {
+        const calculated = await statisticsService.calculateStatistics(user.id);
+        setStats(calculated);
+      }
+    })();
+  }, [user?.id, user?.venue?.id, user?.venue?.backendId, user.hasCompletedOnboarding]);
 
   // Gestisce i messaggi di successo dal routing
   useEffect(() => {
@@ -107,11 +145,8 @@ const AdminDashboard = () => {
             BENVENUTO, {venueName.toUpperCase()}!
           </h1>
           <p className="font-kanit text-gray-600 mt-2">
-            {user.hasCompletedOnboarding 
-              ? 'Ecco una panoramica delle performance del tuo locale.'
-              : 'Completa il tuo profilo per iniziare a utilizzare la piattaforma.'
-            }
-                </p>
+            Ecco una panoramica delle performance del tuo locale.
+          </p>
               </div>
         {user.hasCompletedOnboarding && (
           <Button
@@ -133,79 +168,53 @@ const AdminDashboard = () => {
         </Alert>
       )}
 
-      {/* Dashboard Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <Card className="bg-white">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-kanit font-medium">
-              Visualizzazioni
-            </CardTitle>
-            <Eye className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-racing text-fanzo-dark">
-              {user.hasCompletedOnboarding ? stats.views : '0'}
-            </div>
-            <p className="text-xs text-muted-foreground font-kanit">
-              {user.hasCompletedOnboarding ? '+12% vs settimana scorsa' : 'Completa il profilo per iniziare'}
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-white">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-kanit font-medium">
-              Click
-            </CardTitle>
-            <TrendingUp className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-racing text-fanzo-dark">
-              {user.hasCompletedOnboarding ? stats.clicks : '0'}
+      {/* Dashboard Stats (mobile-first, 2x2) */}
+      <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+        <Card className="bg-card">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="rounded-md bg-primary/10 p-2"><Eye className="h-5 w-5 text-primary" /></div>
+              <div>
+                <div className="font-racing text-xl">{stats.views}</div>
+                <p className="text-xs text-muted-foreground font-kanit">Visualizzazioni</p>
               </div>
-            <p className="text-xs text-muted-foreground font-kanit">
-              {user.hasCompletedOnboarding ? '+8% vs settimana scorsa' : 'Nessun dato disponibile'}
-            </p>
+            </div>
           </CardContent>
         </Card>
 
-        <Card className="bg-white">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-kanit font-medium">
-              Prenotazioni
-            </CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-racing text-fanzo-dark">
-              {user.hasCompletedOnboarding ? stats.bookings.total : '0'}
+        <Card className="bg-card">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="rounded-md bg-primary/10 p-2"><TrendingUp className="h-5 w-5 text-primary" /></div>
+              <div>
+                <div className="font-racing text-xl">{stats.clicks}</div>
+                <p className="text-xs text-muted-foreground font-kanit">Click</p>
+              </div>
             </div>
-            <p className="text-xs text-muted-foreground font-kanit">
-              {user.hasCompletedOnboarding 
-                ? `${stats.bookings.confirmed} confermate, ${stats.bookings.pending} in attesa`
-                : 'Nessuna prenotazione'
-              }
-            </p>
           </CardContent>
         </Card>
 
-        <Card className="bg-white">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-kanit font-medium">
-              Partite Pubblicate
-            </CardTitle>
-            <Calendar className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-racing text-fanzo-dark">
-              {user.hasCompletedOnboarding ? stats.fixtures.total : '0'}
+        <Card className="bg-card">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="rounded-md bg-primary/10 p-2"><Users className="h-5 w-5 text-primary" /></div>
+              <div>
+                <div className="font-racing text-xl">{stats.bookings.total}</div>
+                <p className="text-xs text-muted-foreground font-kanit">Prenotazioni</p>
+              </div>
             </div>
-            <p className="text-xs text-muted-foreground font-kanit">
-              {user.hasCompletedOnboarding 
-                ? `${stats.fixtures.upcoming} in programma`
-                : 'Nessuna partita programma'
-              }
-            </p>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-card">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="rounded-md bg-primary/10 p-2"><Calendar className="h-5 w-5 text-primary" /></div>
+              <div>
+                <div className="font-racing text-xl">{stats.fixtures.total}</div>
+                <p className="text-xs text-muted-foreground font-kanit">Partite pubblicate</p>
+              </div>
+            </div>
           </CardContent>
         </Card>
       </div>

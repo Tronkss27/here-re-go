@@ -99,9 +99,9 @@ button[type="submit"],
 .primary-action {
   background: var(--gazzetta-cta) !important;
   color: var(--gazzetta-white) !important;
-  border: none !important;
-  border-radius: 6px !important;
-  padding: 12px 24px !important;
+  border: 2px solid rgba(0,0,0,0.85) !important; /* pill accent */
+  border-radius: 9999px !important; /* pill */
+  padding: 10px 20px !important;
   font-weight: 600 !important;
   transition: all 0.2s ease !important;
 }
@@ -120,9 +120,9 @@ button[type="button"],
 .button-outline {
   background: var(--gazzetta-white) !important;
   color: var(--gazzetta-text) !important;
-  border: 1px solid var(--gazzetta-border) !important;
-  border-radius: 6px !important;
-  padding: 12px 24px !important;
+  border: 2px solid rgba(0,0,0,0.85) !important; /* pill accent */
+  border-radius: 9999px !important; /* pill */
+  padding: 10px 20px !important;
   font-weight: 500 !important;
 }
 
@@ -154,8 +154,6 @@ button[type="button"]:hover,
 /* 🎯 CARDS E CONTAINERS PULITI */
 /* 🎯 FIX CRITICO: Rimuovi tutti i fondi rosa/pink e banner sovrapposti */
 .card,
-.bg-white,
-.container,
 [class*="card"],
 [class*="bg-pink"],
 [class*="bg-rose"],
@@ -306,27 +304,146 @@ html, body {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
 }
 
+/* Full-bleed reset to prevent horizontal gaps and scroll */
+html, body, #root {
+  width: 100% !important;
+  max-width: 100% !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  overflow-x: hidden !important;
+}
+
+/* Ensure navbar block does not exceed viewport and inherits full width */
+.rbnav { width: 100% !important; }
+
 /* RESET COMPLETO - RIMUOVO TUTTI I COLORI PRECEDENTI */
 * {
   box-sizing: border-box;
 }
 
 /* HEADER */
-header, .header, nav {
+header, .header {
   background: hsl(var(--primary)) !important;
   color: hsl(var(--primary-foreground)) !important;
   border-bottom: none !important;
 }
 
-header *, .header *, nav * {
+header *, .header * {
   color: hsl(var(--primary-foreground)) !important;
 }
 
+/* Header nav links - pill style for readability */
+.header nav a {
+  padding: 6px 10px;
+  border-radius: 8px;
+  border: 1px solid transparent;
+}
+
+.header nav a:hover {
+  background: rgba(255,255,255,0.12);
+  border-color: rgba(255,255,255,0.18);
+}
+
+/* Force full-bleed navbar container on mobile */
+.rbnav-container {
+  width: 100% !important;
+  max-width: 100% !important;
+}
+
+@media (max-width: 768px) {
+  .rbnav-container, .rbnav-container > .rbnav {
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+  }
+}
+
+.header .btn-accent, .header .btn-primary {
+  background: hsl(var(--primary-dark)) !important;
+  color: hsl(var(--primary-foreground)) !important;
+}
+
+/* Explicit pills for CardNav CTAs */
+.rbnav-pill-login {
+  border-radius: 9999px !important;
+  padding: 8px 16px !important;
+  border-width: 2px !important;
+}
+
+.rbnav-pill-business {
+  border-radius: 9999px !important;
+  padding: 8px 16px !important;
+}
+
+/* =================================
+   DEMO HEADERS STACK (DEV ONLY)
+   ================================= */
+.demo-headers-stack {
+  max-width: 1200px;
+  margin: 12px auto 24px auto;
+  padding: 0 16px;
+}
+
+.demo-headers-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: hsl(var(--muted-foreground));
+  margin: 16px 0 8px 0;
+}
+
+.demo-header {
+  border-radius: 12px;
+  overflow: hidden;
+  margin-bottom: 12px;
+  border: 1px solid hsl(var(--border));
+}
+.demo-header__inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+}
+.demo-header__logo { color: white; font-weight: 800; }
+.demo-header__nav { display: flex; gap: 12px; }
+.demo-header__actions { display: flex; gap: 8px; }
+.demo-btn { border-radius: 8px; padding: 8px 12px; font-weight: 700; }
+.demo-btn--primary { background: hsl(var(--primary-dark)); color: white; }
+.demo-btn--ghost { background: rgba(255,255,255,.12); color: white; border: 1px solid rgba(255,255,255,.18); }
+
+/* Versione A: Solid Green Pill */
+.demo-header--a { background: hsl(var(--primary)); }
+.demo-header--a .demo-header__nav a {
+  color: white; padding: 8px 12px; border-radius: 10px; border: 1px solid transparent;
+}
+.demo-header--a .demo-header__nav a:hover { background: rgba(255,255,255,.12); border-color: rgba(255,255,255,.18); }
+
+/* Versione B: Green Glass */
+.demo-header--b {
+  background: color-mix(in srgb, hsl(var(--primary)) 86%, transparent);
+  backdrop-filter: saturate(120%) blur(8px);
+}
+.demo-header--b .demo-header__inner { border-bottom: 1px solid rgba(255,255,255,.12); }
+.demo-header--b .demo-header__nav a {
+  color: white; padding: 8px 12px; border-radius: 10px; border: 1px solid rgba(255,255,255,.18);
+}
+.demo-header--b .demo-header__nav a:hover { background: rgba(255,255,255,.18); }
+
+/* Versione C: Minimal Underline */
+.demo-header--c { background: hsl(var(--primary)); }
+.demo-header--c .demo-header__nav a { color: white; padding: 6px 2px; border-bottom: 3px solid transparent; }
+.demo-header--c .demo-header__nav a:hover { border-bottom-color: rgba(255,255,255,.35); }
+.demo-header--c .demo-header__nav a[aria-current="page"] { border-bottom-color: #fff; }
+
 /* SIDEBAR */
-.sidebar, .admin-sidebar, aside {
-  background: var(--color-background-alt) !important;
-  color: var(--color-text-primary) !important;
-  border-right: 2px solid var(--color-border) !important;
+/* Limita lo stile ai soli layout admin su desktop per evitare 'buchi' su mobile */
+@media (min-width: 768px) {
+  .sidebar, .admin-sidebar, .admin-rail {
+    background: var(--color-background-alt) !important;
+    color: var(--color-text-primary) !important;
+    border-right: 2px solid var(--color-border) !important;
+  }
 }
 
 .sidebar *, .admin-sidebar *, aside * {
@@ -555,19 +672,13 @@ form {
   background: var(--color-background) !important;
 }
 
-/* ADMIN SIDEBAR */
-.admin-sidebar {
-  width: 280px !important;
-  background: var(--color-background-alt) !important;
-  border-right: 2px solid var(--color-border) !important;
-  padding: 24px !important;
-  position: fixed !important;
-  height: 100vh !important;
-  left: 0 !important;
-  top: 0 !important;
-  z-index: 50 !important;
-  display: flex !important;
-  flex-direction: column !important;
+/* ADMIN SIDEBAR (legacy layout disattivato) */
+.admin-sidebar { /* legacy disabled: kept for backwards compatibility, no layout enforcement */
+  width: auto !important;
+  position: static !important;
+  height: auto !important;
+  padding: 0 !important;
+  border: none !important;
 }
 
 .admin-sidebar * {
@@ -609,11 +720,11 @@ form {
   box-shadow: 0 2px 4px rgba(0,0,0,0.1) !important;
 }
 
-/* ADMIN MAIN CONTENT */
+/* ADMIN MAIN CONTENT (legacy offset disattivato) */
 .admin-main {
   flex: 1 !important;
-  margin-left: 280px !important;
-  padding: 32px !important;
+  margin-left: 0 !important;
+  padding: 0 !important;
   background: var(--color-background) !important;
   min-height: 100vh !important;
 }
@@ -624,18 +735,24 @@ form {
 
 /* RESPONSIVE SIDEBAR */
 @media (max-width: 768px) {
-  .admin-sidebar {
-    transform: translateX(-100%) !important;
-    transition: transform 0.3s ease !important;
-  }
-  
-  .admin-sidebar.open {
-    transform: translateX(0) !important;
-  }
-  
-  .admin-main {
-    margin-left: 0 !important;
-  }
+  .admin-sidebar { transform: none !important; }
+  .admin-main { margin-left: 0 !important; }
+}
+
+/* Neutralizza qualsiasi brandizzazione involontaria sul trigger kebab */
+.action-kebab {
+  border: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  outline: none !important;
+  border-color: transparent !important;
+}
+.admin-calendar button[type="button"],
+.admin-calendar .action-kebab,
+.admin-calendar .action-kebab * {
+  border: 0 !important;
+  outline: none !important;
+  box-shadow: none !important;
 }
 
 /* BUTTONS NELLA SIDEBAR ARANCIONE */
@@ -878,16 +995,8 @@ form {
   overflow: hidden;
 }
 
-.hero-banner::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.3);
-  z-index: 1;
-}
+.hero-banner::before { content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.3); z-index: 1; }
+.hero-banner.no-overlay::before { background: transparent; }
 
 .hero-content {
   position: relative;
@@ -921,12 +1030,12 @@ form {
 
 /* Sticky Day Navigation */
 .day-navigation {
-  background: white;
-  border-bottom: 2px solid var(--color-border);
+  background: transparent;
   position: sticky;
   top: 64px; /* Header height */
   z-index: 40;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  margin: 0 auto;
+  padding: 12px 16px;
 }
 
 .day-tabs {
@@ -934,6 +1043,8 @@ form {
   overflow-x: auto;
   scrollbar-width: none; /* Firefox */
   -ms-overflow-style: none; /* IE */
+  gap: 12px;
+  justify-content: center;
 }
 
 .day-tabs::-webkit-scrollbar {
@@ -942,20 +1053,24 @@ form {
 
 .day-tab {
   flex-shrink: 0;
-  padding: 1rem 1.5rem;
-  font-weight: 600;
-  font-size: 0.875rem;
+  padding: 0.75rem 1.25rem;
+  font-weight: 700;
+  font-size: 0.9rem;
   transition: all 0.2s ease;
-  border-bottom: 3px solid transparent;
+  border: 0; /* remove line */
+  border-radius: 12px;
   cursor: pointer;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.3px;
+  background: white;
+  box-shadow: 0 8px 20px rgba(0,0,0,0.06); /* floating */
 }
 
 .day-tab.active {
-  background: hsl(var(--secondary)) !important;
-  color: hsl(var(--primary)) !important;
-  border-bottom-color: hsl(var(--primary)) !important;
+  background: white !important;
+  color: hsl(var(--foreground)) !important;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+  outline: 2px solid hsl(var(--primary));
+  outline-offset: 2px;
 }
 
 .day-tab:hover:not(.active) {
@@ -967,7 +1082,7 @@ form {
    🎯 MATCH CARDS IMPROVEMENTS
    ================================= */
 
-/* Match Cards Grid */
+/* Match Cards Grid - floating container without enclosing borders */
 .matches-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
@@ -1567,7 +1682,7 @@ form {
   height: 300px;
   width: 100%;
   overflow: hidden;
-  border-radius: 16px;
+  border-radius: 0; /* full-bleed */
   margin-bottom: 32px;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
 }
@@ -2543,7 +2658,7 @@ form {
   height: 200px; /* Più piccolo su mobile */
   width: 100%;
   overflow: hidden;
-  border-radius: 12px;
+  border-radius: 0; /* full-bleed */
   margin-bottom: 24px;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
 }
@@ -2957,7 +3072,7 @@ button[key="big-fixtures"] {
 .day-navigation {
   background: var(--bg) !important;
   padding: 20px 0 !important;
-  border-bottom: 1px solid rgba(175, 176, 178, 0.2) !important;
+  border-bottom: none !important;
 }
 
 .day-tabs {
@@ -2973,12 +3088,16 @@ button[key="big-fixtures"] {
 
 /* CARDS SEMPRE BIANCHE CON BORDER ROSA SOTTILE */
 .card,
-.bg-white,
 .facility-card,
 [class*="card"] {
   background: #FFFFFF !important;
   border: 1px solid hsl(var(--border)) !important;
   color: #000000 !important;
+}
+
+/* Remove global border from structural sections using .bg-white (e.g., homepage content wrapper) */
+section.bg-white {
+  border: none !important;
 }
 
 /* FACILITY CARDS SELEZIONATE - ROSA SOFT */

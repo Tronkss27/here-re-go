@@ -1,0 +1,206 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "SPOrTS API",
+    "version": "1.0.0",
+    "description": "Contratti congelati rispetto all'implementazione attuale (core endpoints)"
+  },
+  "servers": [
+    { "url": "http://localhost:3001", "description": "Local" }
+  ],
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": { "type": "http", "scheme": "bearer", "bearerFormat": "JWT" }
+    },
+    "schemas": {
+      "User": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "name": { "type": "string" },
+          "email": { "type": "string" },
+          "role": { "type": "string", "enum": ["user", "venue_owner", "admin"] },
+          "venueId": { "type": "string", "nullable": true },
+          "tenantId": { "type": "string", "nullable": true }
+        },
+        "required": ["id", "email", "role"]
+      },
+      "Venue": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "name": { "type": "string" },
+          "tenantId": { "type": "string" }
+        }
+      },
+      "Booking": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "venue": { "type": "string" },
+          "date": { "type": "string", "format": "date" },
+          "timeSlot": { "type": "object", "properties": { "start": {"type":"string"}, "end": {"type":"string"} } },
+          "partySize": { "type": "integer" },
+          "customer": { "type": "object" }
+        }
+      },
+      "Announcement": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "venueId": { "type": "string" },
+          "match": { "type": "object" },
+          "eventDetails": { "type": "object" },
+          "status": { "type": "string" }
+        }
+      },
+      "OfferTemplate": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "title": { "type": "string" },
+          "description": { "type": "string" },
+          "price": { "type": "number", "nullable": true },
+          "isActive": { "type": "boolean" }
+        }
+      },
+      "AnalyticsOverview": {
+        "type": "object",
+        "properties": {
+          "timeRange": { "type": "object", "properties": { "from": {"type": "string"}, "to": {"type": "string"} } },
+          "views": { "type": "integer" },
+          "clicks": { "type": "integer" },
+          "ctr": { "type": "number" },
+          "bookings": { "type": "object" },
+          "fixtures": { "type": "object" },
+          "reviews": { "type": "object" },
+          "offers": { "type": "object" }
+        }
+      },
+      "Timeseries": {
+        "type": "object",
+        "properties": {
+          "metric": { "type": "string", "enum": ["views", "clicks"] },
+          "points": { "type": "array", "items": { "type": "object", "properties": { "t": {"type":"string"}, "value": {"type":"integer"} } } }
+        }
+      }
+    }
+  },
+  "paths": {
+    "/api/health": {
+      "get": { "summary": "Healthcheck", "responses": { "200": {"description": "OK"} } }
+    },
+    "/api/auth/register": {
+      "post": {
+        "summary": "Register",
+        "requestBody": { "required": true, "content": { "application/json": { "schema": {"type": "object"} } } },
+        "responses": { "201": {"description": "Created"}, "400": {"description": "Validation"}, "500": {"description": "Server"} }
+      }
+    },
+    "/api/auth/login": {
+      "post": {
+        "summary": "Login",
+        "requestBody": { "required": true, "content": { "application/json": { "schema": {"type": "object"} } } },
+        "responses": { "200": {"description": "OK"}, "401": {"description": "Invalid"}, "500": {"description": "Server"} }
+      }
+    },
+    "/api/auth/verify": {
+      "get": { "security": [{"bearerAuth": []}], "summary": "Verify token", "responses": { "200": {"description": "OK"}, "401": {"description": "Unauthorized"} } }
+    },
+    "/api/auth/me": {
+      "get": { "security": [{"bearerAuth": []}], "summary": "Current user", "responses": { "200": {"description": "OK"}, "401": {"description": "Unauthorized"} } }
+    },
+    "/api/venues/public": { "get": { "summary": "Public venues", "responses": { "200": {"description": "OK"} } } },
+    "/api/venues/details/{id}": {
+      "get": {
+        "summary": "Public venue details",
+        "parameters": [{"in":"path","name":"id","required":true,"schema":{"type":"string"}}],
+        "responses": { "200": {"description": "OK"}, "404": {"description": "Not found"} }
+      }
+    },
+    "/api/venues/{id}/announcements": {
+      "get": {
+        "summary": "Public venue announcements",
+        "parameters": [{"in":"path","name":"id","required":true,"schema":{"type":"string"}}],
+        "responses": { "200": {"description": "OK"}, "400": {"description": "Bad request"} }
+      }
+    },
+    "/api/venues": {
+      "get": { "security": [{"bearerAuth": []}], "summary": "Tenant venues", "responses": { "200": {"description": "OK"} } },
+      "post": { "security": [{"bearerAuth": []}], "summary": "Create venue", "responses": { "201": {"description": "Created"}, "400": {"description": "Validation"} } }
+    },
+    "/api/venues/{id}": {
+      "put": { "security": [{"bearerAuth": []}], "summary": "Update venue", "parameters": [{"in":"path","name":"id","required":true,"schema":{"type":"string"}}], "responses": { "200": {"description": "OK"}, "404": {"description": "Not found"} } },
+      "delete": { "security": [{"bearerAuth": []}], "summary": "Delete venue", "parameters": [{"in":"path","name":"id","required":true,"schema":{"type":"string"}}], "responses": { "200": {"description": "OK"}, "404": {"description": "Not found"} } }
+    },
+    "/api/venues/{id}/booking-settings": {
+      "patch": { "security": [{"bearerAuth": []}], "summary": "Update booking settings", "parameters": [{"in":"path","name":"id","required":true,"schema":{"type":"string"}}], "responses": { "200": {"description": "OK"} } }
+    },
+    "/api/bookings/availability/{venueId}": {
+      "get": { "summary": "Availability", "parameters": [{"in":"path","name":"venueId","required":true,"schema":{"type":"string"}}, {"in":"query","name":"date","required":true,"schema":{"type":"string","format":"date"}}], "responses": { "200": {"description": "OK"}, "400": {"description": "Bad request"} } }
+    },
+    "/api/bookings": {
+      "post": { "summary": "Create booking", "requestBody": {"required": true, "content": {"application/json": {"schema": {"$ref": "#\/components\/schemas\/Booking"}}}}, "responses": { "201": {"description": "Created"}, "400": {"description": "Validation"} } }
+    },
+    "/api/bookings/confirm/{code}": {
+      "get": { "summary": "Get booking by code", "parameters": [{"in":"path","name":"code","required":true,"schema":{"type":"string"}}], "responses": { "200": {"description": "OK"}, "404": {"description": "Not found"} } }
+    },
+    "/api/match-announcements/hot": { "get": { "summary": "Hot matches", "responses": { "200": {"description": "OK"} } } },
+    "/api/match-announcements/match/{matchId}/venues": {
+      "get": { "summary": "Venues for a match", "parameters": [{"in":"path","name":"matchId","required":true,"schema":{"type":"string"}}], "responses": { "200": {"description": "OK"} } }
+    },
+    "/api/match-announcements/search/public": { "get": { "summary": "Search public announcements", "responses": { "200": {"description": "OK"} } } },
+    "/api/match-announcements/public/{id}": { "get": { "summary": "Public announcement", "parameters": [{"in":"path","name":"id","required":true,"schema":{"type":"string"}}], "responses": { "200": {"description": "OK"}, "404": {"description": "Not found"} } } },
+    "/api/match-announcements": { "post": { "security": [{"bearerAuth": []}], "summary": "Create announcement", "responses": { "201": {"description": "Created"}, "400": {"description": "Validation"}, "409": {"description": "Conflict"} } } },
+    "/api/match-announcements/venue": { "get": { "security": [{"bearerAuth": []}], "summary": "Venue announcements", "responses": { "200": {"description": "OK"} } } },
+    "/api/match-announcements/{id}": { "put": { "security": [{"bearerAuth": []}], "summary": "Update announcement", "parameters": [{"in":"path","name":"id","required":true,"schema":{"type":"string"}}], "responses": { "200": {"description": "OK"} } }, "delete": { "security": [{"bearerAuth": []}], "summary": "Delete announcement", "parameters": [{"in":"path","name":"id","required":true,"schema":{"type":"string"}}], "responses": { "200": {"description": "OK"} } } },
+    "/api/match-announcements/{id}/archive": { "patch": { "security": [{"bearerAuth": []}], "summary": "Archive announcement", "parameters": [{"in":"path","name":"id","required":true,"schema":{"type":"string"}}], "responses": { "200": {"description": "OK"} } } },
+    "/api/match-announcements/track/match-click": { "post": { "summary": "Track match click", "requestBody": {"required": true, "content": {"application/json": {"schema": {"type": "object", "properties": {"matchId": {"type": "string"}}}}}}, "responses": { "200": {"description": "OK"}, "400": {"description": "Bad request"} } } },
+    "/api/venues/{venueId}/analytics/overview": { "get": { "security": [{"bearerAuth": []}], "summary": "Venue overview", "parameters": [{"in":"path","name":"venueId","required":true,"schema":{"type":"string"}}, {"in":"query","name":"from","schema":{"type":"string"}}, {"in":"query","name":"to","schema":{"type":"string"}}], "responses": { "200": {"description": "OK"} } } },
+    "/api/venues/{venueId}/analytics/timeseries": { "get": { "security": [{"bearerAuth": []}], "summary": "Venue timeseries", "parameters": [{"in":"path","name":"venueId","required":true,"schema":{"type":"string"}}, {"in":"query","name":"metric","schema":{"type":"string"}}, {"in":"query","name":"from","schema":{"type":"string"}}, {"in":"query","name":"to","schema":{"type":"string"}}], "responses": { "200": {"description": "OK"} } } },
+    "/api/venues/{venueId}/analytics/match-traffic": { "get": { "summary": "Venue match traffic", "parameters": [{"in":"path","name":"venueId","required":true,"schema":{"type":"string"}}, {"in":"query","name":"from","schema":{"type":"string"}}, {"in":"query","name":"to","schema":{"type":"string"}}], "responses": { "200": {"description": "OK"} } } },
+    "/api/analytics/profile-view": { "post": { "summary": "Track profile view", "requestBody": {"required": true, "content": {"application/json": {"schema": {"type": "object", "properties": {"venueId": {"type": "string"}, "matchId": {"type": "string"}}}}}}, "responses": { "200": {"description": "OK"}, "400": {"description": "Bad request"} } } },
+    "/api/analytics/profile-click": { "post": { "summary": "Track profile click", "requestBody": {"required": true, "content": {"application/json": {"schema": {"type": "object", "properties": {"venueId": {"type": "string"}, "matchId": {"type": "string"}}}}}}, "responses": { "200": {"description": "OK"}, "400": {"description": "Bad request"} } } },
+    "/api/analytics/matches/top": { "get": { "summary": "Top matches", "parameters": [{"in":"query","name":"global","schema":{"type":"string"}},{"in":"query","name":"from","schema":{"type":"string"}},{"in":"query","name":"to","schema":{"type":"string"}},{"in":"query","name":"limit","schema":{"type":"integer"}}], "responses": { "200": {"description": "OK"} } } },
+    "/api/offer-templates": { "get": { "security": [{"bearerAuth": []}], "summary": "List offer templates", "responses": { "200": {"description": "OK"} } }, "post": { "security": [{"bearerAuth": []}], "summary": "Create offer template", "responses": { "201": {"description": "Created"} } } },
+    "/api/offer-templates/{id}": { "put": { "security": [{"bearerAuth": []}], "summary": "Update template", "parameters": [{"in":"path","name":"id","required":true,"schema":{"type":"string"}}], "responses": { "200": {"description": "OK"}, "404": {"description": "Not found"} } }, "delete": { "security": [{"bearerAuth": []}], "summary": "Delete template", "parameters": [{"in":"path","name":"id","required":true,"schema":{"type":"string"}}], "responses": { "200": {"description": "OK"}, "404": {"description": "Not found"} } } },
+    "/api/venues/{venueId}/reviews/summary": { "get": { "summary": "Reviews summary", "parameters": [{"in":"path","name":"venueId","required":true,"schema":{"type":"string"}}], "responses": { "200": {"description": "OK"} } } },
+    "/api/venues/{venueId}/reviews": { "get": { "summary": "Reviews list", "parameters": [{"in":"path","name":"venueId","required":true,"schema":{"type":"string"}}, {"in":"query","name":"rating","schema":{"type":"integer"}}], "responses": { "200": {"description": "OK"} } } },
+    "/api/reviews/{id}/reply": { "post": { "security": [{"bearerAuth": []}], "summary": "Reply to review", "parameters": [{"in":"path","name":"id","required":true,"schema":{"type":"string"}}], "requestBody": {"required": true, "content": {"application/json": {"schema": {"type": "object", "properties": {"text": {"type": "string"}}}}}}, "responses": { "200": {"description": "OK"}, "400": {"description": "Bad request"} } } }
+    ,
+    "/api/global-matches": {
+      "get": {
+        "summary": "Lista partite globali (admin view)",
+        "parameters": [
+          {"in":"query","name":"league","schema":{"type":"string"}},
+          {"in":"query","name":"fromDate","schema":{"type":"string"}},
+          {"in":"query","name":"toDate","schema":{"type":"string"}},
+          {"in":"query","name":"limit","schema":{"type":"integer"}},
+          {"in":"query","name":"page","schema":{"type":"integer"}}
+        ],
+        "responses": { "200": {"description": "OK"} }
+      }
+    },
+    "/api/global-matches/leagues": {
+      "get": { "summary": "Leghe disponibili", "parameters": [{"in":"query","name":"onlyAvailable","schema":{"type":"boolean"}}], "responses": { "200": {"description": "OK"} } }
+    },
+    "/api/global-matches/rounds": {
+      "get": { "summary": "Partite per giornate (rounds)", "parameters": [{"in":"query","name":"league","required":true,"schema":{"type":"string"}}, {"in":"query","name":"limitRounds","schema":{"type":"integer"}}], "responses": { "200": {"description": "OK"} } }
+    },
+    "/api/sync-jobs": {
+      "post": { "security": [{"bearerAuth": []}], "summary": "Crea job di sync fixtures", "requestBody": {"required": true, "content": {"application/json": {"schema": {"type": "object", "properties": {"league": {"type": "string"}, "dateRange": {"type": "object"}, "syncInfo": {"type": "object"}}}}}}, "responses": { "200": {"description": "OK"}, "400": {"description": "Bad request"} } },
+      "get": { "security": [{"bearerAuth": []}], "summary": "Lista job utente", "responses": { "200": {"description": "OK"} } }
+    },
+    "/api/sync-jobs/{jobId}": {
+      "get": { "security": [{"bearerAuth": []}], "summary": "Dettaglio stato job", "parameters": [{"in":"path","name":"jobId","required":true,"schema":{"type":"string"}}], "responses": { "200": {"description": "OK"}, "404": {"description": "Not found"} } }
+    },
+    "/api/tenants/test": { "get": { "summary": "Ping tenants", "responses": { "200": {"description": "OK"} } } },
+    "/api/tenants/register": { "post": { "summary": "Registrazione tenant", "responses": { "200": {"description": "OK"} } } },
+    "/api/tenants/current": { "get": { "summary": "Tenant corrente", "responses": { "200": {"description": "OK"} } }, "put": { "security": [{"bearerAuth": []}], "summary": "Aggiorna tenant", "responses": { "200": {"description": "OK"}, "403": {"description": "Forbidden"} } } },
+    "/api/tenants/current/plan": { "put": { "security": [{"bearerAuth": []}], "summary": "Aggiorna piano tenant", "responses": { "200": {"description": "OK"}, "403": {"description": "Forbidden"} } } },
+    "/api/tenants/current/usage": { "get": { "security": [{"bearerAuth": []}], "summary": "Uso tenant", "responses": { "200": {"description": "OK"} } } },
+    "/api/tenants": { "get": { "security": [{"bearerAuth": []}], "summary": "Lista tenants (admin)", "responses": { "200": {"description": "OK"} } } }
+  }
+}
+
+

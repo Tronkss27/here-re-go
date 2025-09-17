@@ -17,7 +17,18 @@ router.get("/test", (req, res) => {
 router.post("/register", tenantController.register);
 router.get("/current", tenantController.getCurrentTenant);
 router.put("/current", auth, TenantMiddleware.tenantPermissions("admin"), tenantController.updateTenant);
-router.put("/current/plan", auth, TenantMiddleware.tenantPermissions("admin"), tenantController.updatePlan);
+// In sviluppo consentiamo anche ai venue_owner di aggiornare il piano per facilitare i test
+router.put(
+  "/current/plan",
+  auth,
+  (req, res, next) => {
+    const role = req.user?.role || 'user'
+    if (['admin', 'system_admin'].includes(role)) return next()
+    if (process.env.NODE_ENV === 'development' && role === 'venue_owner') return next()
+    return res.status(403).json({ success: false, error: 'Forbidden: admin required' })
+  },
+  tenantController.updatePlan
+);
 router.get("/current/usage", auth, tenantController.getTenantUsage);
 router.get("/", auth, tenantController.getAllTenants);
 

@@ -1,17 +1,23 @@
 # SPOrTS
 
+## Start veloce per AI/Agenti
+- Leggi prima: [AI_START_HERE.md](AI_START_HERE.md)
+- Flussi UI/UX e mappe: [docs/UX/README.md](docs/UX/README.md)
+
 Questo repository contiene il progetto "SPOrTS" — backend e frontend per la gestione dei venue, onboarding e sincronizzazione dati.
 
 ## Struttura del progetto
 - `backend/` - server Node.js (API, servizi, sync)
 - `frontend/` - client React + Vite
 - `scripts/` - script utili per sviluppo e testing
-- `tasks/` - elenco dei task e stato
+- `DOCS/` - documenti inventario, contratti, UX map, migrazione
+- `openapi.json` - freeze dei contratti REST
+- `flutter/` - (verrà popolata dallo scaffold Flutter)
 
 ## Requisiti
 - Node.js 18+ (o versione compatibile con le dipendenze)
 - npm o yarn
-- Postgres o database supportato (vedi `backend/.env.example` per variabili richieste)
+- MongoDB locale (default: `mongodb://localhost:27017/sports-bar`)
 
 ## Setup locale
 1. Clona il repository:
@@ -21,44 +27,27 @@ git clone https://github.com/Tronkss27/Spo-r-ts.git
 cd Spo-r-ts
 ```
 
-2. Crea file `.env` per `backend` e `frontend` basandoti sugli esempi (`backend/.env.example` se presente). **Non committare `.env`**.
+2. Crea file `.env` per `backend` e `frontend` basandoti sugli esempi.
 
 3. Installa dipendenze:
 
 ```bash
-# backend
-cd backend && npm install
-
-# frontend
-cd ../frontend && npm install
+npm run install:all
 ```
 
-4. Avvia i servizi in sviluppo (esempio):
+4. Avvia i servizi in sviluppo:
 
 ```bash
-# Dalla root progetto
-# Avvia backend
-cd backend && npm run dev
-
-# In un altro terminale avvia frontend
-cd frontend && npm run dev
+npm run dev
 ```
 
-## Database
-- Configura la connessione nel file `.env` del `backend` (es. `DATABASE_URL`)
-- Esegui eventuali migrazioni: `npm run migrate` (o comando specifico del progetto)
+## Build
+- Frontend: `npm run frontend:build`
+- Backend: `npm run backend:build`
 
-## Build e deploy
-- Frontend: `cd frontend && npm run build` e servire `dist/` con un web server
-- Backend: preparare build/immagine Docker come da `Dockerfile` e `docker-compose.dev.yml`
+## Test
+Attualmente non sono inclusi test in questa repo pulita. I check contratti si basano su `openapi.json`.
 
-## Esempi di comandi utili
-- Lint: `npm run lint` (se presente)
-- Test: `npm test` o `npm run test`
-
-## Note di sicurezza
-- Assicurati che le chiavi API e `.env` non siano pubbliche.
-- `node_modules/`, `.env` e altri file sensibili sono esclusi dal `.gitignore`.
-
-## Contatti
-Per assistenza contatta l'autore del progetto. 
+## Migrazione Flutter
+- Vedi `MIGRATION.md` e `DOCS/UX_MAP.md`
+- Lo scaffold Flutter verrà creato in `flutter/` 

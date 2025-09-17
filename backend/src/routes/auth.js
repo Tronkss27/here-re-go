@@ -5,7 +5,7 @@ const User = require('../models/User')
 const Venue = require('../models/Venue')
 const Tenant = require('../models/Tenant') // Importa il modello Tenant
 const { auth } = require('../middlewares/auth')
-const TenantMiddleware = require('../middlewares/TenantMiddleware')
+const TenantMiddleware = require('../middlewares/tenantMiddleware')
 
 const router = express.Router()
 

@@ -26,7 +26,6 @@ const ClientLogin = React.lazy(() => import('./pages/ClientLogin'));
 const ClientRegister = React.lazy(() => import('./pages/ClientRegister'));
 const SportsLogin = React.lazy(() => import('./pages/SportsLogin'));
 const SportsRegister = React.lazy(() => import('./pages/SportsRegister'));
-const ComponentDemo = React.lazy(() => import('./pages/ComponentDemo'));
 const UserProfile = React.lazy(() => import('./pages/UserProfile'));
 
 // BarMatch Pages Integration - Lazy loaded
@@ -46,6 +45,9 @@ const AccountSettings = React.lazy(() => import('./pages/admin/AccountSettings')
 const BookingsManagement = React.lazy(() => import('./pages/admin/BookingsManagement'));
 const OffersManagement = React.lazy(() => import('./pages/admin/OffersManagement'));
 const VenueOnboarding = React.lazy(() => import('./pages/admin/VenueOnboarding'));
+
+// Admin pages
+const Recensioni = React.lazy(() => import('./pages/admin/Recensioni'));
 
 // User Booking Pages - Lazy loaded
 const MyBookings = React.lazy(() => import('./pages/MyBookings'));
@@ -141,7 +143,7 @@ function App() {
   // SPOrTS inline styles for guaranteed rendering
   const appContainerStyle = {
     minHeight: '100vh',
-    background: 'linear-gradient(135deg, #f8fdf9 0%, #e5f3e7 100%)', // Light green gradient
+    background: '#ffffff',
     fontFamily: 'Kanit, sans-serif'
   }
 
@@ -262,11 +264,7 @@ function App() {
                     } 
                   />
                   
-                  {/* Component Demo route */}
-                  <Route 
-                    path="/components" 
-                    element={<ComponentDemo />} 
-                  />
+                  {/* Demo/Mock routes rimossi nella pulizia */}
                   
                   {/* Venue Onboarding Route - SOLO per venue owner NON completati */}
                   <Route 
@@ -290,11 +288,14 @@ function App() {
                     <Route index element={<AdminDashboard />} />
                     <Route path="calendario" element={<CalendarioPartite />} />
                     <Route path="statistiche" element={<Statistiche />} />
+                    <Route path="recensioni" element={<Recensioni />} />
                     <Route path="profilo" element={<ProfiloLocale />} />
                     <Route path="account" element={<AccountSettings />} />
                     <Route path="bookings" element={<BookingsManagement />} />
                     <Route path="offers" element={<OffersManagement />} />
                   </Route>
+
+                  {/* Mock admin routes rimossi */}
                   
                   {/* 404 - BarMatch style */}
                   <Route path="*" element={<NotFound />} />

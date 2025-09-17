@@ -3,6 +3,8 @@ const router = express.Router();
 const { query } = require('express-validator');
 const PopularMatch = require('../models/PopularMatch');
 const roundMappingService = require('../services/roundMappingService');
+const sportsApiService = require('../services/sportsApiService');
+const providerFactory = require('../services/providers');
 
 // GET /api/global-matches - Lista partite disponibili per admin
 router.get('/', [
@@ -20,20 +22,21 @@ router.get('/', [
     
     // Mappa league.id dal frontend al formato PopularMatch
     if (league) {
-      // Mappa gli ID delle leghe dal frontend  
-      const leagueMap = {
-        'serie-a': 'Serie A',
-        'serie-b': 'Serie B',
-        'coppa-italia': 'Coppa Italia',
-        'premier-league': 'Premier League', 
-        'championship': 'Championship',
-        'la-liga': 'La Liga',
-        'bundesliga': 'Bundesliga',
-        'ligue-1': 'Ligue 1',
-        'eredivisie': 'Eredivisie',
-        'primeira-liga': 'Liga Portugal'
+      // Alias multipli per gestire differenze di naming tra provider/DB
+      const leagueAliases = {
+        'serie-a': ['Serie A'],
+        'serie-b': ['Serie B'],
+        'coppa-italia': ['Coppa Italia'],
+        'premier-league': ['Premier League'], 
+        'championship': ['Championship'],
+        'la-liga': ['La Liga','LaLiga'],
+        'bundesliga': ['Bundesliga'],
+        'ligue-1': ['Ligue 1'],
+        'eredivisie': ['Eredivisie'],
+        'primeira-liga': ['Primeira Liga','Liga Portugal','Liga Portugal Betclic']
       };
-      query.league = leagueMap[league] || league;
+      const aliases = leagueAliases[league] || [league];
+      query.league = { $in: aliases };
     }
     
     // Filtra solo partite future (da oggi in poi)
@@ -108,6 +111,10 @@ router.get('/', [
       return realLogos[leagueName] || emojiLogos[leagueName] || '⚽';
     }
     
+    // Evita cache sui risultati lista partite
+    res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+    res.set('Pragma', 'no-cache');
+    res.set('Expires', '0');
     res.json({
       success: true,
       data: formattedMatches,
@@ -227,7 +234,10 @@ router.get('/leagues', async (req, res) => {
       : availableLeagues;
     
     console.log(`✅ Returning ${leagues.length} leagues (available filter: ${onlyAvailable})`);
-    
+    // Evita cache per avere aggiornamenti immediati anche su Safari (304)
+    res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+    res.set('Pragma', 'no-cache');
+    res.set('Expires', '0');
     res.json({
       success: true,
       data: leagues,
@@ -254,27 +264,27 @@ router.get('/rounds', [
     const { league, limitRounds = 2 } = req.query;
 
     // Mappa gli ID delle leghe dal frontend al formato PopularMatch.league
-    const leagueMap = {
-      'serie-a': 'Serie A',
-      'serie-b': 'Serie B',
-      'coppa-italia': 'Coppa Italia',
-      'premier-league': 'Premier League', 
-      'championship': 'Championship',
-      'la-liga': 'La Liga',
-      'bundesliga': 'Bundesliga',
-      'ligue-1': 'Ligue 1',
-      'eredivisie': 'Eredivisie',
-      'primeira-liga': 'Liga Portugal'
+    const leagueAliases = {
+      'serie-a': ['Serie A'],
+      'serie-b': ['Serie B'],
+      'coppa-italia': ['Coppa Italia'],
+      'premier-league': ['Premier League'], 
+      'championship': ['Championship'],
+      'la-liga': ['La Liga','LaLiga'],
+      'bundesliga': ['Bundesliga'],
+      'ligue-1': ['Ligue 1'],
+      'eredivisie': ['Eredivisie'],
+      'primeira-liga': ['Primeira Liga','Liga Portugal','Liga Portugal Betclic']
     };
 
-    const leagueName = leagueMap[league] || league;
+    const aliases = leagueAliases[league] || [league];
 
     // Solo future (da oggi in poi)
     const today = new Date().toISOString().split('T')[0];
 
     // Recupera tutte le partite future con roundId valorizzato
     const matches = await PopularMatch.find({
-      league: leagueName,
+      league: { $in: aliases },
       roundId: { $ne: null },
       date: { $gte: today }
     })
@@ -296,13 +306,36 @@ router.get('/rounds', [
       return minA.localeCompare(minB);
     });
 
-    const limitedRounds = sortedRoundEntries.slice(0, Number(limitRounds));
+    // Heuristica: evita di mostrare round parziali (mismatch di roundId)
+    // Calcola il numero massimo di partite in un round e usa una soglia (80%)
+    const counts = sortedRoundEntries.map(([, list]) => list.length);
+    const maxCount = counts.length > 0 ? Math.max(...counts) : 0;
+    const threshold = Math.max(6, Math.floor(maxCount * 0.8)); // per leghe da 9-10 match/round
+
+    // Filtra round troppo scarni SOLO se esistono round più completi a seguire
+    const filteredRoundEntries = sortedRoundEntries.filter((entry) => {
+      const list = entry[1];
+      return list.length >= threshold || maxCount <= 4; // se maxCount è piccolo, non filtrare
+    });
+
+    // Prendi i round completi disponibili; se nessun round supera la soglia, ricadi su tutti
+    const baseRounds = filteredRoundEntries.length > 0
+      ? filteredRoundEntries
+      : sortedRoundEntries;
+
+    const limitedRounds = baseRounds.slice(0, Number(limitRounds));
+
+    // Numerazione monotona per data come fallback (se manca mapping o roundNumber)
+    const monotoneNumbers = new Map();
+    limitedRounds.forEach((entry, i) => {
+      monotoneNumbers.set(entry[0], i + 1);
+    });
 
     // Trasforma per frontend
-    const rounds = limitedRounds.map(([roundId, list], idx) => {
+    let rounds = limitedRounds.map(([roundId, list], idx) => {
       // Calcola numero giornata a partire da SEASONID.md per coerenza
       const mappedRoundNumber = roundMappingService.getRoundNumber(league, roundId);
-      const inferredRoundNumber = mappedRoundNumber || (list.find(m => typeof m.roundNumber === 'number')?.roundNumber || null);
+      const inferredRoundNumber = mappedRoundNumber || (list.find(m => typeof m.roundNumber === 'number')?.roundNumber || monotoneNumbers.get(roundId));
       const items = list.map(match => ({
         id: match.matchId,
         homeTeam: match.homeTeam,
@@ -334,6 +367,92 @@ router.get('/rounds', [
       };
     });
 
+    // 🔁 Provider-backed top-up: se abbiamo meno round del richiesto, integra usando Sportmonks BETWEEN (senza salvare su DB)
+    if (rounds.length < Number(limitRounds)) {
+      try {
+        const existingRoundIds = new Set(rounds.map(r => String(r.roundId)));
+        const start = today;
+        const endDateObj = new Date();
+        endDateObj.setDate(endDateObj.getDate() + 21); // finestra 3 settimane
+        const end = endDateObj.toISOString().split('T')[0];
+
+        const raw = await sportsApiService.getFixturesBetween(start, end, { leagueKey: league });
+
+        // Raggruppa per round_id
+        const byRid = new Map();
+        for (const fx of raw) {
+          const rid = String(fx.round_id || (fx.round && fx.round.id) || '');
+          if (!rid) continue;
+          if (existingRoundIds.has(rid)) continue; // evita duplicati con DB
+          if (!byRid.has(rid)) byRid.set(rid, []);
+          byRid.get(rid).push(fx);
+        }
+
+        // Costruisci round addizionali mappando con l'adapter per ottenere home/away coerenti
+        const extraRounds = Array.from(byRid.entries()).map(([rid, arr]) => {
+          const mapped = providerFactory.mapFixtures(arr).successful;
+          // Ordina per data/ora
+          const items = mapped.map(sf => ({
+            id: sf.externalId,
+            homeTeam: sf.participants.find(p => p.role === 'home')?.name || 'TBD',
+            homeTeamLogo: sf.participants.find(p => p.role === 'home')?.image_path || null,
+            awayTeam: sf.participants.find(p => p.role === 'away')?.name || 'TBD',
+            awayTeamLogo: sf.participants.find(p => p.role === 'away')?.image_path || null,
+            competition: {
+              id: (sf.league.name || '').toLowerCase().replace(' ', '-'),
+              name: sf.league.name,
+              logo: sf.league.logo
+            },
+            date: sf.date,
+            time: sf.time || null,
+            venue: 'Stadium',
+            source: 'sync-api'
+          })).sort((a, b) => {
+            const d = a.date.localeCompare(b.date);
+            if (d !== 0) return d;
+            return (a.time || '00:00').localeCompare(b.time || '00:00');
+          });
+
+          const mappedRoundNumber = roundMappingService.getRoundNumber(league, rid);
+          return {
+            roundId: rid,
+            roundNumber: mappedRoundNumber || null,
+            count: items.length,
+            earliestDate: items[0]?.date || null,
+            fixtures: items
+          };
+        });
+
+        // Scegli sempre "X" (round più prossimo e pieno) + "X+1" (prossimo per numero di giornata)
+        if (rounds.length > 0 && extraRounds.length > 0) {
+          const current = rounds[0];
+          const currentNum = Number(current.roundNumber) || null;
+          const nextByNumber = extraRounds
+            .filter(r => typeof r.roundNumber === 'number' && (!currentNum || r.roundNumber > currentNum))
+            .sort((a, b) => a.roundNumber - b.roundNumber)[0];
+          if (nextByNumber) {
+            rounds = [current, nextByNumber];
+          } else {
+            // fallback: temporale
+            rounds = rounds.concat(extraRounds)
+              .sort((a, b) => (a.earliestDate || '9999-12-31').localeCompare(b.earliestDate || '9999-12-31'))
+              .slice(0, Number(limitRounds));
+          }
+        } else {
+          // solo merge semplice
+          rounds = rounds.concat(extraRounds)
+            .sort((a, b) => (a.earliestDate || '9999-12-31').localeCompare(b.earliestDate || '9999-12-31'))
+            .slice(0, Number(limitRounds));
+        }
+      } catch (topupErr) {
+        console.warn('⚠️ Provider top-up failed:', topupErr.message);
+      }
+    }
+
+    // Evita risposte cached (304) per garantire aggiornamento immediato in UI
+    res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+    res.set('Pragma', 'no-cache');
+    res.set('Expires', '0');
     res.json({ success: true, data: rounds });
 
   } catch (error) {

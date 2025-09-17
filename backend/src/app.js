@@ -91,6 +91,9 @@ const bookingRoutes = require('./routes/bookings');
 const fixtureRoutes = require('./routes/fixtures');
 const matchAnnouncementRoutes = require('./routes/matchAnnouncements');
 const matchRoutes = require('./routes/matches');
+const analyticsRoutes = require('./routes/analytics');
+const reviewsRoutes = require('./routes/reviews');
+const offerTemplateRoutes = require('./routes/offerTemplates');
 
 // PUBLIC ROUTES (senza autenticazione) - DEVONO VENIRE PRIMA DEI MIDDLEWARE
 const matchAnnouncementController = require('./controllers/matchAnnouncementController');
@@ -129,6 +132,9 @@ app.use('/api/bookings', bookingRoutes);
 app.use('/api/fixtures', fixtureRoutes);
 app.use('/api/match-announcements', matchAnnouncementRoutes);
 app.use('/api/matches', matchRoutes);
+app.use('/api/offer-templates', offerTemplateRoutes);
+app.use('/api', analyticsRoutes);
+app.use('/api', reviewsRoutes);
 app.use('/api/global-matches', require('./routes/globalMatches'));
 app.use('/api/sync-jobs', require('./routes/syncJobs'));
 

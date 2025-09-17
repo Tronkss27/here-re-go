@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Search, MapPin, Calendar, ChevronDown, ChevronUp, Star, Users, Clock, TrendingUp, X } from 'lucide-react';
 import Header from '@/components/Header';
 import VenueCard from '@/components/VenueCard';
+import ProfileViewTracker from '@/components/ProfileViewTracker';
 import MatchCard from '@/components/MatchCard';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -690,20 +691,22 @@ const Locali = React.memo(() => {
                     style={{ animationDelay: `${index * 100}ms` }}
                     role="listitem"
                   >
-                    <MemoizedVenueCard
-                      id={venue._id || venue.id}
-                      name={venue.name}
-                      image={venue.images?.[0]?.url || venue.image || '/placeholder.svg'}
-                      city={venue.location?.address?.city || venue.location?.city || venue.city || 'N/A'}
-                      distance="N/A" // This will be calculated when we add geolocation
-                      rating={venue.rating}
-                      reviewCount={venue.totalReviews}
-                      features={venue.amenities}
-                      isPremium={false} // This can be added to venue data later
-                      isBookable={venue.features?.bookable || false}
-                      isShowingMatch={venue.isShowingMatch}
-                      matchInfo={venue.matchInfo}
-                    />
+                    <ProfileViewTracker venueId={(venue._id || venue.id) as string} matchId={actualMatchId as string}>
+                      <MemoizedVenueCard
+                        id={venue._id || venue.id}
+                        name={venue.name}
+                        image={venue.images?.[0]?.url || venue.image || '/placeholder.svg'}
+                        city={venue.location?.address?.city || venue.location?.city || venue.city || 'N/A'}
+                        distance="N/A"
+                        rating={venue.rating}
+                        reviewCount={venue.totalReviews}
+                        features={venue.amenities}
+                        isPremium={false}
+                        isBookable={venue.features?.bookable || false}
+                        isShowingMatch={venue.isShowingMatch}
+                        matchInfo={{ ...(venue.matchInfo || {}), matchId: actualMatchId as string } as any}
+                      />
+                    </ProfileViewTracker>
                   </div>
                 ))}
 

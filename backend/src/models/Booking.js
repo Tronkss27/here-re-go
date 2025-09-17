@@ -131,6 +131,17 @@ const bookingSchema = new mongoose.Schema({
     required: false
   },
 
+  // Snapshot offerte associate alla prenotazione (legate all'annuncio/match)
+  offersSnapshot: [{
+    id: { type: String, required: true },
+    title: { type: String, required: true },
+    description: { type: String, required: true },
+    templateId: { type: mongoose.Schema.Types.ObjectId, ref: 'OfferTemplate' },
+    redeemed: { type: Boolean, default: false },
+    redeemedAt: { type: Date },
+    redeemedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }
+  }],
+
   // Metadati
   bookingType: {
     type: String,

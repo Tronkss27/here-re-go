@@ -9,6 +9,12 @@ const OfferReferenceSchema = new mongoose.Schema({
       return this.title || this.description;
     }
   },
+  // Collegamento opzionale al template di origine
+  templateId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'OfferTemplate',
+    required: false
+  },
   title: {
     type: String,
     required: function() {
@@ -113,7 +119,7 @@ const MatchAnnouncementSchema = new mongoose.Schema({
   tenantId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Tenant',
-    required: false // Temporaneamente opzionale per migrazione
+    required: true
   },
   
   venueId: {
@@ -178,6 +184,24 @@ MatchAnnouncementSchema.index({ 'match.date': 1, status: 1 });
 MatchAnnouncementSchema.index({ 'match.competition.id': 1 });
 MatchAnnouncementSchema.index({ searchTags: 1 });
 MatchAnnouncementSchema.index({ isActive: 1 });
+// Indice per visibilità (filtri frequenti)
+MatchAnnouncementSchema.index({ tenantId: 1, 'match.date': 1, status: 1, isActive: 1 });
+
+// Virtuals per durata/visibilità
+MatchAnnouncementSchema.virtual('endDateTime').get(function() {
+  try {
+    if (!this.eventDetails?.startDate || !this.eventDetails?.endTime) return null;
+    const datePart = (this.eventDetails.startDate || '').split('T')[0];
+    return new Date(`${datePart}T${this.eventDetails.endTime}`);
+  } catch (e) { return null; }
+});
+
+// visibilityUntil dipende da una costante di lock; se non fornita, default 4h
+MatchAnnouncementSchema.methods.getVisibilityUntil = function(lockHours = 4) {
+  const end = this.endDateTime;
+  if (!end) return null;
+  return new Date(end.getTime() + lockHours * 60 * 60 * 1000);
+};
 
 // Virtual per calcolare engagement rate
 MatchAnnouncementSchema.virtual('engagementRate').get(function() {

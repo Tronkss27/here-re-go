@@ -1,9 +1,13 @@
+// @ts-nocheck
 import React, { useState, useEffect } from 'react';
-import { Plus, Download, Calendar, Edit, Trash2, Eye, Archive, RotateCcw, ExternalLink, RefreshCw } from 'lucide-react';
+import { Plus, Download, Calendar, Edit, Trash2, Archive, RotateCcw, ExternalLink, RefreshCw, MoreVertical } from 'lucide-react';
 import { Button } from '../../components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { Alert, AlertDescription } from '../../components/ui/alert';
 import { Badge } from '../../components/ui/badge';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '../../components/ui/dropdown-menu';
+import { getTeamLogo } from '@/utils/getTeamLogo';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { getVenueAnnouncements, deleteAnnouncement, getAnnouncement, updateAnnouncement, archiveAnnouncement } from '../../services/matchAnnouncementService';
 import SimpleCreateAnnouncementForm from '../../components/forms/SimpleCreateAnnouncementForm';
@@ -22,6 +26,8 @@ interface Announcement {
     };
     date: string;
     time: string;
+    homeTeamLogo?: string;
+    awayTeamLogo?: string;
   };
   status: 'published' | 'draft' | 'archived';
   views: number;
@@ -38,6 +44,11 @@ interface Announcement {
     foodAndDrinks?: string;
   };
   createdAt: string;
+  _computed?: {
+    homeTeamLogo?: string;
+    awayTeamLogo?: string;
+    leagueLogo?: string;
+  }
 }
 
 const CalendarioPartite = () => {
@@ -49,6 +60,50 @@ const CalendarioPartite = () => {
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
   const [message, setMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
+  const navigate = useNavigate();
+  const [groupByDay, setGroupByDay] = useState(true);
+  const [compact, setCompact] = useState(true);
+
+  // Utils formattazione e grouping per giorno (UI-only)
+  const getDateKey = (isoLike: string) => {
+    const d = new Date(isoLike);
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`; // YYYY-MM-DD
+  };
+
+  const formatHeaderLabel = (key: string) => {
+    const d = new Date(key);
+    const parts = d.toLocaleDateString('it-IT', { weekday: 'short', day: '2-digit', month: 'short' }).split(' ');
+    // es: ["ven", "13", "set"] → "Ven 13 Set"
+    return parts
+      .map((p) => (p.length ? p.charAt(0).toUpperCase() + p.slice(1) : p))
+      .join(' ');
+  };
+
+  const groupedAnnouncements = React.useMemo(() => {
+    if (!groupByDay) return [] as Array<{ key: string; items: Announcement[] }>
+    const map = new Map<string, Announcement[]>();
+    for (const a of announcements) {
+      const k = getDateKey(a.match.date);
+      if (!map.has(k)) map.set(k, []);
+      map.get(k)!.push(a);
+    }
+    // ordina per data crescente
+    const keys = Array.from(map.keys()).sort();
+    return keys.map((k) => ({ key: k, items: map.get(k)! }));
+  }, [announcements, groupByDay]);
+
+  // UI density classes
+  const cardPadding = compact ? 'p-3' : 'p-4';
+  const gridGap = compact ? 'gap-2' : 'gap-3';
+  const titleClass = compact
+    ? 'text-[16px] font-semibold leading-snug break-words line-clamp-2'
+    : 'text-[17px] font-medium leading-snug break-words line-clamp-2';
+  const badgeSizeClass = compact ? 'text-[10px] px-2 py-[2px]' : 'text-[12px] px-3 py-[3px]';
+  const metaClass = 'text-sm font-medium text-[#667085] mt-1 tracking-[0.01em]';
+  const badgeOffset = compact ? 'mt-4' : 'mt-5';
 
   // Funzione per caricare gli annunci dal backend
   const fetchAnnouncements = async () => {
@@ -275,17 +330,12 @@ const CalendarioPartite = () => {
   };
 
   return (
-    <div className="space-y-6">
-      {/* Header Actions */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center space-y-4 sm:space-y-0">
-        <h2 className="font-racing text-2xl text-fanzo-dark">CALENDARIO PARTITE</h2>
-        <div className="flex items-center space-x-2">
-          <Button
-            onClick={() => setShowCreateMatchForm(true)}
-            className="bg-fanzo-yellow hover:bg-fanzo-yellow/90 text-fanzo-dark"
-          >
-            <Plus className="h-4 w-4 mr-2" />
-            Crea Annuncio Partita
+    <div className="space-y-6 admin-calendar">
+      {/* Header + CTA (evita titolo duplicato in page, topbar già mostra il titolo) */}
+      <div className="flex flex-col gap-2">
+        <div className="flex items-center">
+          <Button onClick={() => setShowCreateMatchForm(true)} className="bg-primary text-primary-foreground hover:bg-primary/90">
+            <Plus className="h-4 w-4 mr-2" /> Crea annuncio
           </Button>
         </div>
       </div>
@@ -297,93 +347,139 @@ const CalendarioPartite = () => {
         </Alert>
       )}
 
-      {/* Lista Annunci */}
-      <Card>
-          <CardHeader>
-          <CardTitle>I Tuoi Annunci Pubblicati</CardTitle>
-          </CardHeader>
-        <CardContent>
-          {loading ? (
-            <p>Caricamento annunci...</p>
-          ) : !announcements || announcements.length === 0 ? (
-            <div className="text-center py-8">
-              <Calendar className="mx-auto h-12 w-12 text-gray-400" />
-              <h3 className="mt-2 text-sm font-medium text-gray-900">Nessun annuncio trovato</h3>
-              <p className="mt-1 text-sm text-gray-500">Inizia creando il tuo primo annuncio di una partita.</p>
-              </div>
-          ) : (
-            <div className="space-y-4">
-              {announcements.map((announcement) => (
-                <Card key={announcement._id} className="flex items-center justify-between p-4">
-                  <div className="flex items-center space-x-4">
-                    <div className="text-center">
-                      <div className="font-bold text-lg">{new Date(announcement.match.date).toLocaleDateString('it-IT', { day: '2-digit' })}</div>
-                      <div className="text-xs uppercase">{new Date(announcement.match.date).toLocaleDateString('it-IT', { month: 'short' })}</div>
-              </div>
-              <div>
-                      <div className="font-semibold">{announcement.match.homeTeam} vs {announcement.match.awayTeam}</div>
-                      <div className="text-sm text-gray-500">{announcement.match.competition.name} • {announcement.match.time}</div>
-              </div>
-            </div>
-                  <div className="flex items-center space-x-4">
-                    <Badge variant={announcement.status === 'published' ? 'default' : 'secondary'}>
-                      {announcement.status}
-                    </Badge>
-                    <div className="flex items-center text-sm text-gray-500">
-                      <Eye className="h-4 w-4 mr-1" /> {announcement.views}
-                    </div>
-                    <div className="flex items-center space-x-1">
-              <Button 
-                        variant="ghost" 
-                        size="sm" 
-                        onClick={() => handleViewAnnouncement(announcement._id)}
-                        title="Visualizza dettagli"
-              >
-                        <Eye className="h-4 w-4 text-blue-500" />
-              </Button>
-              <Button 
-                        variant="ghost" 
-                        size="sm" 
-                        onClick={() => handleEditAnnouncement(announcement._id)}
-                        title="Modifica annuncio"
-                      >
-                        <Edit className="h-4 w-4 text-yellow-500" />
-                      </Button>
-                      {announcement.status === 'archived' ? (
-                        <Button 
-                          variant="ghost" 
-                          size="sm" 
-                          onClick={() => handleRestoreAnnouncement(announcement._id)}
-                          title="Ripubblica annuncio"
-                        >
-                          <RotateCcw className="h-4 w-4 text-green-500" />
-                        </Button>
-                      ) : (
-                        <Button 
-                          variant="ghost" 
-                          size="sm" 
-                          onClick={() => handleArchiveAnnouncement(announcement._id)}
-                          title="Archivia temporaneamente"
-                        >
-                          <Archive className="h-4 w-4 text-orange-500" />
-                        </Button>
-                      )}
-                      <Button 
-                        variant="ghost" 
-                        size="sm" 
-                        onClick={() => handleDeleteAnnouncement(announcement._id)}
-                        title="Elimina definitivamente"
-                      >
-                        <Trash2 className="h-4 w-4 text-red-500" />
-              </Button>
-            </div>
+      {/* Lista Annunci (floating cards) */}
+      {loading ? (
+        <p>Caricamento annunci...</p>
+      ) : !announcements || announcements.length === 0 ? (
+        <div className="text-center py-8">
+          <Calendar className="mx-auto h-12 w-12 text-gray-400" />
+          <h3 className="mt-2 text-sm font-medium text-gray-900">Nessun annuncio trovato</h3>
+          <p className="mt-1 text-sm text-gray-500">Inizia creando il tuo primo annuncio di una partita.</p>
+        </div>
+      ) : (
+        <div className="space-y-3 pt-2">
+          {!groupByDay && announcements.map((announcement) => {
+            const status = (announcement.status || '').toLowerCase()
+            const statusLabel = status === 'published' ? 'Pubblicata' : status === 'archived' ? 'Archiviata' : status === 'draft' ? 'Bozza' : announcement.status
+            const isPublished = status === 'published' || status === 'active' || (statusLabel || '').toString().toLowerCase() === 'pubblicata'
+            return (
+              <div key={announcement._id} role="button" tabIndex={0} onClick={() => handleViewAnnouncement(announcement._id)} onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && handleViewAnnouncement(announcement._id)} className={`${cardPadding} rounded-[12px] border border-border bg-card grid grid-cols-[56px_1fr_96px] ${gridGap} cursor-pointer hover:bg-muted/40`}>
+                {/* Data */}
+                <div className="w-10 h-10 rounded-md border border-border flex flex-col items-center justify-center">
+                  <div className="text-base font-semibold">{new Date(announcement.match.date).toLocaleDateString('it-IT', { day: '2-digit' })}</div>
+                  <div className="text-[11px] font-semibold tracking-wide uppercase">{new Date(announcement.match.date).toLocaleDateString('it-IT', { month: 'short' })}</div>
+                </div>
+                {/* Contenuto */}
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <img src={(announcement as any)._computed?.homeTeamLogo || announcement.match.homeTeamLogo || getTeamLogo(announcement.match.homeTeam)} alt="" className="w-6 h-6 mr-2 object-contain" loading="lazy" decoding="async" />
+                    <div className={titleClass} title={announcement.match.homeTeam}>{announcement.match.homeTeam}</div>
                   </div>
-        </Card>
-              ))}
-          </div>
-          )}
-        </CardContent>
-      </Card>
+                  <div className="flex items-center gap-2 min-w-0 mt-1">
+                    <img src={(announcement as any)._computed?.awayTeamLogo || announcement.match.awayTeamLogo || getTeamLogo(announcement.match.awayTeam)} alt="" className="w-6 h-6 mr-2 object-contain" loading="lazy" decoding="async" />
+                    <div className={titleClass} title={announcement.match.awayTeam}>{announcement.match.awayTeam}</div>
+                  </div>
+                  <div className={metaClass}>{announcement.match.competition.name} • {announcement.match.time}</div>
+                </div>
+                {/* Azioni */}
+                <div className="min-w-[96px] flex flex-col items-end">
+                  <div className="flex items-center gap-2">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <div role="button" aria-label="Azioni annuncio" tabIndex={0} onClick={(e) => e.stopPropagation()} className="action-kebab h-11 w-11 p-2 hover:bg-muted rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 flex items-center justify-center">
+                          <MoreVertical className="h-6 w-6 text-muted-foreground" />
+                        </div>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuLabel>Azioni</DropdownMenuLabel>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem onClick={() => handleViewAnnouncement(announcement._id)}>Visualizza</DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => navigate('/admin/statistiche')}>Vedi statistiche</DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleEditAnnouncement(announcement._id)}>Modifica</DropdownMenuItem>
+                        {status === 'archived' ? (
+                          <DropdownMenuItem onClick={() => handleRestoreAnnouncement(announcement._id)}>Ripubblica</DropdownMenuItem>
+                        ) : (
+                          <DropdownMenuItem onClick={() => handleArchiveAnnouncement(announcement._id)}>Archivia</DropdownMenuItem>
+                        )}
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem onClick={() => handleDeleteAnnouncement(announcement._id)} className="text-red-600">Elimina</DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+                  <div className={`inline-flex items-center rounded-full border font-semibold ${badgeSizeClass} ${badgeOffset} bg-transparent text-[#344054] ${isPublished ? 'border-emerald-500' : status === 'archived' ? 'border-amber-400' : 'border-slate-400'}`}>{statusLabel}</div>
+                </div>
+              </div>
+            )
+          })}
+
+          {groupByDay && groupedAnnouncements.map(({ key, items }) => (
+            <div key={key} className="space-y-3 pt-2">
+              {/* Header del giorno (non-sticky fallback) */}
+              <div className="-mx-4 px-4 py-2 bg-background border-b border-[hsl(var(--border))]">
+                <div className="text-[13px] font-semibold text-[#475467]">{formatHeaderLabel(key)} · {items.length} {items.length === 1 ? 'partita' : 'partite'}</div>
+              </div>
+              {items.map((announcement) => {
+                const status = (announcement.status || '').toLowerCase()
+                const statusLabel = status === 'published' ? 'Pubblicata' : status === 'archived' ? 'Archiviata' : status === 'draft' ? 'Bozza' : announcement.status
+                const isPublished = status === 'published' || status === 'active' || (statusLabel || '').toString().toLowerCase() === 'pubblicata'
+                return (
+                  <div key={announcement._id} role="button" tabIndex={0} onClick={() => handleViewAnnouncement(announcement._id)} onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && handleViewAnnouncement(announcement._id)} className={`${cardPadding} rounded-[12px] border border-border bg-card grid grid-cols-[1fr_96px] ${gridGap} cursor-pointer hover:bg-muted/40`}>
+                    {/* Contenuto (senza box data) */}
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <img src={(announcement as any)._computed?.homeTeamLogo || announcement.match.homeTeamLogo || getTeamLogo(announcement.match.homeTeam)} alt="" className="w-6 h-6 mr-2 object-contain" loading="lazy" decoding="async" />
+                        <div className={titleClass} title={announcement.match.homeTeam}>{announcement.match.homeTeam}</div>
+                      </div>
+                      <div className="flex items-center gap-2 min-w-0 mt-1">
+                        <img src={(announcement as any)._computed?.awayTeamLogo || announcement.match.awayTeamLogo || getTeamLogo(announcement.match.awayTeam)} alt="" className="w-6 h-6 mr-2 object-contain" loading="lazy" decoding="async" />
+                        <div className={titleClass} title={announcement.match.awayTeam}>{announcement.match.awayTeam}</div>
+                      </div>
+                      <div className={metaClass}>{announcement.match.competition.name} • {announcement.match.time}</div>
+                    </div>
+                    {/* Azioni */}
+                    <div className="min-w-[96px] flex flex-col items-end">
+                      <div className="flex items-center gap-2">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <div role="button" aria-label="Azioni annuncio" tabIndex={0} onClick={(e) => e.stopPropagation()} className="action-kebab h-11 w-11 p-2 hover:bg-muted rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 flex items-center justify-center">
+                              <MoreVertical className="h-6 w-6 text-muted-foreground" />
+                            </div>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuLabel>Azioni</DropdownMenuLabel>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem onClick={() => handleViewAnnouncement(announcement._id)}>Visualizza</DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => navigate('/admin/statistiche')}>Vedi statistiche</DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleEditAnnouncement(announcement._id)}>Modifica</DropdownMenuItem>
+                            {status === 'archived' ? (
+                              <DropdownMenuItem onClick={() => handleRestoreAnnouncement(announcement._id)}>Ripubblica</DropdownMenuItem>
+                            ) : (
+                              <DropdownMenuItem onClick={() => handleArchiveAnnouncement(announcement._id)}>Archivia</DropdownMenuItem>
+                            )}
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem onClick={() => handleDeleteAnnouncement(announcement._id)} className="text-red-600">Elimina</DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
+                      <div 
+                        className={`inline-flex items-center rounded-full border font-semibold ${badgeSizeClass} ${badgeOffset} bg-transparent text-[#344054] ${
+                          isPublished 
+                            ? 'border-emerald-500' 
+                            : status === 'archived' 
+                            ? 'border-amber-400' 
+                            : 'border-slate-400'
+                        }`}
+                      >
+                        {statusLabel}
+                      </div>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* Modale creazione annuncio */}
       <SimpleCreateAnnouncementForm

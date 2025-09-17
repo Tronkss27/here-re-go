@@ -150,12 +150,21 @@ export const hotMatchesService = {
   async trackMatchClick(matchId, venueId = null) {
     try {
       console.log(`📊 Tracking click for match: ${matchId}`);
-      
-      await apiClient.post('/match-announcements/track/match-click', {
-        matchId,
-        venueId,
-        timestamp: new Date().toISOString()
-      });
+      // Throttle 6h per matchId (evita inflazione click)
+      const key = 'mc_last_sent_map'
+      const now = Date.now()
+      let map = {}
+      try { const raw = localStorage.getItem(key); map = raw ? JSON.parse(raw) : {} } catch {}
+      const last = map[matchId] || 0
+      if (now - last < 6 * 60 * 60 * 1000) {
+        console.log('⏱️ Skipping match-click due to throttle for', matchId)
+        return
+      }
+
+      // Endpoint globale corretto + tenant header via apiClient
+      await apiClient.post('/analytics/match-click', { matchId })
+      map[matchId] = now
+      try { localStorage.setItem(key, JSON.stringify(map)) } catch {}
       
       console.log(`✅ Click tracked for match ${matchId}`);
     } catch (error) {

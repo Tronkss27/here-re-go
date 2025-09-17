@@ -16,6 +16,7 @@ import {
   ChartBarIcon
 } from '@heroicons/react/24/outline'
 import OfferWizard from '../../components/OfferWizard'
+import OfferTemplatesApi from '../../services/offerTemplatesService'
 import { useModal } from '../../contexts/ModalContext'
 import { useToast } from '../../hooks/use-toast'
 import { offersService, statisticsService } from '../../services/venueService'
@@ -71,36 +72,21 @@ const OffersManagement = () => {
     try {
       setLoading(true)
       setError(null)
-      
-      if (!user?.id) {
-        setError('Utente non autenticato')
-        return
-      }
-      
-      // Usa il servizio tenant-based
-      const allOffers = offersService.getOffers(user.id)
-      
-      // Applica filtri localmente
-      let filtered = allOffers
-      
-      if (statusFilter !== 'all') {
-        filtered = filtered.filter(offer => offer.status === statusFilter)
-      }
-      
+      if (!user?.id) { setError('Utente non autenticato'); return }
+      // Carica i TEMPLATE dal backend (tenant-scoped)
+      const templates = await OfferTemplatesApi.list({ onlyActive: true })
+      const items = Array.isArray(templates) ? templates : []
+      // Filtro ricerca semplice
+      let filtered = items
       if (searchTerm) {
-        filtered = filtered.filter(offer => 
-          offer.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          offer.description?.toLowerCase().includes(searchTerm.toLowerCase())
-        )
+        const q = searchTerm.toLowerCase()
+        filtered = filtered.filter(t => (t.title || '').toLowerCase().includes(q) || (t.description || '').toLowerCase().includes(q))
       }
-      
       setOffers(filtered)
     } catch (error) {
-      console.error('Errore nel caricamento delle offerte:', error)
-      setError('Errore nel caricamento delle offerte: ' + error.message)
-    } finally {
-      setLoading(false)
-    }
+      console.error('Errore nel caricamento dei template:', error)
+      setError('Errore nel caricamento dei template: ' + (error?.message || ''))
+    } finally { setLoading(false) }
   }
 
   const filterAndSortOffers = () => {
@@ -289,6 +275,26 @@ const OffersManagement = () => {
             <PlusIcon className="h-4 w-4 mr-2" />
             Nuova Offerta
           </button>
+          {/* Azione rapida: crea da template base */}
+          <button
+            onClick={async () => {
+              try {
+                const seed = await OfferTemplatesApi.create({ title: 'Pizza + Birra', description: 'Combo speciale per il match' })
+                if (seed && (seed._id || seed.id)) {
+                  setOffers(prev => [{ ...seed }, ...prev])
+                  showSuccessModal('Template creato')
+                } else {
+                  showErrorModal('Risposta inattesa dal server durante la creazione del template')
+                }
+              } catch (e) {
+                console.error('Errore creazione template:', e)
+                showErrorModal('Errore creazione template: ' + (e?.message || ''))
+              }
+            }}
+            className="ml-2 inline-flex items-center px-3 py-2 border rounded-md text-sm bg-white"
+          >
+            + Template demo
+          </button>
         </div>
       </div>
 
@@ -432,8 +438,8 @@ const OffersManagement = () => {
             </div>
         </div>
         <ul role="list" className="divide-y divide-gray-200">
-          {filteredOffers.map((offer) => (
-            <li key={offer._id}>
+          {filteredOffers.map((offer, index) => (
+            <li key={offer._id || offer.id || `tpl-${index}`}>
               <div className="flex items-center px-4 py-4 sm:px-6">
                 <div className="min-w-0 flex-1 flex items-center">
                   <div className="flex-shrink-0">
@@ -456,14 +462,16 @@ const OffersManagement = () => {
                       <p className="text-sm font-medium text-orange-600 truncate">{offer.title}</p>
                       <p className="mt-2 flex items-center text-sm text-gray-500">
                         <TagIcon className="flex-shrink-0 mr-1.5 h-5 w-5 text-gray-400" />
-                        <span className="truncate">{getTypeLabel(offer.type)}</span>
+                        <span className="truncate">Template</span>
                       </p>
                     </div>
                     <div className="hidden md:block">
-                      <p className="text-sm text-gray-900">{getStatusBadge(offer.status)}</p>
+                      <p className="text-sm text-gray-900">
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">Template</span>
+                      </p>
                       <p className="mt-2 flex items-center text-sm text-gray-500">
                         <CalendarIcon className="flex-shrink-0 mr-1.5 h-5 w-5 text-gray-400" />
-                        <span>Scade il {new Date(offer.validUntil).toLocaleDateString()}</span>
+                        <span>Riutilizzabile</span>
                       </p>
                     </div>
                   </div>

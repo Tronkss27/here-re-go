@@ -1,6 +1,7 @@
 const MatchAnnouncement = require('../models/MatchAnnouncement');
 const PopularMatch = require('../models/PopularMatch');
 const Venue = require('../models/Venue');
+const Fixture = require('../models/Fixture');
 const TenantQuery = require('../utils/tenantQuery');
 const { processVenueWithImages } = require('../utils/imageUtils');
 const sportsApiService = require('../services/sportsApiService');
@@ -127,6 +128,8 @@ class MatchAnnouncementController {
       }
 
       const venueId = req.venue._id;
+      const tenantId = req.tenantId;
+      const isPremium = (req.tenant?.plan || '').toLowerCase() === 'premium';
       const { match, eventDetails } = req.body;
 
       console.log(`🏟️ Creating announcement for venue ${venueId}:`, {
@@ -197,29 +200,34 @@ class MatchAnnouncementController {
       };
       
       // Validazione e pulizia delle offerte selezionate
-      if (eventDetails.selectedOffers && Array.isArray(eventDetails.selectedOffers)) {
-        // Filtra solo le offerte valide con tutti i campi richiesti
-        const validOffers = eventDetails.selectedOffers.filter(offer => 
-          offer && 
-          typeof offer === 'object' &&
-          offer.id && 
-          offer.title && 
-          offer.description
-        );
-        
-        if (validOffers.length > 0) {
-          eventDetailsToSave.selectedOffers = validOffers;
-          console.log(`✅ Validated ${validOffers.length} offers out of ${eventDetails.selectedOffers.length}`);
+      if (Array.isArray(eventDetails.selectedOffers)) {
+        // Normalizza shape e rinforza obblighi
+        const normalized = eventDetails.selectedOffers.map((offer) => {
+          if (!offer || typeof offer !== 'object') return null;
+          const id = offer.id || offer._id || null;
+          const title = offer.title || offer.name || '';
+          const description = typeof offer.description === 'string' ? offer.description : '';
+          const templateId = offer.templateId || null;
+          return (id && title && description) ? { id, title, description, templateId } : null;
+        }).filter(Boolean);
+
+        if (isPremium && normalized.length > 0) {
+          eventDetailsToSave.selectedOffers = normalized;
+          console.log(`✅ Offers accepted for premium tenant: ${normalized.length}`);
         } else {
           delete eventDetailsToSave.selectedOffers;
-          console.log('⚠️ No valid offers found, removing selectedOffers field');
+          if (!isPremium && normalized.length > 0) {
+            console.log('⚠️ Tenant not premium: ignoring provided offers');
+          } else {
+            console.log('⚠️ No valid offers to save');
+          }
         }
       } else {
         delete eventDetailsToSave.selectedOffers;
-        console.log('⚠️ No selectedOffers provided or invalid format');
       }
       
       const announcement = new MatchAnnouncement({
+        tenantId,
         venueId,
         match: {
           ...matchToUse,
@@ -275,7 +283,8 @@ class MatchAnnouncementController {
           venueId: venueId,
           matchId: matchToUse.id,
           offersCount: eventDetails.selectedOffers?.length || 0,
-          isReusedMatchId: !!existingGlobalMatch
+          isReusedMatchId: !!existingGlobalMatch,
+          offersIgnoredForPlan: !isPremium
         }
       });
 
@@ -299,7 +308,9 @@ class MatchAnnouncementController {
         competition, 
         limit = 20, 
         page = 1,
-        includeArchived = 'false'
+        includeArchived = 'false',
+        includeExpired = 'false',
+        lockHours = '4'
       } = req.query;
 
       console.log(`📋 Getting announcements for venue ${venueId}`);
@@ -335,11 +346,67 @@ class MatchAnnouncementController {
 
       console.log(`✅ Found ${announcements.length} announcements`);
 
+      // 🎯 Enrichment: aggiungi loghi da PopularMatch / Fixture senza cambiare schema
+      const matchIds = announcements
+        .map(a => a?.match?.id)
+        .filter(Boolean);
+
+      let popularMatchesMap = new Map();
+      let fixturesMap = new Map();
+
+      if (matchIds.length > 0) {
+        try {
+          const pms = await PopularMatch.find({ matchId: { $in: matchIds } }, 'matchId homeTeamLogo awayTeamLogo leagueLogo league').lean();
+          popularMatchesMap = new Map(pms.map(pm => [String(pm.matchId), pm]));
+        } catch (e) {
+          console.warn('⚠️ Failed to batch load PopularMatch for enrichment:', e.message);
+        }
+
+        try {
+          const fx = await Fixture.find({ $or: [ { fixtureId: { $in: matchIds } }, { _id: { $in: matchIds } } ] }, 'fixtureId homeTeam awayTeam league').lean();
+          // Usa fixtureId come chiave, se mancante prova _id
+          fx.forEach(f => {
+            const key = String(f.fixtureId || f._id);
+            fixturesMap.set(key, f);
+          });
+        } catch (e) {
+          console.warn('⚠️ Failed to batch load Fixture for enrichment:', e.message);
+        }
+      }
+
+      const lockH = parseInt(lockHours, 10) || 4;
+      const now = new Date();
+      const enrichedAnnouncements = announcements.map(a => {
+        const id = String(a?.match?.id || '');
+        const pm = popularMatchesMap.get(id);
+        const fx = fixturesMap.get(id);
+        const computed = {
+          homeTeamLogo: pm?.homeTeamLogo || fx?.homeTeam?.logo || a?.match?.homeTeamLogo || null,
+          awayTeamLogo: pm?.awayTeamLogo || fx?.awayTeam?.logo || a?.match?.awayTeamLogo || null,
+          leagueLogo: pm?.leagueLogo || fx?.league?.logo || a?.match?.competition?.logo || getLeagueLogoUrl(a?.match?.competition?.name) || null
+        };
+        // Calcolo visibilityUntil
+        try {
+          const datePart = (a?.eventDetails?.startDate || '').split('T')[0];
+          const endTime = a?.eventDetails?.endTime;
+          const end = datePart && endTime ? new Date(`${datePart}T${endTime}`) : null;
+          const visibilityUntil = end ? new Date(end.getTime() + lockH * 60 * 60 * 1000) : null;
+          const isVisibleNow = visibilityUntil ? now <= visibilityUntil : true;
+          return { ...a, _computed: { ...computed, visibilityUntil, isVisibleNow } };
+        } catch {
+          return { ...a, _computed: computed };
+        }
+      });
+
+      const finalAnnouncements = (includeExpired === 'true')
+        ? enrichedAnnouncements
+        : enrichedAnnouncements.filter(a => a?._computed?.isVisibleNow !== false);
+
       res.json({
         success: true,
-        data: announcements,
+        data: finalAnnouncements,
         pagination: {
-          totalDocs: announcements.length,
+          totalDocs: finalAnnouncements.length,
           limit: parseInt(limit, 10),
           totalPages: 1,
           page: parseInt(page, 10),
@@ -953,12 +1020,11 @@ class MatchAnnouncementController {
       
       console.log(`📊 Tracking click for match: ${matchId}, venue: ${venueId || 'N/A'}`);
 
-      // Incrementa il clickCount nella PopularMatch
+      // Incrementa i click nella PopularMatch
       const updateResult = await PopularMatch.updateOne(
         { matchId },
         { 
-          $inc: { clickCount: 1 },
-          $set: { lastActivity: new Date() }
+          $inc: { totalClicks: 1 }
         }
       );
 
@@ -968,6 +1034,32 @@ class MatchAnnouncementController {
           success: false,
           message: 'Partita non trovata'
         });
+      }
+
+      // Se ho venueId: incrementa anche i click sugli annunci del venue per quella partita
+      if (venueId) {
+        try {
+          await MatchAnnouncement.updateMany(
+            { venueId: new mongoose.Types.ObjectId(venueId), 'match.id': matchId },
+            { $inc: { clicks: 1 } }
+          );
+        } catch (e) {
+          console.warn('⚠️ Failed to increment announcement clicks for venue:', e.message);
+        }
+      }
+
+      // Aggiorna aggregazione giornaliera per venue, se fornito
+      if (venueId) {
+        const dateStr = new Date().toISOString().split('T')[0];
+        try {
+          await mongoose.connection.collection('analyticsdaily').updateOne(
+            { tenantId: req.tenantId || 'default', venueId: new mongoose.Types.ObjectId(venueId), date: dateStr, metric: 'clicks' },
+            { $inc: { count: 1 } },
+            { upsert: true }
+          );
+        } catch (aggErr) {
+          console.warn('⚠️ Failed to upsert analyticsdaily clicks:', aggErr.message);
+        }
       }
 
       console.log(`✅ Click tracked for match ${matchId}`);
@@ -982,6 +1074,62 @@ class MatchAnnouncementController {
       res.status(500).json({
         success: false,
         message: 'Errore durante il tracking del click',
+        error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
+      });
+    }
+  }
+
+  // Track view su annuncio specifico e aggiorna PopularMatch.totalViews (PUBLIC - NO AUTH)
+  async trackAnnouncementView(req, res) {
+    try {
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        return res.status(400).json({
+          success: false,
+          message: 'Dati di input non validi',
+          errors: errors.array()
+        });
+      }
+
+      const { id } = req.params;
+
+      // Incrementa views sull'annuncio
+      const announcement = await MatchAnnouncement.findByIdAndUpdate(
+        id,
+        { $inc: { views: 1 } },
+        { new: true, projection: { _id: 1, 'match.id': 1 } }
+      );
+
+      if (!announcement) {
+        return res.status(404).json({ success: false, message: 'Annuncio non trovato' });
+      }
+
+      // Aggiorna anche PopularMatch per analytics aggregato
+      if (announcement.match && announcement.match.id) {
+        await PopularMatch.updateOne(
+          { matchId: announcement.match.id },
+          { $inc: { totalViews: 1 } }
+        );
+      }
+
+      // Aggiorna aggregazione giornaliera per venue
+      const dateStr = new Date().toISOString().split('T')[0];
+      try {
+        await mongoose.connection.collection('analyticsdaily').updateOne(
+          { tenantId: req.tenantId || 'default', venueId: announcement.venueId, date: dateStr, metric: 'views' },
+          { $inc: { count: 1 } },
+          { upsert: true }
+        );
+      } catch (aggErr) {
+        console.warn('⚠️ Failed to upsert analyticsdaily views:', aggErr.message);
+      }
+
+      return res.json({ success: true, message: 'View tracciata con successo' });
+    } catch (error) {
+      console.error('❌ Error tracking announcement view:', error);
+      return res.status(500).json({
+        success: false,
+        message: 'Errore durante il tracking della view',
         error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
       });
     }

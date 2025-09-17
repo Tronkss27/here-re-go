@@ -56,6 +56,7 @@ interface Booking {
   isUpcoming?: boolean
   duration?: number
   remainingAmount?: number
+  offersSnapshot?: { id: string; title: string; description: string; redeemed?: boolean }[]
 }
 
 interface BookingListProps {
@@ -401,6 +402,39 @@ const BookingList: React.FC<BookingListProps> = ({
                         {booking.customerPhone || 'Telefono non disponibile'}
                       </div>
                     </div>
+
+                    {/* Offerte collegate (snapshot) */}
+                    {Array.isArray(booking.offersSnapshot) && booking.offersSnapshot.length > 0 && (
+                      <div className="mt-3">
+                        <div className="text-sm font-medium mb-2">Offerte abbinate</div>
+                        <div className="space-y-2">
+                          {booking.offersSnapshot.map((o, idx) => (
+                            <div key={`${o.id}_${idx}`} className="flex items-center justify-between p-2 border rounded">
+                              <div className="min-w-0 mr-3">
+                                <div className="text-sm font-semibold truncate">{o.title}</div>
+                                <div className="text-xs text-muted-foreground truncate">{o.description}</div>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <Badge variant={o.redeemed ? 'default' : 'outline'} className="text-xs">
+                                  {o.redeemed ? 'Riscattata' : 'Da riscattare'}
+                                </Badge>
+                                <Button variant="outline" size="sm"
+                                  onClick={() => {
+                                    // Toggle locale (UI only). In futuro: chiamata API.
+                                    setBookings(prev => prev.map(b => b._id === booking._id ? {
+                                      ...b,
+                                      offersSnapshot: (b.offersSnapshot || []).map((x, i) => i === idx ? { ...x, redeemed: !x.redeemed } : x)
+                                    } : b))
+                                  }}
+                                >
+                                  {o.redeemed ? 'Annulla' : 'Segna riscattata'}
+                                </Button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
 
                   {/* Actions */}

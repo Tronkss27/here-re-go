@@ -11,39 +11,39 @@
      ================================= */
   
   /* Light Theme (Default) */
-  --background: 0 0% 100%;          /* Pure white */
-  --foreground: 222.2 84% 4.9%;     /* Very dark blue-gray */
-  --card: 0 0% 100%;                /* White cards */
-  --card-foreground: 222.2 84% 4.9%; /* Dark text on cards */
-  --popover: 0 0% 100%;             /* White popovers */
-  --popover-foreground: 222.2 84% 4.9%; /* Dark text on popovers */
-  
-  /* Primary - Green Brand Colors */
-  --primary: 142 76% 36%;           /* #2ba84a - Main brand green */
-  --primary-foreground: 210 40% 98%; /* Light text on primary */
-  --primary-dark: 142 69% 28%;      /* #248232 - Darker green */
-  --primary-light: 142 84% 44%;     /* #34c759 - Lighter green */
-  
-  /* Secondary - Neutral Grays */
-  --secondary: 210 40% 96%;         /* Very light gray */
-  --secondary-foreground: 222.2 84% 4.9%; /* Dark text on secondary */
-  
-  /* Muted - Subtle Backgrounds */
-  --muted: 210 40% 96%;             /* Light gray backgrounds */
-  --muted-foreground: 215.4 16.3% 46.9%; /* Medium gray text */
-  
-  /* Accent - Highlight Colors */
-  --accent: 210 40% 96%;            /* Light accent background */
-  --accent-foreground: 222.2 84% 4.9%; /* Dark text on accent */
-  
-  /* Destructive - Error States */
-  --destructive: 0 84% 60%;         /* Red for errors */
-  --destructive-foreground: 210 40% 98%; /* Light text on destructive */
-  
-  /* Border & Input Colors */
-  --border: 214.3 31.8% 91.4%;     /* Light gray borders */
-  --input: 214.3 31.8% 91.4%;      /* Input field borders */
-  --ring: 142 76% 36%;              /* Focus ring - primary green */
+  --background: 0 0% 100%;          /* pure white */
+  --foreground: 0 0% 10%;           /* text-900 #1a1a1a */
+  --card: 0 0% 100%;
+  --card-foreground: 0 0% 10%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 0 0% 10%;
+
+  /* Primary - Brand Green (from your scale) */
+  --primary: 90 100% 40%;           /* primary-600 #66cc00 */
+  --primary-foreground: 0 0% 100%;
+  --primary-dark: 90 100% 30%;      /* primary-700 #4d9900 */
+  --primary-light: 90 100% 60%;     /* primary-400 #99ff33 */
+
+  /* Secondary - Surfaces soft green */
+  --secondary: 96 42% 91%;          /* secondary-100 #e6f2d9 */
+  --secondary-foreground: 90 30% 20%;
+
+  /* Muted - Neutral light */
+  --muted: 0 0% 95%;                /* background-50 #f2f2f2 */
+  --muted-foreground: 0 0% 40%;
+
+  /* Accent */
+  --accent: 72 100% 50%;            /* accent-500 #bfff00 */
+  --accent-foreground: 0 0% 15%;
+
+  /* Destructive - keep neutral red */
+  --destructive: 0 84% 60%;
+  --destructive-foreground: 0 0% 100%;
+
+  /* Border & Input */
+  --border: 0 0% 80%;               /* background-200 #cccccc */
+  --input: 0 0% 80%;
+  --ring: 90 100% 40%;              /* Focus ring - primary */
   
   /* Chart Colors - Sports Data Visualization */
   --chart-1: 142 76% 36%;           /* Primary green */
@@ -126,44 +126,40 @@
    ================================= */
 .dark {
   /* Dark Theme Overrides */
-  --background: 222.2 84% 4.9%;     /* Very dark blue-gray */
-  --foreground: 210 40% 98%;        /* Very light text */
-  --card: 222.2 84% 4.9%;           /* Dark cards */
-  --card-foreground: 210 40% 98%;   /* Light text on dark cards */
-  --popover: 222.2 84% 4.9%;        /* Dark popovers */
-  --popover-foreground: 210 40% 98%; /* Light text on dark popovers */
-  
-  /* Primary remains the same but adjust foreground */
-  --primary: 142 76% 36%;           /* Keep green */
-  --primary-foreground: 210 40% 98%; /* Light text */
-  
-  /* Secondary - Dark Variants */
-  --secondary: 217.2 32.6% 17.5%;   /* Dark gray */
-  --secondary-foreground: 210 40% 98%; /* Light text on secondary */
-  
-  /* Muted - Dark Backgrounds */
-  --muted: 217.2 32.6% 17.5%;       /* Dark muted background */
-  --muted-foreground: 215 20.2% 65.1%; /* Medium light text */
-  
-  /* Accent - Dark Highlight */
-  --accent: 217.2 32.6% 17.5%;      /* Dark accent background */
-  --accent-foreground: 210 40% 98%; /* Light text on accent */
-  
-  /* Destructive remains similar */
-  --destructive: 0 62.8% 30.6%;     /* Darker red for dark theme */
-  --destructive-foreground: 210 40% 98%; /* Light text */
-  
-  /* Border & Input - Dark Variants */
-  --border: 217.2 32.6% 17.5%;      /* Dark borders */
-  --input: 217.2 32.6% 17.5%;       /* Dark input borders */
-  --ring: 142 76% 36%;              /* Keep green focus ring */
-  
-  /* Chart Colors - Maintain brand consistency */
-  --chart-1: 142 76% 36%;           /* Primary green */
-  --chart-2: 142 84% 44%;           /* Light green */
-  --chart-3: 142 69% 28%;           /* Dark green */
-  --chart-4: 217.2 32.6% 17.5%;     /* Dark gray */
-  --chart-5: 215 20.2% 65.1%;       /* Medium light gray */
+  --background: 222 40% 6%;
+  --foreground: 0 0% 95%;
+  --card: 222 40% 6%;
+  --card-foreground: 0 0% 95%;
+  --popover: 222 40% 6%;
+  --popover-foreground: 0 0% 95%;
+
+  --primary: 90 100% 35%;
+  --primary-foreground: 0 0% 98%;
+  --primary-dark: 90 100% 28%;
+  --primary-light: 90 100% 52%;
+
+  --secondary: 96 42% 16%;
+  --secondary-foreground: 0 0% 95%;
+
+  --muted: 0 0% 15%;
+  --muted-foreground: 0 0% 70%;
+
+  --accent: 72 100% 45%;
+  --accent-foreground: 0 0% 10%;
+
+  --destructive: 0 62.8% 30.6%;
+  --destructive-foreground: 0 0% 98%;
+
+  --border: 0 0% 25%;
+  --input: 0 0% 25%;
+  --ring: 90 100% 35%;
+
+  /* Chart Colors */
+  --chart-1: 90 100% 35%;
+  --chart-2: 90 100% 52%;
+  --chart-3: 90 100% 28%;
+  --chart-4: 0 0% 25%;
+  --chart-5: 0 0% 70%;
 }
 
 /* =================================
@@ -172,24 +168,24 @@
    ================================= */
 :root {
   /* Primary Colors - RGB Values */
-  --primary-rgb: 43 168 74;         /* #2ba84a converted to RGB */
-  --primary-dark-rgb: 36 130 50;    /* #248232 converted to RGB */
-  --primary-light-rgb: 52 199 89;   /* #34c759 converted to RGB */
+  --primary-rgb: 102 204 0;         /* #66cc00 */
+  --primary-dark-rgb: 77 153 0;     /* #4d9900 */
+  --primary-light-rgb: 153 255 51;  /* #99ff33 */
   
   /* Background Colors - RGB Values */
   --background-rgb: 255 255 255;    /* White background */
-  --foreground-rgb: 15 23 42;       /* Dark foreground */
+  --foreground-rgb: 26 26 26;       /* text-900 */
   --card-rgb: 255 255 255;          /* White cards */
   
   /* Semantic Colors - RGB Values */
-  --secondary-rgb: 241 245 249;     /* Light gray */
-  --muted-rgb: 241 245 249;         /* Muted background */
-  --accent-rgb: 241 245 249;        /* Accent background */
+  --secondary-rgb: 230 242 217;     /* #e6f2d9 */
+  --muted-rgb: 242 242 242;         /* #f2f2f2 */
+  --accent-rgb: 191 255 0;          /* #bfff00 */
   --destructive-rgb: 239 68 68;     /* Red error */
   
   /* Border Colors - RGB Values */
-  --border-rgb: 226 232 240;        /* Light border */
-  --input-rgb: 226 232 240;         /* Input border */
+  --border-rgb: 204 204 204;        /* #cccccc */
+  --input-rgb: 204 204 204;         /* #cccccc */
 }
 
 .dark {

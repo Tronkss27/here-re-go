@@ -1,0 +1,233 @@
+{
+  "collections": {
+    "users": {
+      "description": "Utenti applicazione con ruoli e (opz.) collegamento a venue/tenant",
+      "indexes": [
+        {"fields": ["email"], "unique": true},
+        {"fields": ["tenantId", "email"], "unique": true},
+        {"fields": ["tenantId"], "unique": false},
+        {"fields": ["role"], "unique": false}
+      ],
+      "schema": {
+        "_id": "ObjectId",
+        "name": "string",
+        "email": "string",
+        "password": "string(bcrypt)",
+        "role": "enum(user, admin, venue_owner)",
+        "tenantId": "ObjectId | null",
+        "venueId": "ObjectId | null",
+        "isActive": "boolean",
+        "lastLogin": "date | null",
+        "createdAt": "date",
+        "updatedAt": "date"
+      },
+      "example": {
+        "_id": "651a0c...",
+        "name": "Mario Rossi",
+        "email": "mario@example.com",
+        "password": "$2a$10$...",
+        "role": "venue_owner",
+        "tenantId": "652b1d...",
+        "venueId": "653c2e...",
+        "isActive": true,
+        "lastLogin": "2025-08-24T12:30:00Z",
+        "createdAt": "2025-07-01T10:00:00Z",
+        "updatedAt": "2025-08-24T12:30:00Z"
+      }
+    },
+    "tenants": {
+      "description": "Tenant multi-tenant con impostazioni, limiti e stato piano",
+      "indexes": [
+        {"fields": ["slug"], "unique": true},
+        {"fields": ["domain"], "unique": true, "sparse": true},
+        {"fields": ["subdomain"], "unique": true, "sparse": true},
+        {"fields": ["status"], "unique": false}
+      ],
+      "schema": {
+        "_id": "ObjectId",
+        "slug": "string",
+        "name": "string",
+        "domain": "string | null",
+        "subdomain": "string | null",
+        "settings": {
+          "branding": {"logoUrl": "string|null", "primaryColor": "#RRGGBB|null", "secondaryColor": "#RRGGBB|null"},
+          "features": {"bookingSystem": "bool", "multiVenue": "bool", "eventManagement": "bool", "analytics": "bool", "customDomain": "bool"},
+          "limits": {"maxVenues": "number", "maxUsers": "number", "maxBookingsPerMonth": "number", "storageLimit": "MB"}
+        },
+        "businessInfo": {
+          "type": "enum(restaurant, bar, sports_bar, cafe, pub, club, other)",
+          "address": {"street": "string", "city": "string", "state": "string|null", "zipCode": "string|null", "country": "string"},
+          "contact": {"email": "string|null", "phone": "string|null", "website": "string|null"},
+          "taxInfo": {"vatNumber": "string|null", "taxCode": "string|null"}
+        },
+        "status": "enum(active, suspended, trial, cancelled)",
+        "plan": "enum(trial, basic, premium, enterprise)",
+        "usage": {"currentUsers": "number", "currentVenues": "number", "bookingsThisMonth": "number", "storageUsed": "MB", "lastActivity": "date"},
+        "trialEndsAt": "date",
+        "subscriptionRenewalDate": "date|null",
+        "ownerUser": "ObjectId",
+        "createdAt": "date",
+        "updatedAt": "date"
+      },
+      "example": {
+        "_id": "652b1d...",
+        "slug": "default",
+        "name": "Default Tenant",
+        "status": "trial",
+        "plan": "trial",
+        "ownerUser": "651a0c..."
+      }
+    },
+    "venues": {
+      "description": "Locali (bar/ristoranti) con dati anagrafici, orari, media e metriche",
+      "indexes": [
+        {"fields": ["tenantId"], "unique": false},
+        {"fields": ["tenantId", "status"], "unique": false},
+        {"fields": ["tenantId", "slug"], "unique": true, "sparse": true},
+        {"fields": ["tenantId", "location.address.city"], "unique": false},
+        {"fields": ["features"], "unique": false},
+        {"fields": ["name", "description", "location.address.city"], "text": true}
+      ],
+      "schema": {
+        "_id": "ObjectId",
+        "tenantId": "ObjectId|null",
+        "name": "string",
+        "description": "string|null",
+        "owner": "ObjectId",
+        "contact": {"email": "string", "phone": "string", "website": "string|null"},
+        "location": {"address": {"street": "string", "city": "string", "state": "string|null", "postalCode": "string", "country": "string"}, "coordinates": {"latitude": "number|null", "longitude": "number|null"}},
+        "hours": {"monday..sunday": {"open": "HH:MM", "close": "HH:MM", "closed": "bool"}},
+        "capacity": {"total": "number", "tables": "number|null", "bar": "number|null", "outdoor": "number"},
+        "features": ["enum(...)"],
+        "images": [{"url": "string", "caption": "string|null", "isMain": "bool", "uploadedAt": "date"}],
+        "sportsOfferings": [{"sport": "string", "leagues": ["string"], "isPrimary": "bool"}],
+        "bookingSettings": {"enabled": "bool", "requiresApproval": "bool", "advanceBookingDays": "number", "minimumPartySize": "number", "maximumPartySize": "number", "timeSlotDuration": "number", "cancellationPolicy": "string|null"},
+        "pricing": {"basePrice": "number", "pricePerPerson": "number", "minimumSpend": "number", "currency": "string"},
+        "status": "enum(pending, approved, rejected, suspended)",
+        "isVerified": "bool",
+        "isActive": "bool",
+        "analytics": {"totalBookings": "number", "totalReviews": "number", "averageRating": "number", "viewCount": "number"},
+        "slug": "string|null",
+        "adminNotes": "string|null",
+        "createdAt": "date",
+        "updatedAt": "date"
+      },
+      "example": {
+        "_id": "653c2e...",
+        "tenantId": "652b1d...",
+        "name": "Bar Sport",
+        "owner": "651a0c...",
+        "location": {"address": {"street": "Via Roma 1", "city": "Milano", "postalCode": "20100", "country": "Italy"}}
+      }
+    },
+    "bookings": {
+      "description": "Prenotazioni con snapshot offerte, storico stati e dettagli cliente",
+      "indexes": [
+        {"fields": ["tenantId"], "unique": false},
+        {"fields": ["tenantId", "venue", "bookingDate"], "unique": false},
+        {"fields": ["tenantId", "user", "bookingDate"], "unique": false},
+        {"fields": ["tenantId", "status", "bookingDate"], "unique": false},
+        {"fields": ["tenantId", "confirmationCode"], "unique": true, "sparse": true}
+      ],
+      "schema": {
+        "_id": "ObjectId",
+        "tenantId": "ObjectId|null",
+        "venue": "Mixed(ObjectId|string)",
+        "user": "ObjectId",
+        "fixture": "ObjectId|null",
+        "bookingDate": "date",
+        "startTime": "HH:MM",
+        "endTime": "HH:MM",
+        "partySize": "number",
+        "customerName": "string",
+        "customerEmail": "string",
+        "customerPhone": "string",
+        "specialRequests": "string|null",
+        "status": "enum(pending, confirmed, cancelled, completed, no-show)",
+        "statusHistory": [{"status": "enum(...)" , "timestamp": "date", "updatedBy": "ObjectId|null", "reason": "string|null"}],
+        "totalPrice": "number",
+        "deposit": "number",
+        "paymentStatus": "enum(pending, partial, paid, refunded)",
+        "paymentMethod": "enum(cash, card, online, bank_transfer)|null",
+        "offersSnapshot": [{"id": "string", "title": "string", "description": "string", "templateId": "ObjectId|null", "redeemed": "bool", "redeemedAt": "date|null", "redeemedBy": "ObjectId|null"}],
+        "bookingType": "enum(match_viewing, general_dining, private_event, group_booking)",
+        "source": "enum(website, phone, walk_in, app, third_party)",
+        "internalNotes": "string|null",
+        "confirmationCode": "string|null",
+        "modificationHistory": [{"field": "string", "oldValue": "mixed", "newValue": "mixed", "modifiedBy": "ObjectId|null", "modifiedAt": "date"}],
+        "remindersSent": [{"type": "enum(confirmation, reminder_24h, reminder_2h, follow_up)", "sentAt": "date", "method": "enum(email, sms, push)"}],
+        "createdAt": "date",
+        "updatedAt": "date"
+      },
+      "example": {
+        "_id": "654d3f...",
+        "tenantId": "652b1d...",
+        "venue": "653c2e...",
+        "user": "651a0c...",
+        "bookingDate": "2025-09-20T00:00:00Z",
+        "startTime": "20:30",
+        "endTime": "22:30",
+        "partySize": 4,
+        "status": "confirmed",
+        "totalPrice": 50
+      }
+    },
+    "fixtures": {
+      "description": "Partite (fonte provider) con dettagli squadra/lega, data e stato",
+      "indexes": [
+        {"fields": ["tenantId"], "unique": false},
+        {"fields": ["tenantId", "fixtureId"], "unique": true, "sparse": true},
+        {"fields": ["tenantId", "date"], "unique": false},
+        {"fields": ["tenantId", "status"], "unique": false}
+      ],
+      "schema": {
+        "_id": "ObjectId",
+        "tenantId": "ObjectId|null",
+        "fixtureId": "string",
+        "homeTeam": {"id": "string", "name": "string", "logo": "string|null"},
+        "awayTeam": {"id": "string", "name": "string", "logo": "string|null"},
+        "league": {"id": "string", "name": "string", "country": "string|null", "logo": "string|null", "season": "string|null"},
+        "date": "date",
+        "status": "enum(scheduled, live, finished, postponed, cancelled)",
+        "score": {"home": "number|null", "away": "number|null"},
+        "popularity": "number(0..10)",
+        "totalBookings": "number",
+        "isActive": "boolean",
+        "createdAt": "date",
+        "updatedAt": "date"
+      }
+    },
+    "matchannouncements": {
+      "description": "Annunci partita dei venue (con offerte collegate)",
+      "schema": {"...": "Vedi modello, include tenantId, venueId, match{...}, eventDetails{...}, selectedOffers[] etc."}
+    },
+    "offertemplates": {
+      "description": "Template offerte (titolo/descrizione/prezzo/stato)",
+      "schema": {"...": "Vedi modello, include tenantId, title, description, price, isActive, createdAt/updatedAt"}
+    },
+    "offers": {
+      "description": "Offerte istanziate da template, collegate ad annunci o prenotazioni",
+      "schema": {"...": "Vedi modello, include tenantId, venueId, templateId, status, redemption"}
+    },
+    "reviews": {
+      "description": "Recensioni e risposte per venue",
+      "schema": {"...": "Vedi modello, include tenantId, venue, rating, text, status, replies"}
+    },
+    "popularmatches": {
+      "description": "Dati popolarità e analytics per match",
+      "schema": {"...": "Vedi modello, include matchId, counters, derived ranking"}
+    },
+    "globalmatches": {
+      "description": "Cache partite globali dal provider esterno (non tenant-bound)",
+      "schema": {"...": "Vedi modello, include providerId(unique), league, season, date, status, participants, scores, venue, lastUpdatedFromProvider"}
+    },
+    "auditlogs": {
+      "description": "Audit dei percorsi/operazioni (multi-tenant)",
+      "schema": {"...": "Vedi modello, include tenantId, userId, operation, method, path, statusCode, ts, ip, userAgent"}
+    },
+    "syncjobs": {
+      "description": "Job di sincronizzazione provider",
+      "schema": {"...": "Vedi modello, include jobId, status, progress, timestamps"}
+    }
+  }
+}

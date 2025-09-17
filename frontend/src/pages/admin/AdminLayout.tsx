@@ -14,11 +14,15 @@ import {
   ExternalLink
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import MobileSidebar from '@/components/admin/MobileSidebar';
+import AdminTopBar from '@/components/admin/AdminTopBar';
+import { adminNavItems } from '@/components/admin/AdminNavItems';
 import { useAuth } from '@/contexts/AuthContext';
 import { venueProfileService } from '@/services/venueService';
 
 const AdminLayout = () => {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
   const [venueName, setVenueName] = useState('');
   const [isCreatingVenue, setIsCreatingVenue] = useState(false);
   const location = useLocation();
@@ -155,62 +159,46 @@ const currentPageTitle = () => {
 };
 
 return (
-  <div className="admin-layout">
-    {/* Sidebar */}
-    <div className={`admin-sidebar ${sidebarCollapsed ? '' : 'open'}`}>
-      <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-3">
-          <div className="text-xl font-special text-white">
-            🏆 SPOrTS
-          </div>
-        </div>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-          className="text-white hover:bg-white/10 md:hidden"
-        >
-          {sidebarCollapsed ? <Menu size={20} /> : <X size={20} />}
-        </Button>
-      </div>
+  <div className="flex min-h-screen flex-col md:flex-row">
+    {/* Top bar + Mobile sidebar */}
+    <div className="md:hidden sticky top-0 z-40 w-full">
+      <AdminTopBar title={currentPageTitle()} onOpenSidebar={() => setMobileOpen(true)} />
+      <MobileSidebar open={mobileOpen} onOpenChange={setMobileOpen} />
+    </div>
 
-      <nav className="mt-8 space-y-2">
-        {menuItems.map((item) => (
+    {/* Desktop sidebar (nuova, no classi legacy) */}
+    <aside className="admin-rail hidden md:flex md:w-72 lg:w-80 shrink-0 flex-col border-r bg-background" style={{ position: 'sticky', top: 0, height: '100vh' }}>
+      <div className="flex items-center justify-between px-4 py-4">
+        <div className="text-xl font-special">🏆 SPOrTS</div>
+      </div>
+      <nav className="flex-1 overflow-y-auto px-2 py-2">
+        {adminNavItems.map(({ href, label, Icon }) => (
           <NavLink
-            key={item.path}
-            to={item.path}
+            key={href}
+            to={href}
             className={({ isActive }) =>
-              `nav-link flex items-center space-x-3 p-3 rounded-lg transition-colors ${
-                isActive 
-                  ? 'bg-white/10 text-white font-medium active' 
-                  : 'text-white/80 hover:bg-white/5 hover:text-white'
-              }`
+              `flex items-center gap-3 rounded-md px-3 py-2 text-[15px] ${isActive ? 'bg-accent text-accent-foreground' : 'hover:bg-muted'}`
             }
           >
-            <item.icon size={20} />
-            <span>{item.label}</span>
+            <Icon className="h-5 w-5" />
+            <span className="font-kanit">{label}</span>
           </NavLink>
         ))}
       </nav>
-
-      {/* Public Profile Link */}
-      <div className="absolute bottom-6 left-6 right-6">
-        <Button
-          onClick={handleViewPublicProfile}
-          disabled={isCreatingVenue}
-          className="w-full bg-white/10 hover:bg-white/20 text-white border-white/20"
-          variant="outline"
-        >
+      <div className="px-3 pb-4">
+        <Button onClick={handleViewPublicProfile} disabled={isCreatingVenue} variant="outline" className="w-full">
           <Eye size={16} className="mr-2" />
           Visualizza Profilo Pubblico
           <ExternalLink size={14} className="ml-2" />
         </Button>
       </div>
-    </div>
+    </aside>
 
     {/* Main Content */}
-    <div className="admin-main">
-      <Outlet />
+    <div className="flex-1 w-full">
+      <div className="mx-auto w-full max-w-screen-md p-4 md:p-6" style={{ paddingBottom: 'calc(16px + env(safe-area-inset-bottom))' }}>
+        <Outlet />
+      </div>
     </div>
   </div>
 );

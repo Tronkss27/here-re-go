@@ -129,14 +129,15 @@ class LeagueManager {
       yesterday.setDate(yesterday.getDate() - 1);
       const yesterdayString = yesterday.toISOString().split('T')[0];
       
+      const aliases = this._getLeagueAliases(leagueKey);
       const oldMatches = await PopularMatch.find({
-        league: { $regex: new RegExp(leagueConfig.name, 'i') },
+        league: { $in: aliases },
         date: { $lt: yesterdayString }
       });
       
       if (oldMatches.length > 0) {
         await PopularMatch.deleteMany({
-          league: { $regex: new RegExp(leagueConfig.name, 'i') },
+          league: { $in: aliases },
           date: { $lt: yesterdayString }
         });
         
@@ -152,7 +153,7 @@ class LeagueManager {
 
       // Conta SOLO match con roundId valorizzato
       const futureMatches = await PopularMatch.find({
-        league: { $regex: new RegExp(leagueConfig.name, 'i') },
+        league: { $in: aliases },
         date: { $gte: todayString },
         roundId: { $ne: null }
       }).countDocuments();
@@ -189,8 +190,9 @@ class LeagueManager {
     endDate.setDate(endDate.getDate() + 30);
     const end = endDate.toISOString().slice(0,10);
 
+    const aliases = this._getLeagueAliases(leagueKey);
     const missing = await PopularMatch.find({
-      league: { $regex: new RegExp(leagueConfig.name, 'i') },
+      league: { $in: aliases },
       date: { $gte: start },
       $or: [{ roundId: { $eq: null } }, { roundId: { $exists: false } }]
     }).lean();
@@ -543,6 +545,24 @@ class LeagueManager {
         ]
       }
     };
+  }
+
+  /**
+   * 🔤 League aliases to normalize DB queries vs provider naming
+   */
+  _getLeagueAliases(leagueKey) {
+    const map = {
+      'primeira-liga': ['Primeira Liga', 'Liga Portugal'],
+      'la-liga': ['La Liga', 'LaLiga'],
+      'serie-a': ['Serie A'],
+      'serie-b': ['Serie B'],
+      'premier-league': ['Premier League'],
+      'bundesliga': ['Bundesliga'],
+      'ligue-1': ['Ligue 1'],
+      'eredivisie': ['Eredivisie'],
+      'championship': ['Championship']
+    };
+    return map[leagueKey] || [this.config.leagues.find(l => l.key === leagueKey)?.name || leagueKey];
   }
   
   /**

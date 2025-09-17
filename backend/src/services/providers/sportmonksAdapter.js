@@ -70,7 +70,10 @@ class SportmonksAdapter {
         meta: {
           hasOdds: Boolean(fixture.has_odds),
           isLive: status.code === 'LIVE',
-          round: fixture.round_id ? String(fixture.round_id) : null,
+          // roundId può arrivare come round_id o come round.id se abbiamo include: 'round'
+          round: fixture.round_id
+            ? String(fixture.round_id)
+            : (fixture.round?.id ? String(fixture.round.id) : null),
           season: fixture.season_id ? String(fixture.season_id) : null,
           createdAt: new Date(),
           updatedAt: new Date()
@@ -159,6 +162,18 @@ class SportmonksAdapter {
     
     // ✅ FIX: Gestisci starting_at null/invalid (TBD fixtures)
     if (!startingAt || startingAt === null || startingAt === 'TBD') {
+      // Fallback: prova a usare la data di inizio del round se inclusa
+      const roundStart = fixture.round?.starting_at || fixture.round?.starting_at_date || null;
+      if (roundStart) {
+        const dt = new Date(roundStart);
+        return {
+          date: isNaN(dt.getTime()) ? null : dt.toISOString().slice(0, 10),
+          time: null,
+          datetime: null,
+          timezone: fixture.timezone || null,
+          invalid: false
+        };
+      }
       console.warn(`[SportmonksAdapter] TBD fixture ${fixture.id}: starting_at missing or null`);
       return {
         date: null,
@@ -279,7 +294,8 @@ class SportmonksAdapter {
    * Valida il DTO finale
    */
   _validateStandardFixture(fixture) {
-    const required = ['fixtureId', 'league', 'date', 'time', 'participants', 'status'];
+    // time può essere null (TBD). Richiediamo sempre date.
+    const required = ['fixtureId', 'league', 'date', 'participants', 'status'];
     
     for (const field of required) {
       if (!fixture[field]) {
@@ -308,8 +324,8 @@ class SportmonksAdapter {
       throw new Error('Invalid date format');
     }
 
-    // Validate time format  
-    if (!/^\d{2}:\d{2}$/.test(fixture.time)) {
+    // Validate time format solo se presente
+    if (fixture.time && !/^\d{2}:\d{2}$/.test(fixture.time)) {
       throw new Error('Invalid time format');
     }
   }

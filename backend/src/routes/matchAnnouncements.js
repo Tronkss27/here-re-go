@@ -68,6 +68,12 @@ router.post('/track/match-click',
   matchAnnouncementController.trackMatchClick
 );
 
+// Track view su annuncio (PUBLIC - NO AUTH)
+router.post('/announcements/:id/track/view',
+  [param('id').isMongoId()],
+  matchAnnouncementController.trackAnnouncementView
+);
+
 // Test connessione API (admin)
 router.get('/test/api-connection',
   matchAnnouncementController.testApiConnection
@@ -96,10 +102,12 @@ router.post('/',
     body('eventDetails.startDate').isISO8601(),
     body('eventDetails.startTime').matches(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/),
     body('eventDetails.endTime').matches(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/),
-    body('eventDetails.description').optional().isString().isLength({ max: 1000 })
-    
-    // Validazione offerte - TEMPORANEAMENTE RIMOSSA PER DEBUG
-    // body('eventDetails.selectedOffers').optional().isArray({ max: 10 })
+    body('eventDetails.description').optional().isString().isLength({ max: 1000 }),
+    // Validazione offerte
+    body('eventDetails.selectedOffers').optional().isArray({ max: 10 }),
+    body('eventDetails.selectedOffers.*.id').optional().isString().notEmpty(),
+    body('eventDetails.selectedOffers.*.title').optional().isString().trim().isLength({ min: 1, max: 100 }),
+    body('eventDetails.selectedOffers.*.description').optional().isString().trim().isLength({ min: 1, max: 500 })
   ],
   matchAnnouncementController.createAnnouncement
 );
@@ -112,7 +120,9 @@ router.get('/venue',
     query('competition').optional().isString().trim(),
     query('limit').optional().isInt({ min: 1, max: 100 }),
     query('page').optional().isInt({ min: 1 }),
-    query('includeArchived').optional().isBoolean()
+    query('includeArchived').optional().isBoolean(),
+    query('includeExpired').optional().isBoolean(),
+    query('lockHours').optional().isInt({ min: 0, max: 24 })
   ],
   matchAnnouncementController.getVenueAnnouncements
 );

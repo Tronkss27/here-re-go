@@ -18,7 +18,8 @@ const LEAGUE_TITLE_BY_SLUG = {
   'ligue-1': 'Ligue 1',
   'eredivisie': 'Eredivisie',
   'championship': 'Championship',
-  'primeira-liga': 'Primeira Liga',
+  // Usa il nome ufficiale come appare in SEASONID.md
+  'primeira-liga': 'Liga Portugal',
 };
 
 function ensureLoaded() {

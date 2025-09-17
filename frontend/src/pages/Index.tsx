@@ -1,22 +1,30 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { MapPin, ChevronRight, Users, Clock, Calendar, TrendingUp } from 'lucide-react';
-import Header from '@/components/Header';
-import { Card } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { useHotMatches } from '@/services/hotMatchesService';
-import { useNavigate } from 'react-router-dom';
-import { getLeagueLogo, getLeagueDisplayName, getTeamAbbreviation } from '@/utils/leagueUtils';
+import { ChevronRight, TrendingUp } from 'lucide-react';
+import Header from '../components/Header';
+import CardNav from '../components/CardNav';
+import { Card } from '../components/ui/card';
+import { Button } from '../components/ui/button';
+import { useHotMatches } from '../services/hotMatchesService';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext.jsx';
+import MatchCardC3 from '../components/MatchCardC3';
+import { getLeagueDisplayName } from '../utils/leagueUtils';
 
 const Index = () => {
   const [activeDay, setActiveDay] = useState('big-fixtures');
   const navigate = useNavigate();
+  const location = useLocation();
+  const auth = useAuth();
+  const useNewUI = (import.meta as any).env.VITE_ENABLE_NEW_UI === 'true';
+
+  type DayTab = { id: string; label: string; date: Date | null };
   
   // Hook per partite popolari - prendiamo più partite per avere dati sufficienti
-  const { matches: hotMatches, loading: hotLoading, error: hotError, trackClick } = useHotMatches(20);
+  const { matches: hotMatches, loading: hotLoading, error: hotError, trackClick } = useHotMatches(20) as any;
 
   // Genera i prossimi 7 giorni
   const getDayTabs = () => {
-    const tabs = [];
+    const tabs: DayTab[] = [];
     const today = new Date();
     
     // Big Fixtures sempre primo
@@ -47,7 +55,7 @@ const Index = () => {
     return tabs;
   };
 
-  const dayTabs = getDayTabs();
+  const dayTabs: DayTab[] = getDayTabs();
 
   // Filtra e ordina le partite in base al giorno selezionato
   const filteredMatches = useMemo(() => {
@@ -82,7 +90,14 @@ const Index = () => {
       
       return [...popular, ...others];
     }
-  }, [hotMatches, activeDay, dayTabs]);
+  }, [hotMatches as any, activeDay, dayTabs]);
+
+  // Supporto query param per attivare tab (es. /?tab=big)
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const tab = params.get('tab');
+    if (tab === 'big') setActiveDay('big-fixtures');
+  }, [location.search]);
 
   const getActiveTabTitle = () => {
     switch(activeDay) {
@@ -97,8 +112,56 @@ const Index = () => {
   };
 
   return (
-    <div className="min-h-screen bg-white">
-      <Header />
+    <div className="min-h-screen bg-white w-full overflow-x-hidden">
+      {useNewUI ? (
+        <CardNav
+          logo={''}
+          logoText={"It's a Match"}
+          user={auth?.isAuthenticated ? { name: auth?.user?.name, avatarUrl: auth?.user?.avatarUrl, isVenueOwner: auth?.user?.isVenueOwner } : null}
+          onLogin={() => navigate('/client-login')}
+          onBusiness={() => navigate('/sports-login')}
+          onLogout={() => auth?.logout?.()}
+          onProfile={() => navigate('/profile')}
+          onAdmin={() => navigate('/admin')}
+          baseColor="#BFFF00"
+          mode="header"
+          headerTheme="light"
+          items={[
+            {
+              label: 'Locali',
+              bgDesktop: 'linear-gradient(180deg, #BFFF00 0%, #FFFFFF 100%)',
+              bgMobile: 'linear-gradient(90deg, #BFFF00 0%, #FFFFFF 100%)',
+              textColor: '#111111',
+              links: [
+                { label: 'Vicino a te', ariaLabel: 'Locali vicino a te', href: '/locali?near=me' },
+                { label: 'Migliori', ariaLabel: 'Locali migliori', href: '/locali?sort=top' }
+              ]
+            },
+            {
+              label: 'Partite',
+              bgDesktop: 'linear-gradient(180deg, #BFFF00 0%, #FFFFFF 100%)',
+              bgMobile: 'linear-gradient(90deg, #BFFF00 0%, #FFFFFF 100%)',
+              textColor: '#111111',
+              links: [
+                { label: 'Big fixtures', ariaLabel: 'Partite più calde', href: '/?tab=big' },
+                { label: 'Per Lega', ariaLabel: 'Partite per lega', href: '/locali?league=serie-a' }
+              ]
+            },
+            {
+              label: 'Chi siamo',
+              bgDesktop: 'linear-gradient(180deg, #BFFF00 0%, #FFFFFF 100%)',
+              bgMobile: 'linear-gradient(90deg, #BFFF00 0%, #FFFFFF 100%)',
+              textColor: '#111111',
+              links: [
+                { label: 'Mission', ariaLabel: 'Mission', href: '/mission' },
+                { label: 'Contatti', ariaLabel: 'Contatti', href: '/contatti' }
+              ]
+            }
+          ]}
+        />
+      ) : (
+        <Header />
+      )}
       
       {/* Client Landing Section - only visible for authenticated clients */}
       {/* ClientLandingSection component was removed from imports, so this section is removed */}
@@ -118,8 +181,42 @@ const Index = () => {
       </section>
 
       {/* Day Navigation Tabs */}
-      <section className="day-navigation">
-        <div className="container mx-auto px-4">
+      {useNewUI ? (
+        <section className="pt-4">
+          <div className="max-w-[1200px] mx-auto px-4">
+            <div className="flex items-center justify-center">
+              <div className="flex gap-3 overflow-x-auto no-scrollbar py-2 px-2">
+                {dayTabs.map((tab, index) => {
+                  const isActive = activeDay === tab.id;
+                  const isBig = tab.id === 'big-fixtures';
+                  // Calcola etichetta come nel mock
+                  const displayLabel = isBig
+                    ? 'PARTITE PIÙ CALDE'
+                    : tab.id === 'today'
+                      ? 'OGGI'
+                      : tab.id === 'tomorrow'
+                        ? 'DOMANI'
+                        : (tab.date ? tab.date.toLocaleDateString('it-IT', { weekday: 'short' }).toUpperCase() : tab.label);
+                  const monthDay = tab.date ? tab.date.getDate() : null;
+                  return (
+                    <button
+                      key={tab.id}
+                      onClick={() => setActiveDay(tab.id)}
+                      className={`${isActive ? 'bg-white shadow-[0_6px_20px_rgba(0,0,0,0.08)] ring-2 ring-[hsl(var(--primary))] ring-offset-2 ring-offset-white' : 'bg-transparent'} min-w-[120px] flex flex-col items-center px-4 py-2 rounded-xl transition-all`}
+                    >
+                      <span className={`text-sm font-semibold ${isActive ? 'text-gray-800' : 'text-gray-700'}`}>{displayLabel}</span>
+                      {!isBig && monthDay !== null && (
+                        <span className="text-[12px] text-muted-foreground mt-1">{monthDay}</span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        </section>
+      ) : (
+        <section className="day-navigation">
           <div className="day-tabs">
             {dayTabs.map((tab) => (
               <button
@@ -131,12 +228,12 @@ const Index = () => {
               </button>
             ))}
           </div>
-        </div>
-      </section>
+        </section>
+      )}
 
       {/* Main Content */}
-      <section className="bg-white py-12">
-        <div className="container mx-auto px-4">
+      <section className="bg-white py-12 w-full overflow-x-hidden">
+        <div className="w-full px-0">
           
           {/* Hot Matches Section */}
           <div className="mb-16">
@@ -169,139 +266,28 @@ const Index = () => {
               </div>
             ) : filteredMatches.length > 0 ? (
               <div className="matches-grid">
-                {filteredMatches.map((match, index) => (
-                  <div
-                    key={`${match.matchId}-${index}`}
-                    className="match-card"
-                    onClick={() => {
-                      trackClick(match.matchId);
-                      // Genera URL strutturata
-                      const date = match.date || new Date().toISOString().split('T')[0];
-                      const teamsSlug = `${match.homeTeam.toLowerCase().replace(/\s+/g, '-')}-vs-${match.awayTeam.toLowerCase().replace(/\s+/g, '-')}`;
-                      navigate(`/locali/${date}/${teamsSlug}/${match.matchId}`);
+                {filteredMatches.map((m, index) => (
+                  <MatchCardC3
+                    key={`${m.matchId}-${index}`}
+                    match={{
+                      matchId: m.matchId,
+                      league: m.league || getLeagueDisplayName(m.competition?.name),
+                      homeTeam: m.homeTeam,
+                      awayTeam: m.awayTeam,
+                      date: m.date,
+                      time: m.time,
+                      homeTeamLogo: m.homeTeamLogo,
+                      awayTeamLogo: m.awayTeamLogo,
+                      venueCount: m.venueCount,
                     }}
-                  >
-                    <div className="p-6">
-                      {/* Match Header - Logo Lega */}
-                      <div className="match-card-header">
-                        <div className="competition-info">
-                          {match.leagueLogo ? (
-                            <img 
-                              src={match.leagueLogo} 
-                              alt={match.league || 'League'}
-                              className="competition-logo-img w-5 h-5 object-contain"
-                              onError={(e) => {
-                                e.currentTarget.style.display = 'none';
-                                e.currentTarget.nextElementSibling.style.display = 'inline';
-                              }}
-                            />
-                          ) : null}
-                          <span 
-                            className="competition-logo-placeholder"
-                            style={{ display: match.leagueLogo ? 'none' : 'inline' }}
-                          >
-                            ⚽
-                          </span>
-                          <span>{match.league || getLeagueDisplayName(match.competition?.name) || 'Campionato'}</span>
-                        </div>
-                        <div className="hot-badge">
-                          <TrendingUp size={12} />
-                          HOT
-                        </div>
-                      </div>
-                      
-                      {/* Teams con Loghi Placeholder */}
-                      <div className="teams-section">
-                        <div className="teams-with-logos">
-                          {/* Logo squadra casa */}
-                          <div className="flex flex-col items-center">
-                            <div className="team-logo-placeholder">
-                              {match.homeTeamLogo ? (
-                                <img 
-                                  src={match.homeTeamLogo} 
-                                  alt={`${match.homeTeam} logo`}
-                                  className="w-8 h-8 object-contain"
-                                  onError={(e) => {
-                                    e.currentTarget.style.display = 'none';
-                                    e.currentTarget.nextElementSibling.style.display = 'block';
-                                  }}
-                                />
-                              ) : null}
-                              <span 
-                                className="text-lg font-bold text-gray-500"
-                                style={{ display: match.homeTeamLogo ? 'none' : 'block' }}
-                              >
-                                {match.homeTeam.charAt(0)}
-                              </span>
-                            </div>
-                            <span className="team-name">
-                              {getTeamAbbreviation(match.homeTeam)}
-                            </span>
-                          </div>
-                          
-                          {/* VS */}
-                          <div className="vs-separator">VS</div>
-                          
-                          {/* Logo squadra ospite */}
-                          <div className="flex flex-col items-center">
-                            <div className="team-logo-placeholder">
-                              {match.awayTeamLogo ? (
-                                <img 
-                                  src={match.awayTeamLogo} 
-                                  alt={`${match.awayTeam} logo`}
-                                  className="w-8 h-8 object-contain"
-                                  onError={(e) => {
-                                    e.currentTarget.style.display = 'none';
-                                    e.currentTarget.nextElementSibling.style.display = 'block';
-                                  }}
-                                />
-                              ) : null}
-                              <span 
-                                className="text-lg font-bold text-gray-500"
-                                style={{ display: match.awayTeamLogo ? 'none' : 'block' }}
-                              >
-                                {match.awayTeam.charAt(0)}
-                              </span>
-                            </div>
-                            <span className="team-name">
-                              {getTeamAbbreviation(match.awayTeam)}
-                            </span>
-                          </div>
-                        </div>
-                        
-                        {/* Orario evidenziato */}
-                        <div className="text-center">
-                          <div className="time-highlight">
-                            <div className="time-date">
-                              {new Date(match.date).toLocaleDateString('it-IT', { 
-                                weekday: 'short', 
-                                day: 'numeric', 
-                                month: 'short' 
-                              })}
-                            </div>
-                            <div className="time-hour">
-                              {match.time}
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                      
-                      {/* Stats */}
-                      <div className="venue-count">
-                        <div className="flex items-center justify-center gap-1">
-                          <Users size={14} />
-                          <span>{match.venueCount} locali disponibili</span>
-                        </div>
-                      </div>
-                      
-                      {/* CTA Button */}
-                      <button className="match-cta-button">
-                        <MapPin size={16} className="cta-icon-map" />
-                        <span>Trova Locali</span>
-                        <ChevronRight size={16} className="cta-icon-arrow" />
-                      </button>
-                    </div>
-                  </div>
+                    onClick={async () => {
+                      // Usa il servizio centralizzato (gestisce throttle + tenant via apiClient)
+                      await trackClick(m.matchId);
+                      const date = m.date || new Date().toISOString().split('T')[0];
+                      const teamsSlug = `${m.homeTeam.toLowerCase().replace(/\s+/g, '-')}-vs-${m.awayTeam.toLowerCase().replace(/\s+/g, '-')}`;
+                      navigate(`/locali/${date}/${teamsSlug}/${m.matchId}`);
+                    }}
+                  />
                 ))}
               </div>
             ) : (

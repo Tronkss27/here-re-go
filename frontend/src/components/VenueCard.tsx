@@ -1,6 +1,7 @@
 import React, { useCallback, useMemo } from 'react';
 import { MapPin, Star, Wifi, Globe, User, Tv, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import apiClient from '@/services/apiClient.js'
 import { useNavigate } from 'react-router-dom';
 import OptimizedImage from '@/components/ui/OptimizedImage';
 
@@ -41,7 +42,23 @@ const VenueCard = React.memo(({
 }: VenueCardProps) => {
   const navigate = useNavigate();
 
-  const handleViewDetails = useCallback(() => {
+  const handleViewDetails = useCallback(async () => {
+    try {
+      // Throttle 6h per venue per i click (separato dalle views)
+      const key = 'pc_last_sent_map'
+      const now = Date.now()
+      let map: Record<string, number> = {}
+      try { const raw = localStorage.getItem(key); map = raw ? JSON.parse(raw) : {} } catch {}
+      const matchId = (matchInfo as any)?.matchId || (window as any)?.currentMatchId || undefined
+      const compositeKey = matchId ? `${id}:${matchId}` : id
+      const last = map[compositeKey] || 0
+      if (now - last >= 6 * 60 * 60 * 1000) {
+        await apiClient.post('/analytics/profile-click', { venueId: id, ...(matchId ? { matchId: String(matchId) } : {}) })
+        map[compositeKey] = now
+        try { localStorage.setItem(key, JSON.stringify(map)) } catch {}
+        try { window.dispatchEvent(new CustomEvent('analytics:dirty')) } catch {}
+      }
+    } catch {}
     navigate(`/locale/${id}`);
   }, [navigate, id]);
 

@@ -225,7 +225,8 @@ async function getFixturesBetween(startDate, endDate, options = {}) {
         'ligue-1': 301,
         'ligue-2': 302,
         'eredivisie': 72,
-        'primeira-liga': 271,
+        // ✅ FIX: Primeira Liga (Liga Portugal) è 462 su Sportmonks, 271 è Superliga danese
+        'primeira-liga': 462,
     };
 
     const leagueId = options.leagueId || leagueIdMapping[options.leagueKey];
@@ -290,7 +291,8 @@ async function getFixturesByDate(date) {
         const response = await apiClient.get(`/fixtures/date/${date}`, {
             params: {
                 // ✅ Include anche 'round' così salviamo sempre roundId/roundNumber
-                include: 'participants;league;round'
+                include: 'participants;league;round',
+                per_page: 200
             }
         });
         
