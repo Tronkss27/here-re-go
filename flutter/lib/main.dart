@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import 'router.dart';
+import 'theme.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -16,10 +17,7 @@ class SportsApp extends StatelessWidget {
     final router = buildRouter();
     return MaterialApp.router(
       title: 'SPOrTS',
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF111827)),
-        useMaterial3: true,
-      ),
+      theme: AppTheme.build(),
       routerConfig: router,
     );
   }
