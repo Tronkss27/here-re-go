@@ -26,6 +26,7 @@ class AppTheme {
     final base = ThemeData(
       useMaterial3: true,
       colorScheme: colorScheme,
+      fontFamily: 'Hubot Sans Expanded',
       scaffoldBackgroundColor: Colors.white,
       textTheme: const TextTheme(
         displaySmall: TextStyle(fontSize: 32, fontWeight: FontWeight.w800, height: 40 / 32),
