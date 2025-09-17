@@ -2,15 +2,16 @@ import 'package:flutter/material.dart';
 
 class AppTheme {
   static ThemeData build() {
-    const brandGreen = Color(0xFF00A85A);
-    const brandGreenDark = Color(0xFF0B5D3B);
+    const brandBase = Color(0xFF245841); // contorni/dettagli
+    const ctaStart = Color(0xFF006909);
+    const ctaEnd = Color(0xFF00FF89);
     const text = Color(0xFF111111);
     const muted = Color(0xFF6B7280);
     const border = Color(0xFFE5E7EB);
 
     final colorScheme = ColorScheme(
       brightness: Brightness.light,
-      primary: brandGreen,
+      primary: brandBase,
       onPrimary: Colors.white,
       secondary: brandGreenDark,
       onSecondary: Colors.white,
@@ -38,11 +39,12 @@ class AppTheme {
       dividerColor: border,
       hintColor: muted,
       elevatedButtonTheme: ElevatedButtonThemeData(
-        style: ElevatedButton.styleFrom(
-          backgroundColor: brandGreen,
-          foregroundColor: Colors.white,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+        style: ButtonStyle(
+          padding: WidgetStateProperty.all(const EdgeInsets.symmetric(horizontal: 20, vertical: 14)),
+          foregroundColor: WidgetStateProperty.all(Colors.white),
+          shape: WidgetStateProperty.all(RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
+          // Gradient via container wrapper: gestito nei widget CTA dedicati
+          backgroundColor: WidgetStateProperty.all(brandBase),
         ),
       ),
       chipTheme: base.chipTheme.copyWith(

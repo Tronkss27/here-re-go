@@ -146,3 +146,5 @@ main().catch(console.error)
 - Questo è SOLO un esempio illustrativo. L’implementazione reale può (e dovrebbe) differire dove opportuno.
 - Il programmatore ha piena libertà su scelte tecnologiche (streaming, CSV/NDJSON, librerie, orchestrazione) e struttura dei moduli.
 
+
+

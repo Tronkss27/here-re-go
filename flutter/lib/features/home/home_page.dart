@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../shared/cta_button.dart';
 
 class HomePage extends StatelessWidget {
   const HomePage({super.key});
@@ -75,7 +76,7 @@ class _MatchCard extends StatelessWidget {
             Row(children: [
               Expanded(child: Text(date, style: Theme.of(context).textTheme.bodyMedium)),
               const SizedBox(width: 12),
-              ElevatedButton(onPressed: () {}, child: const Text('TROVA LOCALI')),
+              CtaButton(label: 'TROVA LOCALI', onPressed: () {}),
             ])
           ],
         ),

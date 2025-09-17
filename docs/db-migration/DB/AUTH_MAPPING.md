@@ -34,3 +34,5 @@
   - `role`: `user|venue_owner|admin`
   - `tenant_id`: UUID del tenant
 - Le policy RLS in `DB/RLS_POLICIES.sql` presuppongono questi claim.
+
+

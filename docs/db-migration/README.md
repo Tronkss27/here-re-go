@@ -16,3 +16,5 @@ Questa sezione documenta un piano pratico per valutare e migrare da MongoDB a:
 Note:
 - Non applica alcuna migrazione: è solo una guida operativa/testabile in locale.
 - Il target principale è Supabase (Postgres + Auth + RLS). In coda trovi considerazioni su Firebase.
+
+

@@ -89,3 +89,5 @@ Obiettivo: migrazione incrementale e testabile in locale, senza downtime percepi
 ### Rollback
 - Rollback = puntare di nuovo il backend a Mongo, lasciare dati Postgres in quarantena.
 - Conservare dump Mongo e snapshot Postgres (pg_dump) prima del cutover.
+
+

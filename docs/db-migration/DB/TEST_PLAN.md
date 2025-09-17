@@ -50,3 +50,5 @@
 - Simula cutover, crea 5 nuove prenotazioni su Mongo durante validazione.
 - Esegui delta ETL e verifica che compaiano in Postgres.
 - In caso di rollback, conferma che il backend rilegga da Mongo senza perdita.
+
+

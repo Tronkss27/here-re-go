@@ -33,3 +33,5 @@
 - **Supabase**: storage + richieste + egress; ottimo rapporto per carichi misti CRUD/analytics moderate.
 - **Firebase**: costi per document read intensivi; ottimo per push realtime.
 - **Mongo Atlas**: costo controllabile, ottimo per write heavy documentali, scalabilità orizzontale.
+
+
