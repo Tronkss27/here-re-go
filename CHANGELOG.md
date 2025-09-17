@@ -312,11 +312,11 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 🔗 Links
 
-- **Repository**: [GitHub](https://github.com/your-repo/sports)
+- **Repository**: [GitHub](https://github.com/Tronkss27/here-re-go)
 - **Documentation**: [Docs Site](https://docs.sports.app)
 - **API Docs**: [API Reference](https://api.sports.app/docs)
 - **Demo**: [Live Demo](https://demo.sports.app)
 
 ---
 
-*Per il changelog completo delle versioni precedenti, vedi [GitHub Releases](https://github.com/your-repo/sports/releases).* 
+*Per il changelog completo delle versioni precedenti, vedi [GitHub Releases](https://github.com/Tronkss27/here-re-go/releases).* 

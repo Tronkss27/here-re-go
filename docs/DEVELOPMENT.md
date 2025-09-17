@@ -11,7 +11,7 @@
 ### **Installazione**
 ```bash
 # Clona il repository
-git clone https://github.com/your-repo/sports.git
+git clone git@github.com:Tronkss27/here-re-go.git
 cd sports
 
 # Installa tutte le dipendenze

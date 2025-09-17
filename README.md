@@ -23,8 +23,8 @@ Questo repository contiene il progetto "SPOrTS" — backend e frontend per la ge
 1. Clona il repository:
 
 ```bash
-git clone https://github.com/Tronkss27/Spo-r-ts.git
-cd Spo-r-ts
+git clone git@github.com:Tronkss27/here-re-go.git
+cd here-re-go
 ```
 
 2. Crea file `.env` per `backend` e `frontend` basandoti sugli esempi.

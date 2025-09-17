@@ -57,10 +57,10 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/your-repo/sports.git"
+    "url": "git+ssh://git@github.com/Tronkss27/here-re-go.git"
   },
   "bugs": {
-    "url": "https://github.com/your-repo/sports/issues"
+    "url": "https://github.com/Tronkss27/here-re-go/issues"
   },
-  "homepage": "https://github.com/your-repo/sports#readme"
+  "homepage": "https://github.com/Tronkss27/here-re-go#readme"
 }
