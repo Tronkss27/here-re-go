@@ -1,0 +1,11 @@
+# Componenti dedotti (prima passata)
+
+- AppBar (logo, CTA account)
+- Chip filtro (stati: default/attivo/disabled)
+- Card Match (lega, squadre, CTA "Trova Locali")
+- Card Venue (immagine, titolo, rating, indirizzo, badge offerta, CTA "Visualizza")
+- Tag Categoria (Sport Bar / Ristorante / Birreria)
+- Pannello Servizi (pill buttons)
+- CTA Primaria (gradient green)
+- Badge Rating (stella + valore)
+- Sezione Orari (tabella semplice)
