@@ -35,3 +35,4 @@
 - **Mongo Atlas**: costo controllabile, ottimo per write heavy documentali, scalabilità orizzontale.
 
 
+

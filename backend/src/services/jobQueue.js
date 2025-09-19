@@ -5,14 +5,18 @@ const { v4: uuidv4 } = require('uuid');
 
 class JobQueue {
   constructor() {
+    const agendaMongo = process.env.MONGODB_URI || 'mongodb://localhost:27017/sports-bar'
     this.agenda = new Agenda({
       db: {
-        address: process.env.MONGODB_URI,
+        address: agendaMongo,
         collection: 'agenda_jobs'
       },
       processEvery: '10 seconds',
       maxConcurrency: 2 // Max 2 sync jobs simultanei per stabilità
     });
+    if (!process.env.MONGODB_URI) {
+      console.warn(`[JobQueue] MONGODB_URI non definita: uso fallback ${agendaMongo}`)
+    }
 
     this.initializeJobs();
   }

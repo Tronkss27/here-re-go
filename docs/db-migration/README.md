@@ -18,3 +18,4 @@ Note:
 - Il target principale è Supabase (Postgres + Auth + RLS). In coda trovi considerazioni su Firebase.
 
 
+

@@ -13,16 +13,17 @@ app.use(helmet({
   crossOriginResourcePolicy: false // Disabilito CORP di helmet per gestirlo manualmente
 }))
 app.use(cors({
-  origin: [
-    process.env.FRONTEND_URL || 'http://localhost:5173',
-    'http://localhost:5174', // Support both development ports
-    'http://localhost:5175',  // New port for current frontend instance
-    // Support per IP di rete locale per testing mobile/network
-    'http://192.168.1.53:5174',
-    /^http:\/\/192\.168\.\d{1,3}\.\d{1,3}:517[3-5]$/, // Regex per qualsiasi IP 192.168.x.x con porte 5173-5175
-    /^http:\/\/10\.\d{1,3}\.\d{1,3}\.\d{1,3}:517[3-5]$/, // Regex per IP 10.x.x.x 
-    /^http:\/\/172\.(1[6-9]|2\d|3[0-1])\.\d{1,3}\.\d{1,3}:517[3-5]$/ // Regex per IP 172.16-31.x.x
-  ],
+  origin: (origin, cb) => {
+    const allowlist = [
+      process.env.FRONTEND_URL || 'http://localhost:5173',
+      'http://localhost:5174',
+      'http://localhost:5175'
+    ]
+    if (!origin || allowlist.includes(origin)) return cb(null, true)
+    // consenti richieste dallo stesso host (Safari local fetch)
+    if (origin?.startsWith('http://localhost:')) return cb(null, true)
+    return cb(null, false)
+  },
   credentials: true
 }))
 

@@ -294,4 +294,13 @@ router.post('/demo', async (req, res) => {
   }
 })
 
+// Dev helper: CORS preflight for auth endpoints
+router.options('*', (req, res) => {
+  res.setHeader('Access-Control-Allow-Origin', req.headers.origin || '*')
+  res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,PATCH,DELETE,OPTIONS')
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Tenant-ID')
+  res.setHeader('Access-Control-Allow-Credentials', 'true')
+  return res.sendStatus(200)
+})
+
 module.exports = router 

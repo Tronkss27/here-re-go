@@ -91,3 +91,4 @@ Obiettivo: migrazione incrementale e testabile in locale, senza downtime percepi
 - Conservare dump Mongo e snapshot Postgres (pg_dump) prima del cutover.
 
 
+

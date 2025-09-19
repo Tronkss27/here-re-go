@@ -52,3 +52,4 @@
 - In caso di rollback, conferma che il backend rilegga da Mongo senza perdita.
 
 
+
